@@ -3,17 +3,16 @@
 """
 from typing import Optional, List
 from langchain_core.tools import tool
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from infrastructure.database.repository.blood_pressure_repository import BloodPressureRepository
+from infrastructure.database.connection import get_async_session_factory
 
 
 @tool
 async def query_blood_pressure(
     user_id: int,
     limit: int = 10,
-    offset: int = 0,
-    session: Optional[AsyncSession] = None
+    offset: int = 0
 ) -> str:
     """
     查询用户的血压记录
@@ -22,16 +21,15 @@ async def query_blood_pressure(
         user_id: 用户ID
         limit: 返回记录数量限制（默认10）
         offset: 偏移量（默认0）
-        session: 数据库会话（从上下文获取）
         
     Returns:
         血压记录列表的字符串表示
     """
-    if not session:
-        raise ValueError("数据库会话未提供")
-    
-    repo = BloodPressureRepository(session)
-    records = await repo.get_by_user_id(user_id, limit=limit, offset=offset)
+    # 获取数据库会话
+    session_factory = get_async_session_factory()
+    async with session_factory() as session:
+        repo = BloodPressureRepository(session)
+        records = await repo.get_by_user_id(user_id, limit=limit, offset=offset)
     
     if not records:
         return f"用户 {user_id} 暂无血压记录"
