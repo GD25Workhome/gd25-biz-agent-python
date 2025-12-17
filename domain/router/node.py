@@ -78,6 +78,7 @@ def route_node(state: RouterState) -> RouterState:
         
         # 检查是否需要重新路由
         need_reroute = False
+        has_new_user_input = isinstance(last_message, HumanMessage)
         
         # 如果意图不明确或需要澄清，需要路由到澄清节点
         if new_intent == "unclear" or intent_result.need_clarification:
@@ -97,6 +98,11 @@ def route_node(state: RouterState) -> RouterState:
             logger.info(
                 f"路由节点: 智能体发生变化 - 从 '{current_agent}' 变为 '{new_agent}'"
             )
+
+        # 关键修正：只要检测到新的用户输入，就应再次执行当前智能体流程，避免新消息被直接 END 掉
+        if has_new_user_input:
+            need_reroute = True
+            logger.info("路由节点: 检测到新的用户输入，强制重新路由以执行当前智能体")
         
         # 更新状态
         state["current_intent"] = new_intent

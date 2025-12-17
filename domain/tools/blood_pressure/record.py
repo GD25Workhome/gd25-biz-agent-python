@@ -11,7 +11,7 @@ from infrastructure.database.connection import get_async_session_factory
 
 @tool
 async def record_blood_pressure(
-    user_id: int,
+    user_id: str,
     systolic: int,
     diastolic: int,
     heart_rate: Optional[int] = None,

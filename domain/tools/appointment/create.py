@@ -14,7 +14,7 @@ from app.core.config import settings
 
 @tool
 async def create_appointment(
-    user_id: int,
+    user_id: str,
     department: str,
     appointment_time: str,
     doctor_name: Optional[str] = None,

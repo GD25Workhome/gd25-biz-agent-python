@@ -14,7 +14,7 @@ from app.core.config import settings
 
 @tool
 async def update_appointment(
-    appointment_id: int,
+    appointment_id: str,
     department: Optional[str] = None,
     appointment_time: Optional[str] = None,
     doctor_name: Optional[str] = None,

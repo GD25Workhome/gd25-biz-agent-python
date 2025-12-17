@@ -25,7 +25,7 @@ class BaseRepository(Generic[ModelType]):
         self.session = session
         self.model = model
     
-    async def get_by_id(self, id: int) -> Optional[ModelType]:
+    async def get_by_id(self, id: str) -> Optional[ModelType]:
         """
         根据 ID 查询
         
@@ -71,7 +71,7 @@ class BaseRepository(Generic[ModelType]):
         await self.session.flush()
         return instance
     
-    async def update(self, id: int, **kwargs) -> Optional[ModelType]:
+    async def update(self, id: str, **kwargs) -> Optional[ModelType]:
         """
         更新记录
         
@@ -92,7 +92,7 @@ class BaseRepository(Generic[ModelType]):
         await self.session.flush()
         return instance
     
-    async def delete(self, id: int) -> bool:
+    async def delete(self, id: str) -> bool:
         """
         删除记录
         

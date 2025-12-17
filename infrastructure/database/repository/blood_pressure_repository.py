@@ -24,7 +24,7 @@ class BloodPressureRepository(BaseRepository[BloodPressureRecord]):
     
     async def get_by_user_id(
         self,
-        user_id: int,
+        user_id: str,
         limit: int = 100,
         offset: int = 0
     ) -> List[BloodPressureRecord]:
@@ -50,7 +50,7 @@ class BloodPressureRepository(BaseRepository[BloodPressureRecord]):
     
     async def get_by_date_range(
         self,
-        user_id: int,
+        user_id: str,
         start_date: datetime,
         end_date: datetime
     ) -> List[BloodPressureRecord]:

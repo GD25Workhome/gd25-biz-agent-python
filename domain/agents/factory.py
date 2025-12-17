@@ -73,7 +73,10 @@ class AgentFactory:
             llm_config = agent_config.get("llm", {})
             llm = get_llm(
                 model=llm_config.get("model", settings.LLM_MODEL),
-                temperature=llm_config.get("temperature", settings.LLM_TEMPERATURE)
+                temperature=llm_config.get(
+                    "temperature",
+                    settings.LLM_TEMPERATURE_DEFAULT
+                )
             )
         
         # 2. 获取工具列表

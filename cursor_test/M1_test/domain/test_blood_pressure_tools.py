@@ -151,7 +151,7 @@ async def create_test_user(session: AsyncSession) -> User:
 
 async def create_test_blood_pressure_record(
     session: AsyncSession,
-    user_id: int,
+    user_id: str,
     systolic: int = 120,
     diastolic: int = 80,
     heart_rate: Optional[int] = 72,

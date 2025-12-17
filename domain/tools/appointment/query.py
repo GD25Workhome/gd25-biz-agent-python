@@ -12,8 +12,8 @@ from app.core.config import settings
 
 @tool
 async def query_appointment(
-    user_id: int,
-    appointment_id: Optional[int] = None
+    user_id: str,
+    appointment_id: Optional[str] = None
 ) -> str:
     """
     查询预约

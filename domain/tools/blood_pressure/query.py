@@ -10,7 +10,7 @@ from infrastructure.database.connection import get_async_session_factory
 
 @tool
 async def query_blood_pressure(
-    user_id: int,
+    user_id: str,
     limit: int = 10,
     offset: int = 0
 ) -> str:

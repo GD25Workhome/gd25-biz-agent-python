@@ -213,8 +213,8 @@ def mock_llm_response():
 def mock_java_service_response():
     """Mock Java 微服务响应"""
     return {
-        "id": 1,
-        "userId": 1,
+        "id": "1",
+        "userId": "1",
         "department": "内科",
         "appointmentTime": "2025-01-15T10:00:00",
         "status": "pending"

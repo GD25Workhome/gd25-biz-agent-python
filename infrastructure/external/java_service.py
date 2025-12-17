@@ -27,7 +27,7 @@ class JavaServiceClient:
     
     async def create_appointment(
         self,
-        user_id: int,
+        user_id: str,
         department: str,
         appointment_time: str,
         doctor_name: Optional[str] = None,
@@ -68,8 +68,8 @@ class JavaServiceClient:
     
     async def query_appointment(
         self,
-        user_id: int,
-        appointment_id: Optional[int] = None
+        user_id: str,
+        appointment_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         查询预约（调用 Java 微服务）
@@ -99,7 +99,7 @@ class JavaServiceClient:
     
     async def update_appointment(
         self,
-        appointment_id: int,
+        appointment_id: str,
         **kwargs
     ) -> Dict[str, Any]:
         """

@@ -18,6 +18,7 @@ python -m cursor_test.M2_test.integration.test_multi_turn_conversation
 import sys
 import asyncio
 import logging
+import random
 from pathlib import Path
 from typing import Dict, Any, List
 from datetime import datetime
@@ -165,7 +166,8 @@ async def run_conversation(
         "current_agent": None,
         "need_reroute": True,
         "session_id": session_id,
-        "user_id": user_id
+        "user_id": user_id,
+        "bp_form": {}
     }
     
     config = {
@@ -356,12 +358,13 @@ async def test_scenario_2_multi_turn_data_collection():
         graph, pool = await create_test_graph()
         
         session_id = f"test_data_collection_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        user_id = "test_user_002"
+        # 使用年月日时分秒+3位随机数生成唯一用户ID，保证可被数字解析
+        user_id = f"{datetime.now().strftime('%Y%m%d%H%M%S')}{random.randint(100, 999)}"
         
         messages = [
             "我想记录血压",  # 不完整信息
             "收缩压是120",  # 提供部分信息
-            "舒张压是80",  # 提供完整信息
+            "舒张压是80，心率是70",  # 提供完整信息
         ]
         
         result = await run_conversation(
@@ -549,10 +552,10 @@ async def main():
     
     try:
         # 运行所有测试场景
-        await test_scenario_1_intent_clarification()
+        # await test_scenario_1_intent_clarification()
         # await test_scenario_2_multi_turn_data_collection()
         # await test_scenario_3_intent_change_detection()
-        # await test_scenario_4_complete_workflow()
+        await test_scenario_4_complete_workflow()
         
         # 打印测试总结
         success = test_result.summary()

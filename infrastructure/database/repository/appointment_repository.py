@@ -24,7 +24,7 @@ class AppointmentRepository(BaseRepository[Appointment]):
     
     async def get_by_user_id(
         self,
-        user_id: int,
+        user_id: str,
         limit: int = 100,
         offset: int = 0
     ) -> List[Appointment]:
@@ -50,7 +50,7 @@ class AppointmentRepository(BaseRepository[Appointment]):
     
     async def get_by_status(
         self,
-        user_id: int,
+        user_id: str,
         status: AppointmentStatus,
         limit: int = 100
     ) -> List[Appointment]:
@@ -80,7 +80,7 @@ class AppointmentRepository(BaseRepository[Appointment]):
     
     async def get_by_date_range(
         self,
-        user_id: int,
+        user_id: str,
         start_date: datetime,
         end_date: datetime
     ) -> List[Appointment]:

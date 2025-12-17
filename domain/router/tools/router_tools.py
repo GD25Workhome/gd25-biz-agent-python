@@ -8,6 +8,7 @@ from langchain_core.tools import tool
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 from langchain_core.prompts import ChatPromptTemplate
 
+from app.core.config import settings
 from domain.router.state import IntentResult
 from infrastructure.llm.client import get_llm
 
@@ -237,8 +238,8 @@ def identify_intent(messages: list[BaseMessage]) -> Dict[str, Any]:
 请识别用户的真实意图，返回JSON格式的结果。""")
         ])
         
-        # 调用LLM（使用较低的温度以确保稳定性）
-        llm = get_llm(temperature=0.0)
+        # 调用LLM（使用可配置的低温度以确保稳定性）
+        llm = get_llm(temperature=settings.LLM_TEMPERATURE_INTENT)
         chain = prompt | llm
         response = chain.invoke({
             "query": current_query,
@@ -310,8 +311,8 @@ def clarify_intent(query: str) -> str:
             ("human", "用户消息: {query}\n\n请生成澄清问题。")
         ])
         
-        # 调用LLM（使用稍高的温度以生成更友好的问题）
-        llm = get_llm(temperature=0.3)
+        # 调用LLM（使用可配置的温度以生成更友好的问题）
+        llm = get_llm(temperature=settings.LLM_TEMPERATURE_CLARIFY)
         chain = prompt | llm
         response = chain.invoke({"query": query})
         

@@ -2,8 +2,12 @@
 FastAPI 应用入口
 """
 from contextlib import asynccontextmanager
+from pathlib import Path
+
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from psycopg_pool import AsyncConnectionPool
@@ -105,6 +109,14 @@ app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 # 注册路由
 app.include_router(router, prefix="/api/v1")
 
+# 挂载静态资源，用于提供简易前端页面
+static_dir = Path(__file__).resolve().parent.parent / "web"
+app.mount(
+    "/web",
+    StaticFiles(directory=str(static_dir), html=True),
+    name="web"
+)
+
 
 @app.get("/health")
 def health_check():
@@ -118,4 +130,20 @@ def health_check():
         "status": "ok",
         "version": "2.0.0"
     }
+
+
+def run_server() -> None:
+    """
+    通过 uvicorn 启动服务，端口与主机从 .env 读取
+    """
+    uvicorn.run(
+        "app.main:app",
+        host=settings.APP_HOST,
+        port=settings.APP_PORT,
+        reload=settings.DEBUG
+    )
+
+
+if __name__ == "__main__":
+    run_server()
 

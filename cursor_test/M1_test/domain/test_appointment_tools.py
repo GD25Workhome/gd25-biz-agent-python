@@ -152,7 +152,7 @@ async def create_test_user(session: AsyncSession) -> User:
 
 async def create_test_appointment(
     session: AsyncSession,
-    user_id: int,
+    user_id: str,
     department: str = "内科",
     doctor_name: Optional[str] = "张医生",
     appointment_time: Optional[datetime] = None,
@@ -251,8 +251,8 @@ async def test_create_appointment_java_service():
         user = await create_test_user(session)
         
         # 模拟 Java 微服务响应
-        mock_response = {
-            "id": 1,
+    mock_response = {
+        "id": "1",
             "userId": user.id,
             "department": "内科",
             "appointmentTime": "2025-01-15T10:00:00",
@@ -620,9 +620,9 @@ async def test_query_appointment_java_service():
         user = await create_test_user(session)
         
         # 模拟 Java 微服务响应
-        mock_response = {
-            "id": 1,
-            "userId": user.id,
+    mock_response = {
+        "id": "1",
+        "userId": str(user.id),
             "department": "内科",
             "appointmentTime": "2025-01-15T10:00:00",
             "status": "pending"
@@ -636,7 +636,7 @@ async def test_query_appointment_java_service():
                 
                 result = await query_appointment.ainvoke({
                     "user_id": user.id,
-                    "appointment_id": 1,
+                "appointment_id": str(appointment.id),
                     "session": session
                 })
         
@@ -727,7 +727,7 @@ async def test_query_appointment_not_exists():
         with patch.object(settings, 'JAVA_SERVICE_BASE_URL', None):
             result = await query_appointment.ainvoke({
                 "user_id": user.id,
-                "appointment_id": 99999,
+                "appointment_id": "99999",
                 "session": session
             })
         
@@ -1083,7 +1083,7 @@ async def test_update_appointment_not_exists():
         
         with patch.object(settings, 'JAVA_SERVICE_BASE_URL', None):
             result = await update_appointment.ainvoke({
-                "appointment_id": 99999,
+                "appointment_id": "99999",
                 "department": "外科",
                 "session": session
             })
@@ -1201,7 +1201,7 @@ async def test_update_appointment_no_session():
         with patch.object(settings, 'JAVA_SERVICE_BASE_URL', None):
             try:
                 await update_appointment.ainvoke({
-                    "appointment_id": 1,
+                    "appointment_id": str(mock_response["id"]),
                     "department": "外科"
                 })
                 assert False, "应该抛出 ValueError"
