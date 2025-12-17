@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>简易聊天界面</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f7f7f7; margin: 0; padding: 0; }
+    .container { max-width: 960px; margin: 32px auto; background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+    h1 { margin-top: 0; }
+    .form-row { display: flex; gap: 12px; margin-bottom: 12px; }
+    .form-row label { min-width: 80px; font-weight: bold; }
+    .form-row input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 8px; }
+    textarea { width: 100%; min-height: 100px; padding: 12px; border-radius: 8px; border: 1px solid #ddd; resize: vertical; }
+    .actions { margin-top: 12px; display: flex; gap: 12px; }
+    button { padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
+    .primary { background: #2563eb; color: #fff; }
+    .ghost { background: #eef2ff; color: #1e1b4b; }
+    .log { margin-top: 16px; max-height: 480px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 12px; background: #fafafa; }
+    .message { margin-bottom: 12px; padding: 10px; border-radius: 8px; }
+    .user { background: #e0f2fe; }
+    .assistant { background: #ecfdf3; }
+    .meta { color: #666; font-size: 12px; margin-bottom: 4px; }
+    .error { color: #b91c1c; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>多轮问答调试台</h1>
+    <div class="form-row">
+      <label for="userId">用户ID</label>
+      <input id="userId" value="demo-user">
+    </div>
+    <div class="form-row">
+      <label for="sessionId">会话ID</label>
+      <input id="sessionId">
+    </div>
+    <div>
+      <label for="message"><strong>输入消息</strong></label>
+      <textarea id="message" placeholder="请输入要发送的内容，支持多轮上下文"></textarea>
+    </div>
+    <div class="actions">
+      <button id="sendBtn" class="primary">发送</button>
+      <button id="resetBtn" class="ghost">重置会话</button>
+    </div>
+    <div id="error" class="error"></div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <script>
+    // API 端点自动复用当前页面的 host 与 port，方便 .env 中调整端口
+    const apiUrl = `${window.location.origin}/api/v1/chat`;
+    const logEl = document.getElementById('log');
+    const messageEl = document.getElementById('message');
+    const userEl = document.getElementById('userId');
+    const sessionEl = document.getElementById('sessionId');
+    const errorEl = document.getElementById('error');
+    const sendBtn = document.getElementById('sendBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    // 在前端维护对话历史，发送时传入 conversation_history
+    let history = [];
+
+    function initSession() {
+      sessionEl.value = `session-${Date.now()}`;
+      history = [];
+      logEl.innerHTML = '';
+      errorEl.textContent = '';
+    }
+
+    function appendMessage(role, content) {
+      const msg = document.createElement('div');
+      msg.className = `message ${role === 'user' ? 'user' : 'assistant'}`;
+      msg.innerHTML = `<div class="meta">${role === 'user' ? '用户' : '助手'}</div><div>${content}</div>`;
+      logEl.appendChild(msg);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    async function sendMessage() {
+      const text = messageEl.value.trim();
+      const userId = userEl.value.trim();
+      const sessionId = sessionEl.value.trim();
+
+      if (!text) {
+        errorEl.textContent = '请输入要发送的内容';
+        return;
+      }
+      if (!userId || !sessionId) {
+        errorEl.textContent = '用户ID与会话ID不能为空';
+        return;
+      }
+
+      errorEl.textContent = '';
+      appendMessage('user', text);
+
+      // 将当前消息加入历史，方便下次发送时带入完整上下文
+      history.push({ role: 'user', content: text });
+      messageEl.value = '';
+      sendBtn.disabled = true;
+      sendBtn.textContent = '发送中...';
+
+      try {
+        const resp = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: text,
+            session_id: sessionId,
+            user_id: userId,
+            conversation_history: history
+          })
+        });
+
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err.detail || `请求失败，状态码 ${resp.status}`);
+        }
+
+        const data = await resp.json();
+        const reply = data.response || '助手未返回内容';
+        history.push({ role: 'assistant', content: reply });
+        appendMessage('assistant', reply);
+      } catch (e) {
+        errorEl.textContent = e.message;
+        history.pop(); // 移除未成功发送的用户消息
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.textContent = '发送';
+        messageEl.focus();
+      }
+    }
+
+    function resetSession() {
+      initSession();
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    resetBtn.addEventListener('click', resetSession);
+    messageEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        sendMessage();
+      }
+    });
+
+    initSession();
+  </script>
+</body>
+</html>

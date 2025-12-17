@@ -1,0 +1,31 @@
+"""
+聊天接口的请求和响应模型
+"""
+from typing import Optional, List
+from pydantic import BaseModel, Field
+
+
+class ChatMessage(BaseModel):
+    """聊天消息模型"""
+    role: str = Field(..., description="消息角色：user, assistant, system")
+    content: str = Field(..., description="消息内容")
+
+
+class ChatRequest(BaseModel):
+    """聊天请求模型"""
+    message: str = Field(..., description="用户消息")
+    session_id: str = Field(..., description="会话ID")
+    user_id: str = Field(..., description="用户ID")
+    conversation_history: Optional[List[ChatMessage]] = Field(
+        default=None,
+        description="对话历史（可选）"
+    )
+
+
+class ChatResponse(BaseModel):
+    """聊天响应模型"""
+    response: str = Field(..., description="助手回复")
+    session_id: str = Field(..., description="会话ID")
+    intent: Optional[str] = Field(default=None, description="识别的意图")
+    agent: Optional[str] = Field(default=None, description="使用的智能体")
+
