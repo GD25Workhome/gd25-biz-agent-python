@@ -1,9 +1,8 @@
 """
 用户模型
 """
-from datetime import datetime
 from uuid import uuid4
-from sqlalchemy import Column, String, DateTime, Boolean
+from sqlalchemy import Column, String, DateTime, Boolean, func
 
 from infrastructure.database.base import Base
 
@@ -24,8 +23,17 @@ class User(Base):
     phone = Column(String(20), nullable=True, comment="手机号")
     email = Column(String(100), nullable=True, comment="邮箱")
     is_active = Column(Boolean, default=True, comment="是否激活")
-    created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        comment="创建时间"
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        comment="更新时间"
+    )
     
     def __repr__(self):
         return f"<User(id={self.id}, username={self.username})>"

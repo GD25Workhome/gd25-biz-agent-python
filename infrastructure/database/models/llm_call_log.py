@@ -1,7 +1,6 @@
 """
 LLM 调用日志模型
 """
-from datetime import datetime
 from typing import Optional
 from uuid import uuid4
 from sqlalchemy import (
@@ -12,6 +11,7 @@ from sqlalchemy import (
     DateTime,
     Text,
     Numeric,
+    func,
 )
 
 from infrastructure.database.base import Base
@@ -49,8 +49,12 @@ class LlmCallLog(Base):
     error_message = Column(Text, nullable=True, comment="错误信息")
     prompt_snapshot = Column(Text, nullable=True, comment="提示词快照（截断存储）")
     response_snapshot = Column(Text, nullable=True, comment="响应快照（截断存储）")
-    created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")
-    finished_at = Column(DateTime, nullable=True, comment="完成时间")
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        comment="创建时间"
+    )
+    finished_at = Column(DateTime(timezone=True), nullable=True, comment="完成时间")
     
     # 关系
     def __repr__(self):
@@ -79,7 +83,11 @@ class LlmCallMessage(Base):
     role = Column(String(20), nullable=False, comment="角色（system/human/assistant/tool）")
     content = Column(Text, nullable=False, comment="消息内容")
     token_estimate = Column(Integer, nullable=True, comment="token 粗略估算")
-    created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        comment="创建时间"
+    )
     
     def __repr__(self):
         return f"<LlmCallMessage(id={self.id}, call_id={self.call_id}, role={self.role})>"

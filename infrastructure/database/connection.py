@@ -22,10 +22,16 @@ async def create_db_pool() -> AsyncConnectionPool:
     Returns:
         AsyncConnectionPool: 数据库连接池
     """
+    async def configure_connection(conn):
+        """建立连接后设置数据库时区"""
+        async with conn.cursor() as cur:
+            await cur.execute(f"SET timezone = '{settings.DB_TIMEZONE}';")
+    
     pool = AsyncConnectionPool(
         conninfo=settings.ASYNC_DB_URI,
         max_size=20,
-        kwargs={"autocommit": False}
+        kwargs={"autocommit": False},
+        configure=configure_connection
     )
     await pool.open()
     return pool
@@ -45,7 +51,10 @@ def get_async_engine():
             echo=settings.DEBUG,
             pool_pre_ping=True,
             pool_size=10,
-            max_overflow=20
+            max_overflow=20,
+            connect_args={
+                "options": f"-c timezone={settings.DB_TIMEZONE}"
+            }
         )
     return _async_engine
 
