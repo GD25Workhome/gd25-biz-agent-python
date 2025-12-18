@@ -1,9 +1,8 @@
 """
 预约模型
 """
-from datetime import datetime
 from uuid import uuid4
-from sqlalchemy import Column, String, DateTime, Text, Enum as SQLEnum
+from sqlalchemy import Column, String, DateTime, Text, Enum as SQLEnum, func
 import enum
 
 from infrastructure.database.base import Base
@@ -37,11 +36,25 @@ class Appointment(Base):
     )
     department = Column(String(100), nullable=False, comment="科室")
     doctor_name = Column(String(100), nullable=True, comment="医生姓名")
-    appointment_time = Column(DateTime, nullable=False, index=True, comment="预约时间")
+    appointment_time = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        index=True,
+        comment="预约时间"
+    )
     status = Column(SQLEnum(AppointmentStatus), default=AppointmentStatus.PENDING, comment="预约状态")
     notes = Column(Text, nullable=True, comment="备注")
-    created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        comment="创建时间"
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        comment="更新时间"
+    )
     
     def __repr__(self):
         return f"<Appointment(id={self.id}, user_id={self.user_id}, department={self.department}, appointment_time={self.appointment_time})>"

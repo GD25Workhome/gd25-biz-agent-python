@@ -32,28 +32,30 @@ async def record_blood_pressure(
     Returns:
         成功消息字符串
     """
-    # 解析记录时间
+    # 解析记录时间：未提供或格式错误时交由数据库默认时区时间处理
+    record_datetime = None
     if record_time:
         try:
             record_datetime = datetime.fromisoformat(record_time.replace('Z', '+00:00'))
         except ValueError:
-            record_datetime = datetime.utcnow()
-    else:
-        record_datetime = datetime.utcnow()
+            record_datetime = None
     
     # 获取数据库会话
     session_factory = get_async_session_factory()
     async with session_factory() as session:
         # 创建记录
         repo = BloodPressureRepository(session)
-        record = await repo.create(
-            user_id=user_id,
-            systolic=systolic,
-            diastolic=diastolic,
-            heart_rate=heart_rate,
-            record_time=record_datetime,
-            notes=notes
-        )
+        create_data = {
+            "user_id": user_id,
+            "systolic": systolic,
+            "diastolic": diastolic,
+            "heart_rate": heart_rate,
+            "notes": notes,
+        }
+        if record_datetime is not None:
+            create_data["record_time"] = record_datetime
+        
+        record = await repo.create(**create_data)
         
         await session.commit()
     

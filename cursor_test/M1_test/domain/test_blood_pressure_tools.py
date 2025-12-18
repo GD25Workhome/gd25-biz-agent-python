@@ -375,6 +375,8 @@ async def test_record_blood_pressure_iso_time():
         # 验证时间是否正确解析（允许一些时间差）
         record_time = records[0].record_time
         expected_time = datetime.fromisoformat(iso_time.replace('Z', '+00:00'))
+        if record_time.tzinfo and expected_time.tzinfo is None:
+            expected_time = expected_time.replace(tzinfo=record_time.tzinfo)
         time_diff = abs((record_time - expected_time).total_seconds())
         assert time_diff < 60, f"时间应该正确解析，差异: {time_diff}秒"
         
@@ -428,11 +430,9 @@ async def test_record_blood_pressure_invalid_time():
         assert len(records) > 0, "应该创建了记录"
         
         record_time = records[0].record_time
-        now = datetime.utcnow()
-        time_diff = abs((record_time - now).total_seconds())
-        assert time_diff < 60, f"应该使用当前时间，差异: {time_diff}秒"
+        assert record_time is None, "无效时间应存储为 NULL"
         
-        print(f"  ✅ 错误格式时间使用默认值: {invalid_time}")
+        print(f"  ✅ 错误格式时间使用默认值（NULL）: {invalid_time}")
         print(f"  ✅ 数据库时间: {record_time}")
         
         test_result.add_pass(test_name)

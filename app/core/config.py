@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     DB_USER: str = "postgres"
     DB_PASSWORD: str = "postgres"
     DB_NAME: str = "langgraphflow"
+    DB_TIMEZONE: str = "Asia/Shanghai"
     
     @property
     def DB_URI(self) -> str:
