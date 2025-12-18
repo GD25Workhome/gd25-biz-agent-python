@@ -29,8 +29,19 @@ class Settings(BaseSettings):
     
     @property
     def CHECKPOINTER_DB_URI(self) -> str:
-        """Checkpointer 专用连接 URI"""
-        return f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        """
+        Checkpointer 专用连接 URI
+        
+        注意：psycopg_pool.AsyncConnectionPool 需要标准的 PostgreSQL URI 格式（postgresql://），
+        不能使用 SQLAlchemy 格式（postgresql+psycopg://）
+        """
+        uri = f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        # 确保返回标准格式，移除任何 SQLAlchemy 驱动前缀
+        if uri.startswith("postgresql+psycopg://"):
+            uri = uri.replace("postgresql+psycopg://", "postgresql://", 1)
+        elif uri.startswith("postgresql+asyncpg://"):
+            uri = uri.replace("postgresql+asyncpg://", "postgresql://", 1)
+        return uri
     
     # LLM 配置
     OPENAI_API_KEY: str = ""

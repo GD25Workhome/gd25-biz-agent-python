@@ -552,10 +552,10 @@ async def main():
     
     try:
         # 运行所有测试场景
-        # await test_scenario_1_intent_clarification()
+        await test_scenario_1_intent_clarification()
         await test_scenario_2_multi_turn_data_collection()
-        # await test_scenario_3_intent_change_detection()
-        # await test_scenario_4_complete_workflow()
+        await test_scenario_3_intent_change_detection()
+        await test_scenario_4_complete_workflow()
         
         # 打印测试总结
         success = test_result.summary()
