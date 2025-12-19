@@ -59,3 +59,5 @@ alembic/versions/*.pyc
 .DS_Store
 Thumbs.db
 
+.env copy
+.env copy

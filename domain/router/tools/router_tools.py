@@ -11,11 +11,15 @@ from langchain_core.prompts import ChatPromptTemplate
 from app.core.config import settings
 from domain.router.state import IntentResult
 from infrastructure.llm.client import get_llm
+from infrastructure.prompts.manager import PromptManager
 
 logger = logging.getLogger(__name__)
 
-# 意图识别系统提示词
-INTENT_IDENTIFICATION_PROMPT = """你是一个智能路由助手，负责识别用户的真实意图。
+# 提示词管理器实例（单例）
+_prompt_manager = PromptManager()
+
+# 意图识别系统提示词（保留作为fallback，如果模板加载失败时使用）
+INTENT_IDENTIFICATION_PROMPT_FALLBACK = """你是一个智能路由助手，负责识别用户的真实意图。
 
 支持的意图类型：
 1. blood_pressure: 用户想要记录、查询或管理血压数据
@@ -226,9 +230,24 @@ def identify_intent(messages: list[BaseMessage]) -> Dict[str, Any]:
                 reasoning="当前查询为空"
             ).model_dump()
         
-        # 构建提示词
+        # 构建提示词（优先使用PromptManager）
+        try:
+            prompt_template = _prompt_manager.render(
+                agent_key="router_tools",
+                context={
+                    "query": current_query,
+                    "history": history_text,
+                    "current_intent": current_intent_text
+                },
+                include_modules=["intent_identification"]
+            )
+        except (FileNotFoundError, ValueError) as e:
+            # 如果模板不存在，使用fallback
+            logger.warning(f"路由工具提示词模板加载失败，使用fallback: {str(e)}")
+            prompt_template = INTENT_IDENTIFICATION_PROMPT_FALLBACK
+        
         prompt = ChatPromptTemplate.from_messages([
-            ("system", INTENT_IDENTIFICATION_PROMPT),
+            ("system", prompt_template),
             ("human", """用户消息: {query}
 
 对话历史: {history}
@@ -273,8 +292,8 @@ def identify_intent(messages: list[BaseMessage]) -> Dict[str, Any]:
         return default_result.model_dump()
 
 
-# 意图澄清提示词
-CLARIFY_INTENT_PROMPT = """你是一个友好的助手，当用户的意图不明确时，你需要友好地引导用户说明他们的需求。
+# 意图澄清提示词（保留作为fallback）
+CLARIFY_INTENT_PROMPT_FALLBACK = """你是一个友好的助手，当用户的意图不明确时，你需要友好地引导用户说明他们的需求。
 
 系统支持的功能：
 1. 记录血压：帮助用户记录、查询和管理血压数据（收缩压、舒张压、心率等）
@@ -305,9 +324,20 @@ def clarify_intent(query: str) -> str:
         str: 澄清问题文本
     """
     try:
-        # 构建提示词
+        # 构建提示词（优先使用PromptManager）
+        try:
+            prompt_template = _prompt_manager.render(
+                agent_key="router_tools",
+                context={"query": query},
+                include_modules=["clarify_intent"]
+            )
+        except (FileNotFoundError, ValueError) as e:
+            # 如果模板不存在，使用fallback
+            logger.warning(f"路由工具澄清提示词模板加载失败，使用fallback: {str(e)}")
+            prompt_template = CLARIFY_INTENT_PROMPT_FALLBACK
+        
         prompt = ChatPromptTemplate.from_messages([
-            ("system", CLARIFY_INTENT_PROMPT),
+            ("system", prompt_template),
             ("human", "用户消息: {query}\n\n请生成澄清问题。")
         ])
         
