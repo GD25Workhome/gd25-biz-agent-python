@@ -283,6 +283,18 @@ def create_router_graph(
     appointment_agent = AgentFactory.create_agent("appointment_agent")
     workflow.add_node("appointment_agent", with_user_context(appointment_agent, "appointment_agent"))
     
+    # 添加健康事件Agent节点
+    health_event_agent = AgentFactory.create_agent("health_event_agent")
+    workflow.add_node("health_event_agent", with_user_context(health_event_agent, "health_event_agent"))
+    
+    # 添加用药记录Agent节点
+    medication_agent = AgentFactory.create_agent("medication_agent")
+    workflow.add_node("medication_agent", with_user_context(medication_agent, "medication_agent"))
+    
+    # 添加症状记录Agent节点
+    symptom_agent = AgentFactory.create_agent("symptom_agent")
+    workflow.add_node("symptom_agent", with_user_context(symptom_agent, "symptom_agent"))
+    
     # 设置入口点
     workflow.set_entry_point("route")
     
@@ -315,6 +327,12 @@ def create_router_graph(
             return "blood_pressure_agent"
         elif current_agent == "appointment_agent":
             return "appointment_agent"
+        elif current_agent == "health_event_agent":
+            return "health_event_agent"
+        elif current_agent == "medication_agent":
+            return "medication_agent"
+        elif current_agent == "symptom_agent":
+            return "symptom_agent"
         else:
             return END
     
@@ -324,6 +342,9 @@ def create_router_graph(
         {
             "blood_pressure_agent": "blood_pressure_agent",
             "appointment_agent": "appointment_agent",
+            "health_event_agent": "health_event_agent",
+            "medication_agent": "medication_agent",
+            "symptom_agent": "symptom_agent",
             "clarify_intent": "clarify_intent",
             END: END,
         },

@@ -90,3 +90,42 @@ agents:
       - 在对话中保持上下文连贯性，理解用户的多轮回复
     system_prompt_path: "config/prompts/appointment_prompt.txt"  # 可选：从文件加载提示词
 
+  # 健康事件记录智能体
+  health_event_agent:
+    name: "健康事件记录智能体"
+    description: "负责处理用户健康事件相关的请求，包括记录、查询和更新健康事件数据"
+    llm:
+      # model: 不指定则使用环境变量中的 LLM_MODEL（deepseek-v3-2-251201）
+      temperature: 0.0
+    tools:
+      - record_health_event
+      - query_health_event
+      - update_health_event
+    system_prompt_path: "config/prompts/modules/health_event/role.txt"  # 使用模块化提示词
+
+  # 用药记录智能体
+  medication_agent:
+    name: "用药记录智能体"
+    description: "负责处理用户用药相关的请求，包括记录、查询和更新用药数据"
+    llm:
+      # model: 不指定则使用环境变量中的 LLM_MODEL（deepseek-v3-2-251201）
+      temperature: 0.0
+    tools:
+      - record_medication
+      - query_medication
+      - update_medication
+    system_prompt_path: "config/prompts/modules/medication/role.txt"  # 使用模块化提示词
+
+  # 症状记录智能体
+  symptom_agent:
+    name: "症状记录智能体"
+    description: "负责处理用户症状相关的请求，包括记录、查询和更新症状数据"
+    llm:
+      # model: 不指定则使用环境变量中的 LLM_MODEL（deepseek-v3-2-251201）
+      temperature: 0.0
+    tools:
+      - record_symptom
+      - query_symptom
+      - update_symptom
+    system_prompt_path: "config/prompts/modules/symptom/role.txt"  # 使用模块化提示词
+

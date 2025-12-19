@@ -60,4 +60,3 @@ alembic/versions/*.pyc
 Thumbs.db
 
 .env copy
-.env copy

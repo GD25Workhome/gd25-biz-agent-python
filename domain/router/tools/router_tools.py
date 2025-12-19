@@ -30,13 +30,25 @@ INTENT_IDENTIFICATION_PROMPT_FALLBACK = """你是一个智能路由助手，负�
    - 关键词：预约、复诊、挂号、就诊、看病、门诊、预约医生、预约时间、取消预约
    - 示例："我想预约复诊"、"查询我的预约"、"取消预约"、"帮我挂个号"
 
-3. unclear: 意图不明确，需要进一步澄清
-   - 当用户的消息无法明确归类到上述两种意图时
+3. health_event: 用户想要记录、查询或管理健康事件（体检、检查、手术等）
+   - 关键词：体检、检查、手术、疫苗接种、健康事件、记录体检、查询体检
+   - 示例："我想记录体检"、"查询我的体检记录"、"记录一次检查"、"疫苗接种"
+
+4. medication: 用户想要记录、查询或管理用药信息
+   - 关键词：用药、药物、吃药、服药、用药记录、查询用药、记录用药
+   - 示例："我想记录用药"、"查询我的用药记录"、"我吃了阿司匹林"、"记录药物"
+
+5. symptom: 用户想要记录、查询或管理症状信息
+   - 关键词：症状、头痛、发热、咳嗽、不舒服、记录症状、查询症状
+   - 示例："我头痛"、"记录症状"、"查询我的症状记录"、"我发烧了"
+
+6. unclear: 意图不明确，需要进一步澄清
+   - 当用户的消息无法明确归类到上述意图时
    - 示例："你好"、"在吗"、"有什么功能"、"谢谢"
 
 请分析用户消息和对话历史，返回JSON格式的意图识别结果：
 {{
-    "intent_type": "意图类型（blood_pressure/appointment/unclear）",
+    "intent_type": "意图类型（blood_pressure/appointment/health_event/medication/symptom/unclear）",
     "confidence": 置信度（0.0-1.0之间的浮点数）,
     "entities": {{}},
     "need_clarification": 是否需要澄清（true/false）,
@@ -46,7 +58,7 @@ INTENT_IDENTIFICATION_PROMPT_FALLBACK = """你是一个智能路由助手，负�
 规则：
 - 如果意图明确且置信度>0.8，设置need_clarification=false
 - 如果意图不明确（置信度<0.8），设置need_clarification=true
-- 如果用户同时提及多个意图，按优先级选择（优先级：appointment > blood_pressure）
+- 如果用户同时提及多个意图，按优先级选择（优先级：appointment > health_event > medication > symptom > blood_pressure）
 - 如果用户的消息很短（如"你好"、"在吗"），且当前有活跃的智能体，可能继续当前意图
 - 如果对话历史中有明确的意图上下文，应该考虑上下文信息
 """
@@ -141,7 +153,7 @@ def _parse_intent_result(llm_response: str) -> IntentResult:
         
         # 验证并创建IntentResult
         intent_type = data.get("intent_type", "unclear")
-        valid_intents = ["blood_pressure", "appointment", "unclear"]
+        valid_intents = ["blood_pressure", "appointment", "health_event", "medication", "symptom", "unclear"]
         if intent_type not in valid_intents:
             logger.warning(f"无效的意图类型: {intent_type}，使用unclear")
             intent_type = "unclear"
@@ -189,6 +201,9 @@ def identify_intent(messages: list[BaseMessage]) -> Dict[str, Any]:
     支持的意图类型：
     - blood_pressure: 血压相关（记录、查询、更新血压）
     - appointment: 预约相关（创建、查询、更新预约）
+    - health_event: 健康事件相关（记录、查询、更新健康事件）
+    - medication: 用药相关（记录、查询、更新用药）
+    - symptom: 症状相关（记录、查询、更新症状）
     - unclear: 意图不明确
     
     Args:
@@ -298,13 +313,16 @@ CLARIFY_INTENT_PROMPT_FALLBACK = """你是一个友好的助手，当用户的�
 系统支持的功能：
 1. 记录血压：帮助用户记录、查询和管理血压数据（收缩压、舒张压、心率等）
 2. 预约复诊：帮助用户创建、查询和管理预约（科室、时间、医生等）
+3. 记录健康事件：帮助用户记录、查询和管理健康事件（体检、检查、手术、疫苗接种等）
+4. 记录用药：帮助用户记录、查询和管理用药信息（药物名称、剂量、频率等）
+5. 记录症状：帮助用户记录、查询和管理症状信息（症状描述、严重程度、持续时间等）
 
 用户消息: {query}
 
 请生成一个友好的澄清问题，引导用户说明他们的具体需求。
 **重要要求**：
-- 澄清问题必须明确提到两种功能：记录血压、预约复诊
-- 问题应该简洁明了，不超过100字
+- 澄清问题必须明确提到所有功能：记录血压、预约复诊、记录健康事件、记录用药、记录症状
+- 问题应该简洁明了，不超过150字
 - 使用友好、专业的语言
 - 不要使用技术术语，使用用户容易理解的语言
 """
@@ -350,10 +368,11 @@ def clarify_intent(query: str) -> str:
         clarification = clarification.strip()
         
         # 验证澄清问题是否包含关键功能
-        if "血压" not in clarification and "预约" not in clarification:
+        key_terms = ["血压", "预约", "健康事件", "用药", "症状"]
+        if not any(term in clarification for term in key_terms):
             logger.warning(f"生成的澄清问题可能不完整: {clarification}")
             # 如果生成的澄清问题不包含关键功能，使用默认问题
-            clarification = "抱歉，我没有理解您的意图。请告诉我您是想记录血压、预约复诊，还是需要其他帮助？"
+            clarification = "抱歉，我没有理解您的意图。请告诉我您是想记录血压、预约复诊、记录健康事件、记录用药、记录症状，还是需要其他帮助？"
         
         logger.info(f"生成澄清问题: {clarification}")
         
@@ -362,6 +381,6 @@ def clarify_intent(query: str) -> str:
     except Exception as e:
         logger.error(f"生成澄清问题失败: {str(e)}", exc_info=True)
         # 返回默认澄清问题
-        default_clarification = "抱歉，我没有理解您的意图。请告诉我您是想记录血压、预约复诊，还是需要其他帮助？"
+        default_clarification = "抱歉，我没有理解您的意图。请告诉我您是想记录血压、预约复诊、记录健康事件、记录用药、记录症状，还是需要其他帮助？"
         return default_clarification
 

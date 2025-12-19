@@ -25,6 +25,9 @@ from infrastructure.database.models import (
     AppointmentStatus,
     LlmCallLog,
     LlmCallMessage,
+    HealthEventRecord,
+    MedicationRecord,
+    SymptomRecord,
 )
 
 # this is the Alembic Config object, which provides
