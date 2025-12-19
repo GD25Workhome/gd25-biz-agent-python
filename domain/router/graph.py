@@ -1,23 +1,25 @@
 """
 路由图构建
 """
-import json
 import logging
 import re
-import uuid
 from typing import Optional, Dict, Any
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.store.base import BaseStore
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
+from langchain_core.messages import SystemMessage, HumanMessage
 from psycopg_pool import AsyncConnectionPool
 
 from domain.router.state import RouterState, BloodPressureForm
 from domain.router.node import route_node, clarify_intent_node
 from domain.agents.factory import AgentFactory
-from domain.tools.blood_pressure.record import record_blood_pressure
+from infrastructure.prompts.manager import PromptManager
+from infrastructure.observability.llm_logger import LlmLogContext
 
 logger = logging.getLogger(__name__)
+
+# 提示词管理器实例（单例）
+_prompt_manager = PromptManager()
 
 
 def create_router_graph(
@@ -104,6 +106,8 @@ def create_router_graph(
     def _build_bp_context_hint(user_id: str, form: BloodPressureForm) -> str:
         """
         生成血压表单上下文提示，列出已收集与待收集字段。
+        
+        注意：此函数保留用于fallback，优先使用PromptManager构建提示词。
         """
         collected = []
         missing = []
@@ -168,117 +172,98 @@ def create_router_graph(
                 for msg in messages
             )
             if user_id and not has_context:
-                # 根据不同智能体构建上下文提示
-                if agent_name == "blood_pressure_agent":
-                    hint_content = _build_bp_context_hint(user_id, bp_form)
-                else:
-                    hint_content = (
-                        f"系统提供的用户ID：{user_id}。"
-                        "调用工具时直接使用该 user_id，无需向用户索取。"
-                    )
-                
-                system_hint = SystemMessage(content=hint_content)
-                messages = [system_hint, *messages]
-                logger.info(f"[AGENT_HINT] 注入系统提示: {hint_content}")
-            
-            # 针对血压智能体做显式槽位校验与直接动作
-            if agent_name == "blood_pressure_agent":
-                missing_fields = []
-                if "systolic" not in bp_form:
-                    missing_fields.append("收缩压")
-                if "diastolic" not in bp_form:
-                    missing_fields.append("舒张压")
-                
-                if missing_fields:
-                    # 缺少必填字段，直接生成追问，避免重复询问已提供字段
-                    ask_text = (
-                        f"我来帮您记录血压数据。已记录信息：{_build_bp_context_hint(user_id or '未知用户', bp_form)}。"
-                        f"缺少字段：{'、'.join(missing_fields)}。请补充以上缺失项。"
-                    )
-                    messages = [*messages, AIMessage(content=ask_text)]
-                    logger.info(f"[BP_SLOT] 缺少必填字段，生成追问: {ask_text}")
-                    
-                    state.update({
-                        "messages": messages,
-                        "current_agent": "blood_pressure_agent",
-                        "need_reroute": True,
-                    })
-                    
-                    return state
-                
-                # 必填字段齐全，直接调用工具，避免 LLM 重复询问
+                # 使用PromptManager构建用户信息提示
                 try:
-                    parsed_user_id = _normalize_user_id(user_id)
-                    if parsed_user_id is None:
-                        err_text = (
-                            "系统未能获取有效的用户ID，无法写入血压记录。"
-                            "请检查登录状态或联系管理员处理。"
+                    # 构建上下文数据
+                    context = {"user_id": user_id}
+                    
+                    if agent_name == "blood_pressure_agent":
+                        # 血压智能体需要表单信息
+                        collected = []
+                        missing = []
+                        if "systolic" in bp_form:
+                            collected.append(f"收缩压={bp_form['systolic']}")
+                        else:
+                            missing.append("收缩压")
+                        if "diastolic" in bp_form:
+                            collected.append(f"舒张压={bp_form['diastolic']}")
+                        else:
+                            missing.append("舒张压")
+                        if "heart_rate" in bp_form:
+                            collected.append(f"心率={bp_form['heart_rate']}")
+                        if "record_time" in bp_form:
+                            collected.append(f"记录时间={bp_form['record_time']}")
+                        if "notes" in bp_form:
+                            collected.append("备注已填写")
+                        
+                        context["collected_fields"] = "；".join(collected) if collected else "无"
+                        context["missing_fields"] = "、".join(missing) if missing else "无（必填项已齐全，可直接调用 record_blood_pressure）"
+                    
+                    # 使用PromptManager渲染user_info模块
+                    user_info_prompt = _prompt_manager.render(
+                        agent_key=agent_name,
+                        context=context,
+                        include_modules=["user_info"]
+                    )
+                    
+                    if user_info_prompt:
+                        system_hint = SystemMessage(content=user_info_prompt)
+                        messages = [system_hint, *messages]
+                        logger.info(f"[AGENT_HINT] 使用PromptManager注入系统提示: {agent_name}")
+                    else:
+                        # 如果PromptManager返回空，使用fallback
+                        logger.warning(f"PromptManager返回空提示词，使用fallback: {agent_name}")
+                        if agent_name == "blood_pressure_agent":
+                            hint_content = _build_bp_context_hint(user_id, bp_form)
+                        else:
+                            hint_content = (
+                                f"系统提供的用户ID：{user_id}。"
+                                "调用工具时直接使用该 user_id，无需向用户索取。"
+                            )
+                        system_hint = SystemMessage(content=hint_content)
+                        messages = [system_hint, *messages]
+                        logger.info(f"[AGENT_HINT] 使用fallback注入系统提示: {agent_name}")
+                        
+                except (FileNotFoundError, ValueError) as e:
+                    # 如果模板不存在，使用fallback
+                    logger.warning(f"提示词模板加载失败，使用fallback: {agent_name}, 错误: {str(e)}")
+                    if agent_name == "blood_pressure_agent":
+                        hint_content = _build_bp_context_hint(user_id, bp_form)
+                    else:
+                        hint_content = (
+                            f"系统提供的用户ID：{user_id}。"
+                            "调用工具时直接使用该 user_id，无需向用户索取。"
                         )
-                        messages = [*messages, AIMessage(content=err_text)]
-                        logger.error("[BP_TOOL] 用户ID无效，已跳过工具调用")
-                        state.update({
-                            "messages": messages,
-                            "current_agent": "blood_pressure_agent",
-                            "need_reroute": False,
-                        })
-                        return state
-
-                    tool_args: Dict[str, Any] = {
-                        "user_id": parsed_user_id,
-                        "systolic": int(bp_form["systolic"]),
-                        "diastolic": int(bp_form["diastolic"]),
-                    }
-                    if "heart_rate" in bp_form:
-                        tool_args["heart_rate"] = int(bp_form["heart_rate"])
-                    if "record_time" in bp_form:
-                        tool_args["record_time"] = bp_form["record_time"]
-                    if "notes" in bp_form:
-                        tool_args["notes"] = bp_form["notes"]
-                    
-                    logger.info(f"[BP_TOOL] 调用 record_blood_pressure 参数: {tool_args}")
-                    
-                    tool_result = await record_blood_pressure.ainvoke(tool_args)
-                    
-                    tool_call_id = f"record_bp_{uuid.uuid4().hex[:8]}"
-                    ai_call = AIMessage(
-                        content="",
-                        tool_calls=[{
-                            "id": tool_call_id,
-                            "name": "record_blood_pressure",
-                            "args": tool_args,
-                            "type": "tool_call",
-                        }]
-                    )
-                    tool_msg = ToolMessage(
-                        content=tool_result,
-                        tool_call_id=tool_call_id,
-                        name="record_blood_pressure"
-                    )
-                    final_ai = AIMessage(content=f"已为您记录血压：{tool_result}")
-                    
-                    messages = [*messages, ai_call, tool_msg, final_ai]
-                    
-                    logger.info(f"[BP_TOOL] 调用成功，结果: {tool_result}")
-                    
-                    state.update({
-                        "messages": messages,
-                        "current_agent": "blood_pressure_agent",
-                        "need_reroute": False,
-                    })
-                    
-                    return state
-                except Exception as tool_err:
-                    err_text = f"记录血压失败，请稍后重试或检查输入。错误信息：{tool_err}"
-                    messages = [*messages, AIMessage(content=err_text)]
-                    logger.error(f"[BP_TOOL] 调用失败: {tool_err}", exc_info=True)
-                    state.update({
-                        "messages": messages,
-                        "current_agent": "blood_pressure_agent",
-                        "need_reroute": False,
-                    })
-                    return state
+                    system_hint = SystemMessage(content=hint_content)
+                    messages = [system_hint, *messages]
+                    logger.info(f"[AGENT_HINT] 使用fallback注入系统提示: {agent_name}")
             
-            # 调用实际智能体（其他智能体或血压已走 LLM 流程）
+            # 直接调用 Agent，由 LLM 决定如何回复和是否调用工具
+            # 不再进行硬编码的槽位校验和工具调用，完全由 LLM 根据系统提示词来决策
+            session_id = state.get("session_id")
+            logger.info(
+                f"[AGENT_INVOKE] 调用智能体: {agent_name}, "
+                f"session_id={session_id}, user_id={user_id}, "
+                f"messages_count={len(messages)}"
+            )
+            
+            # 构建日志上下文，用于 LLM 调用日志
+            log_context = LlmLogContext(
+                session_id=session_id,
+                user_id=user_id,
+                agent_key=agent_name,
+                trace_id=state.get("trace_id"),
+                conversation_id=session_id  # 使用 session_id 作为 conversation_id
+            )
+            
+            # 注意：由于 Agent 在创建时已经创建了 LLM 实例，我们无法在运行时修改其日志上下文
+            # 但日志回调处理器会在调用时自动记录，只是缺少上下文信息
+            # 这里记录日志，说明即将调用 Agent（可能会触发 LLM 调用）
+            logger.info(
+                f"[AGENT_LLM] 即将调用智能体，可能会触发LLM调用: {agent_name}, "
+                f"session_id={session_id}, user_id={user_id}"
+            )
+            
             result = await agent_node.ainvoke({"messages": messages})
             
             # 保留路由状态中的关键字段，防止下游节点丢失上下文

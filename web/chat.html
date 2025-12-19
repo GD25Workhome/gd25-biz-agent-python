@@ -8,9 +8,10 @@
     body { font-family: Arial, sans-serif; background: #f7f7f7; margin: 0; padding: 0; }
     .container { max-width: 960px; margin: 32px auto; background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
     h1 { margin-top: 0; }
-    .form-row { display: flex; gap: 12px; margin-bottom: 12px; }
+    .form-row { display: flex; gap: 12px; margin-bottom: 12px; align-items: center; }
     .form-row label { min-width: 80px; font-weight: bold; }
     .form-row input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 8px; }
+    .form-row input[readonly] { background: #f5f5f5; cursor: not-allowed; }
     textarea { width: 100%; min-height: 100px; padding: 12px; border-radius: 8px; border: 1px solid #ddd; resize: vertical; }
     .actions { margin-top: 12px; display: flex; gap: 12px; }
     button { padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
@@ -22,6 +23,34 @@
     .assistant { background: #ecfdf3; }
     .meta { color: #666; font-size: 12px; margin-bottom: 4px; }
     .error { color: #b91c1c; margin-top: 8px; }
+    
+    /* 用户选择弹窗样式 */
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+    .modal-content { background: #fff; margin: 5% auto; padding: 24px; border-radius: 12px; width: 80%; max-width: 800px; max-height: 80vh; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .modal-header h2 { margin: 0; }
+    .close { font-size: 28px; font-weight: bold; color: #aaa; cursor: pointer; }
+    .close:hover { color: #000; }
+    
+    /* 用户列表样式 */
+    .user-list { margin-bottom: 20px; }
+    .user-item { padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+    .user-item:hover { background: #f5f5f5; }
+    .user-item.selected { background: #e0f2fe; border-color: #2563eb; }
+    .user-info { flex: 1; }
+    .user-info strong { display: block; margin-bottom: 4px; }
+    .user-info span { color: #666; font-size: 12px; }
+    .user-actions { display: flex; gap: 8px; }
+    .user-actions button { padding: 6px 12px; font-size: 12px; }
+    
+    /* 用户表单样式 */
+    .user-form { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 20px; background: #fafafa; }
+    .user-form h3 { margin-top: 0; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; margin-bottom: 4px; font-weight: bold; }
+    .form-group input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+    .form-actions { display: flex; gap: 8px; }
+    .danger { background: #dc2626; color: #fff; }
   </style>
 </head>
 <body>
@@ -29,11 +58,8 @@
     <h1>多轮问答调试台</h1>
     <div class="form-row">
       <label for="userId">用户ID</label>
-      <input id="userId" value="demo-user">
-    </div>
-    <div class="form-row">
-      <label for="sessionId">会话ID</label>
-      <input id="sessionId">
+      <input id="userId" value="" readonly>
+      <button id="selectUserBtn" class="ghost">选择用户</button>
     </div>
     <div>
       <label for="message"><strong>输入消息</strong></label>
@@ -47,27 +73,237 @@
     <div class="log" id="log"></div>
   </div>
 
+  <!-- 用户选择弹窗 -->
+  <div id="userModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>用户管理</h2>
+        <span class="close" id="closeModal">&times;</span>
+      </div>
+      
+      <!-- 用户表单 -->
+      <div class="user-form">
+        <h3 id="formTitle">新增用户</h3>
+        <form id="userForm">
+          <input type="hidden" id="formUserId">
+          <div class="form-group">
+            <label for="formUsername">用户名 *</label>
+            <input type="text" id="formUsername" required>
+          </div>
+          <div class="form-group">
+            <label for="formPhone">手机号</label>
+            <input type="text" id="formPhone">
+          </div>
+          <div class="form-group">
+            <label for="formEmail">邮箱</label>
+            <input type="email" id="formEmail">
+          </div>
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="formIsActive" checked> 是否激活
+            </label>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="primary" id="saveBtn">保存</button>
+            <button type="button" class="ghost" id="cancelBtn">取消</button>
+          </div>
+        </form>
+      </div>
+      
+      <!-- 用户列表 -->
+      <div class="user-list">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h3 style="margin: 0;">用户列表</h3>
+          <button class="primary" id="refreshBtn">刷新</button>
+        </div>
+        <div id="userList"></div>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // API 端点自动复用当前页面的 host 与 port，方便 .env 中调整端口
-    const apiUrl = `${window.location.origin}/api/v1/chat`;
+    // API 端点
+    const chatApiUrl = `${window.location.origin}/api/v1/chat`;
+    const usersApiUrl = `${window.location.origin}/api/v1/users`;
+    
+    // DOM 元素
     const logEl = document.getElementById('log');
     const messageEl = document.getElementById('message');
     const userEl = document.getElementById('userId');
-    const sessionEl = document.getElementById('sessionId');
     const errorEl = document.getElementById('error');
     const sendBtn = document.getElementById('sendBtn');
     const resetBtn = document.getElementById('resetBtn');
+    const selectUserBtn = document.getElementById('selectUserBtn');
+    const userModal = document.getElementById('userModal');
+    const closeModal = document.getElementById('closeModal');
+    const userList = document.getElementById('userList');
+    const userForm = document.getElementById('userForm');
+    const formTitle = document.getElementById('formTitle');
+    const formUserId = document.getElementById('formUserId');
+    const formUsername = document.getElementById('formUsername');
+    const formPhone = document.getElementById('formPhone');
+    const formEmail = document.getElementById('formEmail');
+    const formIsActive = document.getElementById('formIsActive');
+    const saveBtn = document.getElementById('saveBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const refreshBtn = document.getElementById('refreshBtn');
 
-    // 在前端维护对话历史，发送时传入 conversation_history
+    // 在前端维护对话历史和会话ID
     let history = [];
+    let currentSessionId = null;
 
+    // 初始化会话
     function initSession() {
-      sessionEl.value = `session-${Date.now()}`;
+      currentSessionId = `session-${Date.now()}`;
       history = [];
       logEl.innerHTML = '';
       errorEl.textContent = '';
     }
 
+    // 显示/隐藏弹窗
+    function showModal() {
+      userModal.style.display = 'block';
+      loadUsers();
+    }
+    
+    function hideModal() {
+      userModal.style.display = 'none';
+      resetForm();
+    }
+
+    // 重置表单
+    function resetForm() {
+      formTitle.textContent = '新增用户';
+      formUserId.value = '';
+      formUsername.value = '';
+      formPhone.value = '';
+      formEmail.value = '';
+      formIsActive.checked = true;
+    }
+
+    // 加载用户列表
+    async function loadUsers() {
+      try {
+        const resp = await fetch(usersApiUrl);
+        if (!resp.ok) throw new Error('加载用户列表失败');
+        const data = await resp.json();
+        renderUserList(data.users);
+      } catch (e) {
+        alert('加载用户列表失败: ' + e.message);
+      }
+    }
+
+    // 渲染用户列表
+    function renderUserList(users) {
+      userList.innerHTML = '';
+      users.forEach(user => {
+        const item = document.createElement('div');
+        item.className = 'user-item';
+        if (user.id === userEl.value) {
+          item.classList.add('selected');
+        }
+        
+        // 安全地转义 HTML
+        const username = user.username.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        const userId = user.id.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        
+        item.innerHTML = `
+          <div class="user-info">
+            <strong>${username}</strong>
+            <span>ID: ${userId} | 手机: ${user.phone || '未设置'} | 邮箱: ${user.email || '未设置'} | ${user.is_active ? '激活' : '未激活'}</span>
+          </div>
+          <div class="user-actions">
+            <button class="ghost" data-action="select" data-user-id="${userId}" data-username="${username}">选择</button>
+            <button class="ghost" data-action="edit" data-user-data='${JSON.stringify(user)}'>编辑</button>
+            <button class="danger" data-action="delete" data-user-id="${userId}">删除</button>
+          </div>
+        `;
+        
+        // 使用事件委托处理按钮点击
+        const selectBtn = item.querySelector('[data-action="select"]');
+        const editBtn = item.querySelector('[data-action="edit"]');
+        const deleteBtn = item.querySelector('[data-action="delete"]');
+        
+        selectBtn.addEventListener('click', () => selectUser(userId, username));
+        editBtn.addEventListener('click', () => editUser(JSON.parse(editBtn.dataset.userData)));
+        deleteBtn.addEventListener('click', () => deleteUser(userId));
+        
+        userList.appendChild(item);
+      });
+    }
+
+    // 选择用户
+    function selectUser(userId, username) {
+      userEl.value = userId;
+      hideModal();
+    }
+
+    // 编辑用户
+    function editUser(user) {
+      formTitle.textContent = '编辑用户';
+      formUserId.value = user.id;
+      formUsername.value = user.username;
+      formPhone.value = user.phone || '';
+      formEmail.value = user.email || '';
+      formIsActive.checked = user.is_active;
+    }
+
+    // 删除用户
+    async function deleteUser(userId) {
+      if (!confirm('确定要删除这个用户吗？')) return;
+      try {
+        const resp = await fetch(`${usersApiUrl}/${userId}`, { method: 'DELETE' });
+        if (!resp.ok) throw new Error('删除用户失败');
+        await loadUsers();
+        if (userEl.value === userId) {
+          userEl.value = '';
+        }
+      } catch (e) {
+        alert('删除用户失败: ' + e.message);
+      }
+    }
+
+    // 保存用户（新增或更新）
+    async function saveUser(e) {
+      e.preventDefault();
+      const userData = {
+        username: formUsername.value.trim(),
+        phone: formPhone.value.trim() || null,
+        email: formEmail.value.trim() || null,
+        is_active: formIsActive.checked
+      };
+
+      try {
+        let resp;
+        if (formUserId.value) {
+          // 更新用户
+          resp = await fetch(`${usersApiUrl}/${formUserId.value}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(userData)
+          });
+        } else {
+          // 创建用户
+          resp = await fetch(usersApiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(userData)
+          });
+        }
+
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err.detail || '保存用户失败');
+        }
+
+        await loadUsers();
+        resetForm();
+      } catch (e) {
+        alert('保存用户失败: ' + e.message);
+      }
+    }
+
+    // 添加消息到日志
     function appendMessage(role, content) {
       const msg = document.createElement('div');
       msg.className = `message ${role === 'user' ? 'user' : 'assistant'}`;
@@ -76,36 +312,41 @@
       logEl.scrollTop = logEl.scrollHeight;
     }
 
+    // 发送消息
     async function sendMessage() {
       const text = messageEl.value.trim();
       const userId = userEl.value.trim();
-      const sessionId = sessionEl.value.trim();
 
       if (!text) {
         errorEl.textContent = '请输入要发送的内容';
         return;
       }
-      if (!userId || !sessionId) {
-        errorEl.textContent = '用户ID与会话ID不能为空';
+      if (!userId) {
+        errorEl.textContent = '请先选择用户';
         return;
+      }
+
+      // 如果没有会话ID，初始化一个
+      if (!currentSessionId) {
+        initSession();
       }
 
       errorEl.textContent = '';
       appendMessage('user', text);
 
-      // 将当前消息加入历史，方便下次发送时带入完整上下文
+      // 将当前消息加入历史
       history.push({ role: 'user', content: text });
       messageEl.value = '';
       sendBtn.disabled = true;
       sendBtn.textContent = '发送中...';
 
       try {
-        const resp = await fetch(apiUrl, {
+        const resp = await fetch(chatApiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             message: text,
-            session_id: sessionId,
+            session_id: currentSessionId,
             user_id: userId,
             conversation_history: history
           })
@@ -130,18 +371,34 @@
       }
     }
 
+    // 重置会话
     function resetSession() {
       initSession();
     }
 
+    // 事件监听
     sendBtn.addEventListener('click', sendMessage);
     resetBtn.addEventListener('click', resetSession);
+    selectUserBtn.addEventListener('click', showModal);
+    closeModal.addEventListener('click', hideModal);
+    cancelBtn.addEventListener('click', resetForm);
+    refreshBtn.addEventListener('click', loadUsers);
+    userForm.addEventListener('submit', saveUser);
+    
     messageEl.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
         sendMessage();
       }
     });
 
+    // 点击弹窗外部关闭
+    window.addEventListener('click', (e) => {
+      if (e.target === userModal) {
+        hideModal();
+      }
+    });
+
+    // 初始化
     initSession();
   </script>
 </body>

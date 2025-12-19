@@ -12,6 +12,10 @@ from langchain_core.language_models import BaseChatModel
 from infrastructure.llm.client import get_llm
 from domain.tools.registry import TOOL_REGISTRY
 from app.core.config import settings
+from infrastructure.prompts.manager import PromptManager
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class AgentFactory:
@@ -19,6 +23,14 @@ class AgentFactory:
     
     _config: Dict[str, Any] = {}
     _config_path: str = "config/agents.yaml"
+    _prompt_manager: Optional[PromptManager] = None
+    
+    @classmethod
+    def _get_prompt_manager(cls) -> PromptManager:
+        """获取提示词管理器实例（单例）"""
+        if cls._prompt_manager is None:
+            cls._prompt_manager = PromptManager()
+        return cls._prompt_manager
     
     @classmethod
     def load_config(cls, config_path: Optional[str] = None):
@@ -89,12 +101,30 @@ class AgentFactory:
             ]
         
         # 3. 获取系统提示词
-        system_prompt = agent_config.get("system_prompt", "")
-        # 支持从文件加载提示词
-        prompt_path = agent_config.get("system_prompt_path")
-        if prompt_path and os.path.exists(prompt_path):
-            with open(prompt_path, "r", encoding="utf-8") as f:
-                system_prompt = f.read()
+        # 优先使用新的提示词管理系统
+        system_prompt = None
+        try:
+            prompt_manager = cls._get_prompt_manager()
+            # 尝试从模板加载提示词
+            system_prompt = prompt_manager.render(
+                agent_key=agent_key,
+                context={}  # Agent创建时没有上下文，上下文在运行时注入
+            )
+            logger.debug(f"使用PromptManager加载提示词: {agent_key}")
+        except (FileNotFoundError, ValueError) as e:
+            # 如果模板不存在，回退到原有方式
+            logger.warning(f"提示词模板不存在或加载失败: {agent_key}, 错误: {str(e)}, 使用原有方式加载")
+            system_prompt = agent_config.get("system_prompt", "")
+            # 支持从文件加载提示词
+            prompt_path = agent_config.get("system_prompt_path")
+            if prompt_path and os.path.exists(prompt_path):
+                with open(prompt_path, "r", encoding="utf-8") as f:
+                    system_prompt = f.read()
+        
+        # 如果仍然没有提示词，使用空字符串
+        if not system_prompt:
+            logger.warning(f"未找到提示词配置: {agent_key}, 使用空提示词")
+            system_prompt = ""
         
         # 4. 创建 ReAct Agent
         return create_react_agent(

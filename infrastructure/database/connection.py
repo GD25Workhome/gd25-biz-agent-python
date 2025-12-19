@@ -15,6 +15,28 @@ _async_engine = None
 _async_session_factory: Optional[async_sessionmaker[AsyncSession]] = None
 
 
+def normalize_postgres_uri(uri: str) -> str:
+    """
+    规范化 PostgreSQL 连接 URI
+    
+    将 SQLAlchemy 格式（postgresql+psycopg://）转换为标准 PostgreSQL URI 格式（postgresql://）
+    psycopg_pool.AsyncConnectionPool 需要标准的 PostgreSQL URI 格式
+    
+    Args:
+        uri: 原始连接 URI
+        
+    Returns:
+        规范化后的连接 URI
+    """
+    # 将 postgresql+psycopg:// 或 postgresql+asyncpg:// 转换为 postgresql://
+    if uri.startswith("postgresql+psycopg://"):
+        return uri.replace("postgresql+psycopg://", "postgresql://", 1)
+    elif uri.startswith("postgresql+asyncpg://"):
+        return uri.replace("postgresql+asyncpg://", "postgresql://", 1)
+    # 如果已经是标准格式，直接返回
+    return uri
+
+
 async def create_db_pool() -> AsyncConnectionPool:
     """
     创建业务数据库连接池
@@ -24,11 +46,16 @@ async def create_db_pool() -> AsyncConnectionPool:
     """
     async def configure_connection(conn):
         """建立连接后设置数据库时区"""
+        # 注意：在 autocommit=False 模式下，需要提交事务
         async with conn.cursor() as cur:
             await cur.execute(f"SET timezone = '{settings.DB_TIMEZONE}';")
+            await conn.commit()
+    
+    # 规范化连接 URI，确保使用标准 PostgreSQL URI 格式
+    db_uri = normalize_postgres_uri(settings.ASYNC_DB_URI)
     
     pool = AsyncConnectionPool(
-        conninfo=settings.ASYNC_DB_URI,
+        conninfo=db_uri,
         max_size=20,
         kwargs={"autocommit": False},
         configure=configure_connection

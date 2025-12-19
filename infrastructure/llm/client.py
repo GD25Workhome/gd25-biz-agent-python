@@ -46,17 +46,18 @@ def get_llm(
     log_enabled = enable_logging if enable_logging is not None else settings.LLM_LOG_ENABLE
     
     callbacks: List[Any] = list(kwargs.pop("callbacks", []) or [])
-    if log_enabled:
-        callbacks.append(
-            LlmLogCallbackHandler(
-                context=log_context,
-                model=model or settings.LLM_MODEL,
-                temperature=resolved_temperature,
-                top_p=resolved_top_p,
-                max_tokens=resolved_max_tokens,
-                log_enabled=log_enabled,
-            )
+    # 总是添加日志回调处理器，用于控制台日志输出
+    # 数据库日志写入由 log_enabled 参数控制
+    callbacks.append(
+        LlmLogCallbackHandler(
+            context=log_context,
+            model=model or settings.LLM_MODEL,
+            temperature=resolved_temperature,
+            top_p=resolved_top_p,
+            max_tokens=resolved_max_tokens,
+            log_enabled=log_enabled,  # 控制数据库日志，但不影响控制台日志
         )
+    )
     
     # 构建参数字典，kwargs 中的参数会覆盖默认值
     params = {
