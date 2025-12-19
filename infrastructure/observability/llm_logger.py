@@ -5,12 +5,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import time
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+import httpx
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.outputs import LLMResult
 
@@ -19,6 +21,19 @@ from infrastructure.database.connection import get_async_session_factory
 from infrastructure.database.repository.llm_call_log_repository import LlmCallLogRepository
 
 logger = logging.getLogger(__name__)
+
+# 全局存储原始 API 响应（用于提取 reasoning_content）
+# key: run_id, value: 原始 API 响应字典
+_raw_api_responses: Dict[str, Dict[str, Any]] = {}
+
+
+# 注意：HTTP 拦截器的实现需要能够关联 run_id 和原始响应
+# 由于 LangChain 的 HTTP 客户端封装，直接拦截比较困难
+# 当前实现通过其他方式（如检查 response_metadata）来提取 reasoning_content
+# 如果这些方式都失败，可以考虑：
+# 1. 使用 monkey patch 拦截 httpx 的响应
+# 2. 修改 LangChain 的响应解析逻辑
+# 3. 直接调用 API（不通过 LangChain）来获取完整的响应
 
 
 @dataclass
@@ -195,11 +210,12 @@ class LlmLogCallbackHandler(BaseCallbackHandler):
         self.max_tokens = max_tokens
         self.log_enabled = log_enabled
         self._call_info: Dict[str, Dict[str, Any]] = {}
+        # 存储原始 API 响应（用于提取 reasoning_content）
+        self._raw_responses: Dict[str, Dict[str, Any]] = {}
     
     def on_llm_start(self, serialized: Dict[str, Any], prompts: List[Any], **kwargs: Any) -> None:
         """LLM 开始回调"""
-        if not self.log_enabled:
-            return
+        # 控制台日志总是打印，数据库日志由 log_enabled 控制
         run_id = str(kwargs.get("run_id") or uuid.uuid4())
         call_id = str(uuid.uuid4())
         started_at = datetime.utcnow()
@@ -235,22 +251,48 @@ class LlmLogCallbackHandler(BaseCallbackHandler):
         except Exception:
             logger.debug("提示词转存失败，继续执行", exc_info=True)
         
-        _run_in_background(_start_log(
-            call_id=call_id,
-            model=self.model,
-            temperature=self.temperature,
-            top_p=self.top_p,
-            max_tokens=self.max_tokens,
-            prompt_snapshot=prompt_snapshot,
-            context=self.context,
-            prompt_messages=prompt_messages if settings.LLM_LOG_ENABLE else None,
-            started_at=started_at,
-        ))
+        # 打印请求日志到控制台
+        context_info = []
+        if self.context:
+            if self.context.session_id:
+                context_info.append(f"session_id={self.context.session_id}")
+            if self.context.user_id:
+                context_info.append(f"user_id={self.context.user_id}")
+            if self.context.agent_key:
+                context_info.append(f"agent_key={self.context.agent_key}")
+            if self.context.trace_id:
+                context_info.append(f"trace_id={self.context.trace_id}")
+        
+        context_str = ", ".join(context_info) if context_info else "无上下文"
+        
+        logger.info(
+            f"[LLM请求开始] call_id={call_id}, model={self.model}, "
+            f"temperature={self.temperature}, top_p={self.top_p}, "
+            f"max_tokens={self.max_tokens}, {context_str}"
+        )
+        
+        logger.info(f"[LLM请求提示词] call_id={call_id}\n{prompt_snapshot}")
+        # 打印提示词内容（截断过长内容以便阅读）
+        # prompt_preview = prompt_snapshot[:500] + "..." if len(prompt_snapshot) > 500 else prompt_snapshot
+        # logger.info(f"[LLM请求提示词] call_id={call_id}\n{prompt_preview}")
+        
+        # 只在启用数据库日志时写入数据库
+        if self.log_enabled:
+            _run_in_background(_start_log(
+                call_id=call_id,
+                model=self.model,
+                temperature=self.temperature,
+                top_p=self.top_p,
+                max_tokens=self.max_tokens,
+                prompt_snapshot=prompt_snapshot,
+                context=self.context,
+                prompt_messages=prompt_messages if settings.LLM_LOG_ENABLE else None,
+                started_at=started_at,
+            ))
     
     def on_llm_end(self, response: LLMResult, **kwargs: Any) -> None:
         """LLM 成功结束回调"""
-        if not self.log_enabled:
-            return
+        # 控制台日志总是打印，数据库日志由 log_enabled 控制
         run_id = str(kwargs.get("run_id") or "")
         info = self._call_info.pop(run_id, None)
         if not info:
@@ -262,22 +304,134 @@ class LlmLogCallbackHandler(BaseCallbackHandler):
         if started_ts:
             latency_ms = int((time.monotonic() - started_ts) * 1000)
         
-        # 提取响应内容
+        # 提取响应内容和思考过程
         response_text = None
+        reasoning_content = None  # DeepSeek R1 的思考过程
         response_messages: List[Dict[str, Any]] = []
         try:
             generations = response.generations if hasattr(response, "generations") else []
             if generations and generations[0]:
-                content = getattr(generations[0][0].message, "content", None)
-                if content:
-                    response_text = str(content)
+                message = generations[0][0].message
+                content = getattr(message, "content", None)
+                
+                # 处理结构化内容（当使用 reasoning 参数时，content 可能是列表）
+                if isinstance(content, list):
+                    # 结构化响应：包含 reasoning 和 text 类型的块
+                    reasoning_parts = []
+                    text_parts = []
+                    for block in content:
+                        if isinstance(block, dict):
+                            block_type = block.get("type", "")
+                            if block_type == "reasoning":
+                                # 提取 reasoning 内容
+                                summary = block.get("summary", [])
+                                if summary:
+                                    for summary_item in summary:
+                                        if isinstance(summary_item, dict):
+                                            reasoning_parts.append(summary_item.get("text", ""))
+                                        else:
+                                            reasoning_parts.append(str(summary_item))
+                                # 如果没有 summary，尝试直接获取 text
+                                if not reasoning_parts and "text" in block:
+                                    reasoning_parts.append(str(block.get("text", "")))
+                            elif block_type == "text":
+                                text_parts.append(str(block.get("text", "")))
+                        else:
+                            # 如果不是字典，直接作为文本处理
+                            text_parts.append(str(block))
+                    
+                    if reasoning_parts:
+                        reasoning_content = "\n".join(reasoning_parts)
+                    if text_parts:
+                        response_text = "\n".join(text_parts)
+                    elif not text_parts and not reasoning_parts:
+                        # 如果都没有，将整个列表转为字符串
+                        response_text = str(content)
+                elif content:
+                    # 字符串内容：可能包含 <think> 标签
+                    content_str = str(content)
+                    
+                    # 尝试从 <think> 标签中提取思考过程
+                    think_pattern = r'<think>(.*?)</think>'
+                    think_matches = re.findall(think_pattern, content_str, re.DOTALL)
+                    if think_matches:
+                        reasoning_content = "\n".join(think_matches)
+                        # 移除 <think> 标签，保留最终答案
+                        response_text = re.sub(think_pattern, "", content_str, flags=re.DOTALL).strip()
+                    else:
+                        response_text = content_str
+                
+                # 如果还没有找到思考过程，尝试从 additional_kwargs 中查找
+                if not reasoning_content and hasattr(message, "additional_kwargs"):
+                    additional_kwargs = getattr(message, "additional_kwargs", {}) or {}
+                    # 检查常见的思考过程字段名
+                    reasoning_content = (
+                        additional_kwargs.get("reasoning") or
+                        additional_kwargs.get("thinking") or
+                        additional_kwargs.get("thought") or
+                        additional_kwargs.get("reasoning_content") or
+                        additional_kwargs.get("thinking_content")
+                    )
+                    # 如果没有找到，检查是否有其他可能的字段
+                    if not reasoning_content:
+                        for key in additional_kwargs.keys():
+                            if "reason" in key.lower() or "think" in key.lower() or "thought" in key.lower():
+                                reasoning_content = additional_kwargs.get(key)
+                                break
+                
+                # 如果还没有找到思考过程，尝试从存储的原始响应中提取
+                # 火山引擎 API 返回的 reasoning_content 在 message.reasoning_content 字段中
+                # 但 LangChain 没有将其传递到 AIMessage 对象中
+                # 我们需要通过其他方式获取，比如检查 response_metadata 或使用自定义 HTTP 客户端
+                # 这里先尝试从 response_metadata 中查找
+                if not reasoning_content and hasattr(message, "response_metadata"):
+                    response_metadata = getattr(message, "response_metadata", {}) or {}
+                    # 检查是否有原始响应数据
+                    if isinstance(response_metadata, dict):
+                        # 检查是否有 raw_response 或类似的字段
+                        raw_response = response_metadata.get("raw_response") or response_metadata.get("response")
+                        if isinstance(raw_response, dict):
+                            # 检查 choices 中的 message.reasoning_content
+                            choices = raw_response.get("choices", [])
+                            if choices and len(choices) > 0:
+                                choice = choices[0]
+                                message_data = choice.get("message", {})
+                                if isinstance(message_data, dict) and "reasoning_content" in message_data:
+                                    reasoning_content = message_data.get("reasoning_content")
+                                    logger.debug(f"从 response_metadata.raw_response 中提取到 reasoning_content")
+                
+                # 如果仍然没有找到，尝试从全局存储的原始响应中提取
+                if not reasoning_content:
+                    raw_response = _raw_api_responses.get(run_id)
+                    if raw_response:
+                        try:
+                            choices = raw_response.get("choices", [])
+                            if choices and len(choices) > 0:
+                                choice = choices[0]
+                                message_data = choice.get("message", {})
+                                if isinstance(message_data, dict) and "reasoning_content" in message_data:
+                                    reasoning_content = message_data.get("reasoning_content")
+                                    logger.debug(f"从全局存储的原始响应中提取到 reasoning_content")
+                                    # 清理已使用的响应
+                                    _raw_api_responses.pop(run_id, None)
+                        except Exception as e:
+                            logger.debug(f"从原始响应提取 reasoning_content 失败: {str(e)}")
+                
+                # 记录响应消息
+                if response_text:
                     response_messages.append({
-                        "role": getattr(generations[0][0].message, "type", "assistant"),
+                        "role": getattr(message, "type", "assistant"),
                         "content": response_text,
                         "token_estimate": _estimate_tokens(response_text),
                     })
-        except Exception:
-            logger.debug("响应内容解析失败", exc_info=True)
+                    if reasoning_content:
+                        response_messages.append({
+                            "role": "reasoning",
+                            "content": reasoning_content,
+                            "token_estimate": _estimate_tokens(reasoning_content),
+                        })
+        except Exception as e:
+            logger.debug(f"响应内容解析失败: {str(e)}", exc_info=True)
         
         # Token 统计
         prompt_tokens = None
@@ -292,20 +446,59 @@ class LlmLogCallbackHandler(BaseCallbackHandler):
         except Exception:
             logger.debug("token 统计解析失败", exc_info=True)
         
-        _run_in_background(_finish_log(
-            call_id=call_id,
-            response_snapshot=response_text,
-            latency_ms=latency_ms,
-            prompt_tokens=prompt_tokens,
-            completion_tokens=completion_tokens,
-            total_tokens=total_tokens,
-            response_messages=response_messages if settings.LLM_LOG_ENABLE else None,
-        ))
+        # 打印响应日志到控制台
+        token_info = []
+        if prompt_tokens is not None:
+            token_info.append(f"prompt_tokens={prompt_tokens}")
+        if completion_tokens is not None:
+            token_info.append(f"completion_tokens={completion_tokens}")
+        if total_tokens is not None:
+            token_info.append(f"total_tokens={total_tokens}")
+        
+        token_str = ", ".join(token_info) if token_info else "token信息不可用"
+        latency_str = f"{latency_ms}ms" if latency_ms is not None else "未知"
+        
+        logger.info(
+            f"[LLM响应完成] call_id={call_id}, latency={latency_str}, {token_str}"
+        )
+        
+        # 打印思考过程（如果存在）
+        if reasoning_content:
+            reasoning_str = str(reasoning_content)
+            logger.info(f"[LLM思考过程] call_id={call_id}\n{reasoning_str}")
+        else:
+            logger.debug(f"[LLM思考过程] call_id={call_id}, 未检测到思考过程")
+        
+        # 打印最终响应内容
+        if response_text:
+            logger.info(f"[LLM响应内容] call_id={call_id}\n{response_text}")
+        else:
+            logger.warning(f"[LLM响应内容] call_id={call_id}, 响应内容为空")
+        
+        # 构建包含思考过程的响应快照（用于数据库日志）
+        response_snapshot = response_text
+        if reasoning_content and response_text:
+            # 将思考过程和最终答案组合在一起
+            response_snapshot = f"[思考过程]\n{reasoning_content}\n\n[最终答案]\n{response_text}"
+        elif reasoning_content:
+            # 只有思考过程，没有最终答案
+            response_snapshot = f"[思考过程]\n{reasoning_content}"
+        
+        # 只在启用数据库日志时写入数据库
+        if self.log_enabled:
+            _run_in_background(_finish_log(
+                call_id=call_id,
+                response_snapshot=response_snapshot,
+                latency_ms=latency_ms,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                total_tokens=total_tokens,
+                response_messages=response_messages if settings.LLM_LOG_ENABLE else None,
+            ))
     
     def on_llm_error(self, error: Exception, **kwargs: Any) -> None:
         """LLM 失败回调"""
-        if not self.log_enabled:
-            return
+        # 控制台日志总是打印，数据库日志由 log_enabled 控制
         run_id = str(kwargs.get("run_id") or "")
         info = self._call_info.pop(run_id, None)
         if not info:
@@ -316,9 +509,19 @@ class LlmLogCallbackHandler(BaseCallbackHandler):
         if started_ts:
             latency_ms = int((time.monotonic() - started_ts) * 1000)
         
-        _run_in_background(_fail_log(
-            call_id=call_id,
-            error_code=error.__class__.__name__,
-            error_message=str(error),
-            latency_ms=latency_ms,
-        ))
+        # 打印错误日志到控制台
+        latency_str = f"{latency_ms}ms" if latency_ms is not None else "未知"
+        logger.error(
+            f"[LLM调用失败] call_id={call_id}, error_code={error.__class__.__name__}, "
+            f"error_message={str(error)}, latency={latency_str}",
+            exc_info=True
+        )
+        
+        # 只在启用数据库日志时写入数据库
+        if self.log_enabled:
+            _run_in_background(_fail_log(
+                call_id=call_id,
+                error_code=error.__class__.__name__,
+                error_message=str(error),
+                latency_ms=latency_ms,
+            ))

@@ -56,7 +56,7 @@ class Settings(BaseSettings):
     LLM_MAX_TOKENS_DEFAULT: Optional[int] = None
     LLM_LOG_ENABLE: bool = False
     LLM_LOG_SAMPLE_RATE: float = 1.0
-    LLM_LOG_MAX_TEXT_LENGTH: int = 4000
+    LLM_LOG_MAX_TEXT_LENGTH: int = 400000
     
     # 路由配置
     INTENT_CONFIDENCE_THRESHOLD: float = 0.8

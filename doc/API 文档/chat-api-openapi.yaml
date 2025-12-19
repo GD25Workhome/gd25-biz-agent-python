@@ -1,0 +1,217 @@
+openapi: 3.0.3
+info:
+  title: LangGraphFlow Multi-Agent Router API
+  description: |
+    多智能体路由系统 API 文档
+    
+    本 API 提供智能对话服务，支持多轮对话、意图识别和智能体路由功能。
+    系统能够根据用户输入自动识别意图，并路由到相应的专业智能体进行处理。
+  version: 2.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8000
+    description: 本地开发环境
+  - url: http://0.0.0.0:8000
+    description: 生产环境（示例）
+  - url: https://api.example.com
+    description: 生产环境（示例）
+
+tags:
+  - name: chat
+    description: 聊天对话相关接口
+
+paths:
+  /api/v1/chat:
+    post:
+      tags:
+        - chat
+      summary: 聊天对话接口
+      description: |
+        处理用户聊天消息，支持多轮对话。
+        
+        功能特性：
+        - 支持单轮和多轮对话
+        - 自动识别用户意图（如：血压记录、预约管理等）
+        - 自动路由到对应的专业智能体
+        - 返回智能体的回复和路由信息
+        
+        使用说明：
+        - `session_id` 用于标识同一会话，相同会话的对话历史会被保留
+        - `conversation_history` 为可选参数，如果不提供，系统会从会话历史中恢复
+        - 系统会自动识别意图并选择合适的智能体处理请求
+      operationId: chat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+            examples:
+              single_turn:
+                summary: 单轮对话示例
+                description: 简单的单轮对话，不包含对话历史
+                value:
+                  message: "我想记录血压，收缩压120，舒张压80"
+                  session_id: "session_123456"
+                  user_id: "user_789"
+              multi_turn:
+                summary: 多轮对话示例
+                description: 包含对话历史的多轮对话
+                value:
+                  message: "帮我预约下周三下午的复诊"
+                  session_id: "session_123456"
+                  user_id: "user_789"
+                  conversation_history:
+                    - role: "user"
+                      content: "你好"
+                    - role: "assistant"
+                      content: "您好！我是您的健康助手，有什么可以帮您的吗？"
+                    - role: "user"
+                      content: "我想预约复诊"
+                    - role: "assistant"
+                      content: "好的，请告诉我您想预约的时间。"
+      responses:
+        '200':
+          description: 成功响应
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+              examples:
+                success_with_intent:
+                  summary: 成功识别意图
+                  description: 成功识别意图并路由到对应智能体
+                  value:
+                    response: "成功记录血压：收缩压 120 mmHg，舒张压 80 mmHg"
+                    session_id: "session_123456"
+                    intent: "blood_pressure"
+                    agent: "blood_pressure_agent"
+                success_without_intent:
+                  summary: 未识别明确意图
+                  description: 无法识别明确意图时的响应
+                  value:
+                    response: "抱歉，我无法理解您的问题。请告诉我您需要什么帮助？"
+                    session_id: "session_123456"
+                    intent: null
+                    agent: null
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: "请求参数验证失败：message 字段不能为空"
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                router_not_initialized:
+                  summary: 路由图未初始化
+                  value:
+                    detail: "路由图未初始化"
+                processing_error:
+                  summary: 处理请求时出错
+                  value:
+                    detail: "处理请求时出错: 连接超时"
+
+components:
+  schemas:
+    ChatMessage:
+      type: object
+      description: 聊天消息模型
+      required:
+        - role
+        - content
+      properties:
+        role:
+          type: string
+          description: 消息角色
+          enum:
+            - user
+            - assistant
+            - system
+          example: "user"
+        content:
+          type: string
+          description: 消息内容
+          example: "我想记录血压，收缩压120，舒张压80"
+    
+    ChatRequest:
+      type: object
+      description: 聊天请求模型
+      required:
+        - message
+        - session_id
+        - user_id
+      properties:
+        message:
+          type: string
+          description: 用户消息内容
+          minLength: 1
+          example: "我想记录血压，收缩压120，舒张压80"
+        session_id:
+          type: string
+          description: 会话ID，用于标识同一会话。相同会话ID的对话历史会被保留
+          example: "session_123456"
+        user_id:
+          type: string
+          description: 用户ID，用于标识用户身份
+          example: "user_789"
+        conversation_history:
+          type: array
+          description: 对话历史（可选）。如果不提供，系统会从会话历史中恢复
+          items:
+            $ref: '#/components/schemas/ChatMessage'
+          nullable: true
+          example:
+            - role: "user"
+              content: "你好"
+            - role: "assistant"
+              content: "您好！我是您的健康助手，有什么可以帮您的吗？"
+    
+    ChatResponse:
+      type: object
+      description: 聊天响应模型
+      required:
+        - response
+        - session_id
+      properties:
+        response:
+          type: string
+          description: 助手回复内容
+          example: "成功记录血压：收缩压 120 mmHg，舒张压 80 mmHg"
+        session_id:
+          type: string
+          description: 会话ID，与请求中的 session_id 相同
+          example: "session_123456"
+        intent:
+          type: string
+          description: 识别的意图。可能的值包括：blood_pressure（血压记录）、appointment（预约管理）、unclear（未明确）等
+          nullable: true
+          example: "blood_pressure"
+        agent:
+          type: string
+          description: 使用的智能体名称。如果未识别到明确意图，可能为 null
+          nullable: true
+          example: "blood_pressure_agent"
+    
+    ErrorResponse:
+      type: object
+      description: 错误响应模型
+      required:
+        - detail
+      properties:
+        detail:
+          type: string
+          description: 错误详情
+          example: "请求参数验证失败：message 字段不能为空"

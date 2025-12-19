@@ -1,0 +1,24 @@
+agent_key: router_tools
+version: 1.0.0
+description: "路由工具提示词模板"
+
+modules:
+  # 意图识别提示词
+  intent_identification:
+    type: business
+    loader: config
+    source: config/prompts/modules/router/intent_identification.txt
+    enabled: true
+  
+  # 意图澄清提示词
+  clarify_intent:
+    type: business
+    loader: config
+    source: config/prompts/modules/router/clarify_intent.txt
+    enabled: true
+
+composition:
+  order:
+    - intent_identification
+    - clarify_intent
+  separator: "\n\n"

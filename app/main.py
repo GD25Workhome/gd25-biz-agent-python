@@ -2,6 +2,7 @@
 FastAPI 应用入口
 """
 import sys
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -9,6 +10,17 @@ from pathlib import Path
 _project_root = Path(__file__).resolve().parent.parent
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
+
+# 配置日志系统
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+# 设置 uvicorn 日志级别
+logging.getLogger("uvicorn").setLevel(logging.INFO)
+logging.getLogger("uvicorn.access").setLevel(logging.INFO)
 
 import uvicorn
 from fastapi import FastAPI
@@ -112,7 +124,10 @@ async def lifespan(app: FastAPI):
         app.state.store = store
         app.state.router_graph = router_graph
         
-        print("应用启动完成")
+        # 构建访问 URL（如果 host 是 0.0.0.0，则显示为 localhost，因为浏览器无法访问 0.0.0.0）
+        display_host = "localhost" if settings.APP_HOST == "0.0.0.0" else settings.APP_HOST
+        chat_url = f"http://{display_host}:{settings.APP_PORT}/web/chat.html"
+        print(f"应用启动完成 （{chat_url}）")
         
         yield
         
