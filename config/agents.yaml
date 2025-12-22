@@ -23,6 +23,11 @@ agents:
       normal_range: "收缩压 90-140 mmHg，舒张压 60-90 mmHg"
       measurement_time_format: "YYYY-MM-DD HH:mm"
     
+    # 路由配置
+    routing:
+      node_name: "blood_pressure_agent"  # 路由图中的节点名称
+      intent_type: "blood_pressure"       # 对应的意图类型
+    
     # 降级配置（Langfuse不可用时使用）
     system_prompt_path: "config/prompts/blood_pressure_prompt.txt"  # 可选：从文件加载提示词
 
@@ -41,6 +46,11 @@ agents:
     # 提示词配置（优先使用Langfuse）
     langfuse_template: "appointment_agent_prompt"  # Langfuse模版名称
     # langfuse_template_version: "v1.0"  # 可选：指定模版版本
+    
+    # 路由配置
+    routing:
+      node_name: "appointment_agent"  # 路由图中的节点名称
+      intent_type: "appointment"      # 对应的意图类型
     
     # 降级配置（Langfuse不可用时使用）
     system_prompt_path: "config/prompts/appointment_prompt.txt"  # 可选：从文件加载提示词
@@ -61,6 +71,11 @@ agents:
     langfuse_template: "health_event_agent_prompt"  # Langfuse模版名称
     # langfuse_template_version: "v1.0"  # 可选：指定模版版本
     
+    # 路由配置
+    routing:
+      node_name: "health_event_agent"  # 路由图中的节点名称
+      intent_type: "health_event"     # 对应的意图类型
+    
     # 降级配置（Langfuse不可用时使用）
     system_prompt_path: "config/prompts/modules/health_event/role.txt"  # 使用模块化提示词
 
@@ -80,6 +95,11 @@ agents:
     langfuse_template: "medication_agent_prompt"  # Langfuse模版名称
     # langfuse_template_version: "v1.0"  # 可选：指定模版版本
     
+    # 路由配置
+    routing:
+      node_name: "medication_agent"  # 路由图中的节点名称
+      intent_type: "medication"      # 对应的意图类型
+    
     # 降级配置（Langfuse不可用时使用）
     system_prompt_path: "config/prompts/modules/medication/role.txt"  # 使用模块化提示词
 
@@ -98,6 +118,11 @@ agents:
     # 提示词配置（优先使用Langfuse）
     langfuse_template: "symptom_agent_prompt"  # Langfuse模版名称
     # langfuse_template_version: "v1.0"  # 可选：指定模版版本
+    
+    # 路由配置
+    routing:
+      node_name: "symptom_agent"  # 路由图中的节点名称
+      intent_type: "symptom"      # 对应的意图类型
     
     # 降级配置（Langfuse不可用时使用）
     system_prompt_path: "config/prompts/modules/symptom/role.txt"  # 使用模块化提示词

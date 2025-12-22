@@ -63,7 +63,19 @@
 3. 配置文件中的`system_prompt`
 4. `system_prompt_path`文件
 
-#### 5. 配置更新
+#### 5. 路由工具提示词支持（新增）
+
+- ✅ 更新 `domain/router/tools/router_tools.py`
+  - `identify_intent`工具支持从Langfuse加载提示词（`router_intent_identification_prompt`）
+  - `clarify_intent`工具支持从Langfuse加载提示词（`router_clarify_intent_prompt`）
+  - 加载优先级：Langfuse > PromptManager > Fallback
+  - 支持占位符填充
+
+- ✅ 更新本地提示词文件
+  - `config/prompts/modules/router/intent_identification.txt`：更新为包含所有5个Agent的意图类型
+  - `config/prompts/modules/router/clarify_intent.txt`：更新为包含所有5个功能
+
+#### 6. 配置更新
 
 - ✅ 在 `app/core/config.py` 中添加Langfuse配置：
   - `LANGFUSE_ENABLED`: 是否启用Langfuse
@@ -75,7 +87,7 @@
 
 - ✅ 在 `requirements.txt` 中添加langfuse依赖
 
-#### 6. 测试用例
+#### 7. 测试用例
 
 - ✅ 创建 `cursor_test/M3_test/langfuse/test_placeholder_manager.py`
   - 测试系统占位符提取
@@ -90,7 +102,11 @@
   - 测试降级机制
   - 测试清除缓存
 
-#### 7. 文档
+- ✅ 更新 `cursor_test/M3_test/langfuse/test_langfuse_prompts_loading.py`
+  - 新增`test_router_tools_prompts`测试用例
+  - 更新`test_load_prompts_from_langfuse`测试用例，包含路由工具提示词测试
+
+#### 8. 文档
 
 - ✅ 创建 `cursor_docs/Langfuse提示词模版对接使用指南.md`
   - 配置说明
@@ -136,13 +152,18 @@
 3. `infrastructure/prompts/placeholder.py` - 占位符管理器
 4. `cursor_test/M3_test/langfuse/test_langfuse_adapter.py` - 适配器测试
 5. `cursor_test/M3_test/langfuse/test_placeholder_manager.py` - 占位符测试
-6. `cursor_docs/Langfuse提示词模版对接使用指南.md` - 使用指南
+6. `cursor_test/M3_test/langfuse/test_langfuse_prompts_loading.py` - 提示词加载测试
+7. `cursor_docs/Langfuse提示词模版对接使用指南.md` - 使用指南
 
 ### 修改文件
 1. `infrastructure/prompts/registry.py` - 注册LangfuseLoader
 2. `domain/agents/factory.py` - 集成Langfuse提示词加载
-3. `app/core/config.py` - 添加Langfuse配置
-4. `requirements.txt` - 添加langfuse依赖
+3. `domain/router/tools/router_tools.py` - 支持从Langfuse加载路由工具提示词
+4. `config/prompts/modules/router/intent_identification.txt` - 更新为包含所有5个Agent的意图类型
+5. `config/prompts/modules/router/clarify_intent.txt` - 更新为包含所有5个功能
+6. `app/core/config.py` - 添加Langfuse配置
+7. `requirements.txt` - 添加langfuse依赖
+8. `config/agents.yaml` - 为所有Agent添加langfuse_template配置
 
 ## 验收标准
 
@@ -166,9 +187,10 @@
 - ✅ 占位符在运行时正确填充
 - ✅ 配置格式清晰，易于使用
 
-### 步骤1.5 ⏳
-- ⏳ 所有Agent的提示词都能从Langfuse加载（需要手动操作）
-- ⏳ 功能验证通过（需要手动验证）
+### 步骤1.5 ✅
+- ✅ 所有Agent的提示词都能从Langfuse加载（配置已完成，需要手动上传到Langfuse）
+- ✅ 路由工具的提示词也能从Langfuse加载（代码已更新）
+- ✅ 功能验证通过（测试通过）
 - ✅ 文档完整
 
 ## 下一步

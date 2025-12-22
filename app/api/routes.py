@@ -2,7 +2,7 @@
 API 路由定义
 """
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, Request, Depends
 from langchain_core.messages import HumanMessage, AIMessage
 from langgraph.checkpoint.base import BaseCheckpointSaver
@@ -343,4 +343,125 @@ async def delete_user(
         await session.rollback()
         logger.error(f"[删除用户错误] user_id={user_id}, error={str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"删除用户失败: {str(e)}")
+
+
+# ==================== Agent管理接口 ====================
+
+@router.post("/agents/{agent_key}/reload")
+async def reload_agent(agent_key: str) -> Dict[str, Any]:
+    """
+    重新加载指定Agent（热更新）
+    
+    Args:
+        agent_key: Agent键名（如 "blood_pressure_agent"）
+        
+    Returns:
+        重新加载结果
+    """
+    try:
+        from domain.agents.factory import AgentFactory
+        
+        # 检查Agent是否存在
+        if agent_key not in AgentFactory.list_agents():
+            raise HTTPException(status_code=404, detail=f"Agent不存在: {agent_key}")
+        
+        # 重新加载Agent
+        agent = AgentFactory.reload_agent(agent_key)
+        
+        logger.info(f"[Agent热更新] agent_key={agent_key}, 重新加载成功")
+        
+        return {
+            "message": "Agent重新加载成功",
+            "agent_key": agent_key,
+            "cached": AgentFactory.is_cached(agent_key)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[Agent热更新错误] agent_key={agent_key}, error={str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"重新加载Agent失败: {str(e)}")
+
+
+@router.post("/agents/reload-all")
+async def reload_all_agents() -> Dict[str, Any]:
+    """
+    重新加载所有Agent（热更新）
+    
+    Returns:
+        重新加载结果
+    """
+    try:
+        from domain.agents.factory import AgentFactory
+        
+        # 重新加载所有Agent
+        agents = AgentFactory.reload_all_agents()
+        
+        logger.info(f"[Agent热更新] 重新加载所有Agent成功, 共 {len(agents)} 个Agent")
+        
+        return {
+            "message": "所有Agent重新加载成功",
+            "agent_count": len(agents),
+            "agent_keys": list(agents.keys())
+        }
+    except Exception as e:
+        logger.error(f"[Agent热更新错误] 重新加载所有Agent失败, error={str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"重新加载所有Agent失败: {str(e)}")
+
+
+@router.get("/agents/cache/stats")
+async def get_agent_cache_stats() -> Dict[str, Any]:
+    """
+    获取Agent缓存统计信息
+    
+    Returns:
+        缓存统计信息
+    """
+    try:
+        from domain.agents.factory import AgentFactory
+        
+        stats = AgentFactory.get_cache_stats()
+        
+        return {
+            "cache_stats": stats
+        }
+    except Exception as e:
+        logger.error(f"[获取缓存统计错误] error={str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"获取缓存统计失败: {str(e)}")
+
+
+@router.delete("/agents/cache")
+async def clear_agent_cache(agent_key: Optional[str] = None) -> Dict[str, Any]:
+    """
+    清除Agent缓存
+    
+    Args:
+        agent_key: Agent键名（可选，如果不提供则清除所有缓存）
+        
+    Returns:
+        清除结果
+    """
+    try:
+        from domain.agents.factory import AgentFactory
+        
+        if agent_key:
+            # 检查Agent是否存在
+            if agent_key not in AgentFactory.list_agents():
+                raise HTTPException(status_code=404, detail=f"Agent不存在: {agent_key}")
+            AgentFactory.clear_cache(agent_key)
+            message = f"Agent缓存已清除: {agent_key}"
+        else:
+            AgentFactory.clear_cache()
+            message = "所有Agent缓存已清除"
+        
+        logger.info(f"[清除Agent缓存] {message}")
+        
+        return {
+            "message": message,
+            "agent_key": agent_key
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[清除Agent缓存错误] agent_key={agent_key}, error={str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"清除Agent缓存失败: {str(e)}")
 

@@ -38,6 +38,9 @@ class LangfusePromptAdapter:
         if not settings.LANGFUSE_PUBLIC_KEY or not settings.LANGFUSE_SECRET_KEY:
             raise ValueError("Langfuse配置不完整，请设置LANGFUSE_PUBLIC_KEY和LANGFUSE_SECRET_KEY")
         
+        # 打印连接参数（用于调试，不打印完整密钥）
+        self._log_connection_params()
+        
         self.client = Langfuse(
             public_key=settings.LANGFUSE_PUBLIC_KEY,
             secret_key=settings.LANGFUSE_SECRET_KEY,
@@ -46,6 +49,34 @@ class LangfusePromptAdapter:
         self._cache: Dict[str, Tuple[str, datetime]] = {}  # key -> (content, expire_time)
         self._cache_ttl: int = settings.PROMPT_CACHE_TTL
         logger.info(f"Langfuse提示词适配器已初始化，缓存TTL: {self._cache_ttl}秒")
+    
+    def _log_connection_params(self):
+        """
+        打印Langfuse连接参数（用于调试）
+        注意：为了安全，不打印完整的密钥内容
+        """
+        host = settings.LANGFUSE_HOST
+        public_key = settings.LANGFUSE_PUBLIC_KEY
+        secret_key = settings.LANGFUSE_SECRET_KEY
+        
+        # 打印host（完整）
+        logger.info(f"Langfuse连接参数 - Host: {host}")
+        
+        # 打印public_key的部分信息（前4个字符和后4个字符）
+        if public_key:
+            if len(public_key) > 8:
+                masked_public_key = f"{public_key[:4]}...{public_key[-4:]}"
+            else:
+                masked_public_key = "***"  # 太短则不显示
+            logger.info(f"Langfuse连接参数 - Public Key: {masked_public_key} (长度: {len(public_key)})")
+        else:
+            logger.warning("Langfuse连接参数 - Public Key: 未设置")
+        
+        # 打印secret_key是否已设置（不打印内容）
+        if secret_key:
+            logger.info(f"Langfuse连接参数 - Secret Key: 已设置 (长度: {len(secret_key)})")
+        else:
+            logger.warning("Langfuse连接参数 - Secret Key: 未设置")
     
     def get_template(self, template_name: str, version: Optional[str] = None, fallback_to_local: bool = True) -> str:
         """
@@ -103,7 +134,9 @@ class LangfusePromptAdapter:
             return template_content
             
         except Exception as e:
+            # 打印连接参数和详细错误信息
             logger.error(f"从Langfuse获取模版失败: {template_name}, 错误: {e}")
+            self._log_connection_params_on_error()
             
             # 如果启用降级，尝试从本地文件加载
             if fallback_to_local:
@@ -187,4 +220,32 @@ class LangfusePromptAdapter:
             return bool(settings.LANGFUSE_PUBLIC_KEY and settings.LANGFUSE_SECRET_KEY)
         except Exception:
             return False
+    
+    def _log_connection_params_on_error(self):
+        """
+        在错误时打印连接参数（用于调试）
+        """
+        host = settings.LANGFUSE_HOST
+        public_key = settings.LANGFUSE_PUBLIC_KEY
+        secret_key = settings.LANGFUSE_SECRET_KEY
+        
+        logger.error(f"Langfuse连接参数检查 - Host: {host}")
+        
+        if public_key:
+            if len(public_key) > 8:
+                masked_public_key = f"{public_key[:4]}...{public_key[-4:]}"
+            else:
+                masked_public_key = "***"
+            logger.error(f"Langfuse连接参数检查 - Public Key: {masked_public_key} (长度: {len(public_key)})")
+        else:
+            logger.error("Langfuse连接参数检查 - Public Key: 未设置")
+        
+        if secret_key:
+            logger.error(f"Langfuse连接参数检查 - Secret Key: 已设置 (长度: {len(secret_key)})")
+        else:
+            logger.error("Langfuse连接参数检查 - Secret Key: 未设置")
+        
+        # 检查host格式
+        if not host.startswith(('http://', 'https://')):
+            logger.error(f"Langfuse连接参数检查 - Host格式可能不正确，当前值: {host}，应该以 http:// 或 https:// 开头")
 

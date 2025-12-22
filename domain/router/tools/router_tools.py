@@ -1,5 +1,11 @@
 """
 路由工具：意图识别和澄清
+
+提示词统一从 Langfuse 加载，如果获取失败则抛出异常。
+
+路由工具提示词模版名称（Langfuse）：
+- router_intent_identification_prompt：意图识别
+- router_clarify_intent_prompt：意图澄清
 """
 from typing import Dict, Any, Optional
 import json
@@ -11,57 +17,53 @@ from langchain_core.prompts import ChatPromptTemplate
 from app.core.config import settings
 from domain.router.state import IntentResult
 from infrastructure.llm.client import get_llm
-from infrastructure.prompts.manager import PromptManager
+from infrastructure.prompts.langfuse_adapter import LangfusePromptAdapter
+from infrastructure.prompts.placeholder import PlaceholderManager
 
 logger = logging.getLogger(__name__)
 
-# 提示词管理器实例（单例）
-_prompt_manager = PromptManager()
+# Langfuse 提示词适配器实例（单例）
+_langfuse_adapter = None
 
-# 意图识别系统提示词（保留作为fallback，如果模板加载失败时使用）
-INTENT_IDENTIFICATION_PROMPT_FALLBACK = """你是一个智能路由助手，负责识别用户的真实意图。
 
-支持的意图类型：
-1. blood_pressure: 用户想要记录、查询或管理血压数据
-   - 关键词：血压、收缩压、舒张压、高压、低压、记录血压、查询血压、血压记录、血压数据、心率
-   - 示例："我想记录血压"、"查询我的血压记录"、"更新血压数据"、"我的收缩压是120，舒张压是80"
+def _get_langfuse_adapter() -> LangfusePromptAdapter:
+    """获取 Langfuse 适配器实例（单例）"""
+    global _langfuse_adapter
+    if _langfuse_adapter is None:
+        _langfuse_adapter = LangfusePromptAdapter()
+    return _langfuse_adapter
 
-2. appointment: 用户想要预约、查询或管理复诊
-   - 关键词：预约、复诊、挂号、就诊、看病、门诊、预约医生、预约时间、取消预约
-   - 示例："我想预约复诊"、"查询我的预约"、"取消预约"、"帮我挂个号"
 
-3. health_event: 用户想要记录、查询或管理健康事件（体检、检查、手术等）
-   - 关键词：体检、检查、手术、疫苗接种、健康事件、记录体检、查询体检
-   - 示例："我想记录体检"、"查询我的体检记录"、"记录一次检查"、"疫苗接种"
-
-4. medication: 用户想要记录、查询或管理用药信息
-   - 关键词：用药、药物、吃药、服药、用药记录、查询用药、记录用药
-   - 示例："我想记录用药"、"查询我的用药记录"、"我吃了阿司匹林"、"记录药物"
-
-5. symptom: 用户想要记录、查询或管理症状信息
-   - 关键词：症状、头痛、发热、咳嗽、不舒服、记录症状、查询症状
-   - 示例："我头痛"、"记录症状"、"查询我的症状记录"、"我发烧了"
-
-6. unclear: 意图不明确，需要进一步澄清
-   - 当用户的消息无法明确归类到上述意图时
-   - 示例："你好"、"在吗"、"有什么功能"、"谢谢"
-
-请分析用户消息和对话历史，返回JSON格式的意图识别结果：
-{{
-    "intent_type": "意图类型（blood_pressure/appointment/health_event/medication/symptom/unclear）",
-    "confidence": 置信度（0.0-1.0之间的浮点数）,
-    "entities": {{}},
-    "need_clarification": 是否需要澄清（true/false）,
-    "reasoning": "识别理由"
-}}
-
-规则：
-- 如果意图明确且置信度>0.8，设置need_clarification=false
-- 如果意图不明确（置信度<0.8），设置need_clarification=true
-- 如果用户同时提及多个意图，按优先级选择（优先级：appointment > health_event > medication > symptom > blood_pressure）
-- 如果用户的消息很短（如"你好"、"在吗"），且当前有活跃的智能体，可能继续当前意图
-- 如果对话历史中有明确的意图上下文，应该考虑上下文信息
-"""
+def _load_router_prompt(template_name: str, context: Dict[str, Any]) -> str:
+    """
+    从 Langfuse 加载路由工具提示词
+    
+    Args:
+        template_name: Langfuse模版名称（如 "router_intent_identification_prompt"）
+        context: 上下文信息（用于占位符填充）
+        
+    Returns:
+        填充后的提示词内容
+        
+    Raises:
+        ValueError: Langfuse未启用或配置不完整
+        ConnectionError: 无法从Langfuse获取模版
+    """
+    # 从 Langfuse 获取模版
+    adapter = _get_langfuse_adapter()
+    template = adapter.get_template(
+        template_name=template_name,
+        version=None,
+        fallback_to_local=False  # 不降级，直接失败
+    )
+    
+    # 填充占位符
+    placeholders = PlaceholderManager.get_placeholders("router_tools", state=None)
+    placeholders.update(context)
+    prompt_template = PlaceholderManager.fill_placeholders(template, placeholders)
+    
+    logger.debug(f"从Langfuse加载提示词成功: {template_name}")
+    return prompt_template
 
 
 def _extract_conversation_context(messages: list[BaseMessage]) -> tuple[str, str]:
@@ -245,21 +247,15 @@ def identify_intent(messages: list[BaseMessage]) -> Dict[str, Any]:
                 reasoning="当前查询为空"
             ).model_dump()
         
-        # 构建提示词（优先使用PromptManager）
-        try:
-            prompt_template = _prompt_manager.render(
-                agent_key="router_tools",
-                context={
-                    "query": current_query,
-                    "history": history_text,
-                    "current_intent": current_intent_text
-                },
-                include_modules=["intent_identification"]
-            )
-        except (FileNotFoundError, ValueError) as e:
-            # 如果模板不存在，使用fallback
-            logger.warning(f"路由工具提示词模板加载失败，使用fallback: {str(e)}")
-            prompt_template = INTENT_IDENTIFICATION_PROMPT_FALLBACK
+        # 从 Langfuse 加载提示词
+        prompt_template = _load_router_prompt(
+            template_name="router_intent_identification_prompt",
+            context={
+                "query": current_query,
+                "history": history_text,
+                "current_intent": current_intent_text
+            }
+        )
         
         prompt = ChatPromptTemplate.from_messages([
             ("system", prompt_template),
@@ -296,7 +292,10 @@ def identify_intent(messages: list[BaseMessage]) -> Dict[str, Any]:
         
     except Exception as e:
         logger.error(f"意图识别失败: {str(e)}", exc_info=True)
-        # 返回默认结果
+        # 如果是提示词加载失败，直接抛出异常
+        if "Langfuse" in str(e) or "模版" in str(e) or "template" in str(e).lower():
+            raise ValueError(f"无法从Langfuse加载意图识别提示词: {str(e)}") from e
+        # 其他错误返回默认结果
         default_result = IntentResult(
             intent_type="unclear",
             confidence=0.0,
@@ -305,27 +304,6 @@ def identify_intent(messages: list[BaseMessage]) -> Dict[str, Any]:
             reasoning=f"意图识别异常: {str(e)}"
         )
         return default_result.model_dump()
-
-
-# 意图澄清提示词（保留作为fallback）
-CLARIFY_INTENT_PROMPT_FALLBACK = """你是一个友好的助手，当用户的意图不明确时，你需要友好地引导用户说明他们的需求。
-
-系统支持的功能：
-1. 记录血压：帮助用户记录、查询和管理血压数据（收缩压、舒张压、心率等）
-2. 预约复诊：帮助用户创建、查询和管理预约（科室、时间、医生等）
-3. 记录健康事件：帮助用户记录、查询和管理健康事件（体检、检查、手术、疫苗接种等）
-4. 记录用药：帮助用户记录、查询和管理用药信息（药物名称、剂量、频率等）
-5. 记录症状：帮助用户记录、查询和管理症状信息（症状描述、严重程度、持续时间等）
-
-用户消息: {query}
-
-请生成一个友好的澄清问题，引导用户说明他们的具体需求。
-**重要要求**：
-- 澄清问题必须明确提到所有功能：记录血压、预约复诊、记录健康事件、记录用药、记录症状
-- 问题应该简洁明了，不超过150字
-- 使用友好、专业的语言
-- 不要使用技术术语，使用用户容易理解的语言
-"""
 
 
 @tool
@@ -342,17 +320,11 @@ def clarify_intent(query: str) -> str:
         str: 澄清问题文本
     """
     try:
-        # 构建提示词（优先使用PromptManager）
-        try:
-            prompt_template = _prompt_manager.render(
-                agent_key="router_tools",
-                context={"query": query},
-                include_modules=["clarify_intent"]
-            )
-        except (FileNotFoundError, ValueError) as e:
-            # 如果模板不存在，使用fallback
-            logger.warning(f"路由工具澄清提示词模板加载失败，使用fallback: {str(e)}")
-            prompt_template = CLARIFY_INTENT_PROMPT_FALLBACK
+        # 从 Langfuse 加载提示词
+        prompt_template = _load_router_prompt(
+            template_name="router_clarify_intent_prompt",
+            context={"query": query}
+        )
         
         prompt = ChatPromptTemplate.from_messages([
             ("system", prompt_template),
@@ -380,7 +352,9 @@ def clarify_intent(query: str) -> str:
         
     except Exception as e:
         logger.error(f"生成澄清问题失败: {str(e)}", exc_info=True)
-        # 返回默认澄清问题
+        # 如果是提示词加载失败，直接抛出异常
+        if "Langfuse" in str(e) or "模版" in str(e) or "template" in str(e).lower():
+            raise ValueError(f"无法从Langfuse加载意图澄清提示词: {str(e)}") from e
+        # 其他错误返回默认澄清问题
         default_clarification = "抱歉，我没有理解您的意图。请告诉我您是想记录血压、预约复诊、记录健康事件、记录用药、记录症状，还是需要其他帮助？"
         return default_clarification
-

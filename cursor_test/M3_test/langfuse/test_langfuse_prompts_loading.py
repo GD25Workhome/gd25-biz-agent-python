@@ -74,6 +74,31 @@ def test_all_agents_have_langfuse_template_config():
     assert len(missing_configs) == 0, "所有Agent都应该配置Langfuse模版"
 
 
+def test_router_tools_prompts():
+    """测试路由工具提示词配置"""
+    # 路由工具提示词不需要在agents.yaml中配置
+    # 但需要在Langfuse中创建对应的模版
+    router_prompts = [
+        "router_intent_identification_prompt",
+        "router_clarify_intent_prompt",
+    ]
+    
+    print(f"✅ 路由工具提示词模版清单: {router_prompts}")
+    print("   注意：路由工具提示词在代码中直接使用，不需要在agents.yaml中配置")
+    
+    # 验证提示词文件存在（作为降级配置）
+    from pathlib import Path
+    project_root = Path(__file__).parent.parent.parent.parent
+    
+    intent_file = project_root / "config" / "prompts" / "modules" / "router" / "intent_identification.txt"
+    clarify_file = project_root / "config" / "prompts" / "modules" / "router" / "clarify_intent.txt"
+    
+    assert intent_file.exists(), f"意图识别提示词文件不存在: {intent_file}"
+    assert clarify_file.exists(), f"意图澄清提示词文件不存在: {clarify_file}"
+    
+    print(f"✅ 路由工具降级提示词文件存在")
+
+
 def test_langfuse_template_names():
     """测试Langfuse模版名称格式"""
     AgentFactory.load_config()
@@ -100,7 +125,7 @@ def test_langfuse_template_names():
 
 @pytest.mark.skipif(not LANGFUSE_AVAILABLE, reason="Langfuse未安装")
 def test_load_prompts_from_langfuse(mock_langfuse_client, mock_settings):
-    """测试从Langfuse加载所有Agent的提示词"""
+    """测试从Langfuse加载所有Agent和路由工具的提示词"""
     AgentFactory.load_config()
     config = AgentFactory._config
     
@@ -113,13 +138,15 @@ def test_load_prompts_from_langfuse(mock_langfuse_client, mock_settings):
         "symptom_agent",
     ]
     
-    # Mock每个Agent的提示词内容
+    # Mock每个Agent和路由工具的提示词内容
     template_contents = {
         "blood_pressure_agent_prompt": "血压记录助手提示词",
         "appointment_agent_prompt": "复诊管理助手提示词",
         "health_event_agent_prompt": "健康事件记录助手提示词",
         "medication_agent_prompt": "用药记录助手提示词",
         "symptom_agent_prompt": "症状记录助手提示词",
+        "router_intent_identification_prompt": "路由意图识别提示词",
+        "router_clarify_intent_prompt": "路由意图澄清提示词",
     }
     
     # 设置Mock返回值
@@ -161,11 +188,30 @@ def test_load_prompts_from_langfuse(mock_langfuse_client, mock_settings):
             failed_agents.append(f"{agent_key} (错误: {str(e)})")
             print(f"❌ {agent_key}: 加载失败 - {str(e)}")
     
-    if failed_agents:
-        pytest.fail(f"以下Agent的提示词加载失败: {', '.join(failed_agents)}")
+    # 测试路由工具提示词加载
+    router_prompts_to_test = [
+        "router_intent_identification_prompt",
+        "router_clarify_intent_prompt",
+    ]
     
-    # 验证所有Agent都成功加载
-    assert len(failed_agents) == 0, "所有Agent的提示词都应该成功加载"
+    for template_name in router_prompts_to_test:
+        try:
+            adapter = LangfusePromptAdapter()
+            template = adapter.get_template(template_name, version=None)
+            
+            assert template is not None, f"{template_name}的提示词为空"
+            assert len(template) > 0, f"{template_name}的提示词长度为0"
+            
+            print(f"✅ {template_name}: 成功加载提示词 (长度: {len(template)})")
+        except Exception as e:
+            failed_agents.append(f"{template_name} (错误: {str(e)})")
+            print(f"❌ {template_name}: 加载失败 - {str(e)}")
+    
+    if failed_agents:
+        pytest.fail(f"以下提示词加载失败: {', '.join(failed_agents)}")
+    
+    # 验证所有Agent和路由工具提示词都成功加载
+    assert len(failed_agents) == 0, "所有提示词都应该成功加载"
 
 
 def test_placeholder_configuration():

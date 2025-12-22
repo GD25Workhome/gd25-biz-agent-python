@@ -6,6 +6,7 @@ from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 
 from domain.router.state import RouterState, IntentResult
 from domain.router.tools.router_tools import identify_intent, clarify_intent
+from domain.agents.registry import AgentRegistry
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -60,19 +61,21 @@ def route_node(state: RouterState) -> RouterState:
         new_intent = intent_result.intent_type
         new_agent = None
         
-        # 根据意图确定智能体
-        if new_intent == "blood_pressure":
-            new_agent = "blood_pressure_agent"
-        elif new_intent == "appointment":
-            new_agent = "appointment_agent"
-        elif new_intent == "health_event":
-            new_agent = "health_event_agent"
-        elif new_intent == "medication":
-            new_agent = "medication_agent"
-        elif new_intent == "symptom":
-            new_agent = "symptom_agent"
-        else:
-            new_agent = None  # unclear 意图，需要澄清
+        # 根据意图动态确定智能体（使用AgentRegistry）
+        if new_intent and new_intent != "unclear":
+            # 从AgentRegistry查找对应意图类型的Agent
+            agent_registry = AgentRegistry.get_all_agents()
+            for agent_key, agent_config in agent_registry.items():
+                routing_config = agent_config.get("routing", {})
+                intent_type = routing_config.get("intent_type")
+                if intent_type == new_intent:
+                    new_agent = agent_key
+                    break
+        
+        # 如果找不到对应的Agent，设置为None（unclear意图）
+        if not new_agent and new_intent != "unclear":
+            logger.warning(f"路由节点: 未找到对应意图 '{new_intent}' 的Agent，设置为None")
+            new_agent = None
         
         # 意图变化检测
         intent_changed = False
