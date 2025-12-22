@@ -27,3 +27,7 @@ LLM_LOG_ENABLE=false
 LLM_LOG_SAMPLE_RATE=1.0
 LLM_LOG_MAX_TEXT_LENGTH=4000
 
+# 设置 Langfuse 凭据，https://cloud.langfuse.com
+LANGFUSE_SECRET_KEY = "sk-lf-***-f5038a106411"
+LANGFUSE_PUBLIC_KEY = "pk-lf-***-dcc200b8c8e1"
+LANGFUSE_BASE_URL = "https://us.cloud.langfuse.com"

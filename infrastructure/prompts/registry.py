@@ -9,6 +9,13 @@ from .data_loaders import DataLoader, ConfigLoader, FileLoader, DynamicLoader, D
 
 logger = logging.getLogger(__name__)
 
+# 延迟导入LangfuseLoader，避免在未安装时出错
+try:
+    from .langfuse_loader import LangfuseLoader
+    LANGFUSE_LOADER_AVAILABLE = True
+except (ImportError, ValueError):
+    LANGFUSE_LOADER_AVAILABLE = False
+
 
 class LoaderRegistry:
     """加载器注册表"""
@@ -24,6 +31,17 @@ class LoaderRegistry:
         
         # 注册默认加载器（注意顺序，更具体的加载器应该先注册）
         # 顺序很重要：更具体的匹配应该在前
+        
+        # 首先注册Langfuse加载器（如果可用）
+        if LANGFUSE_LOADER_AVAILABLE:
+            try:
+                langfuse_loader = LangfuseLoader()
+                cls.register("langfuse", langfuse_loader)
+                logger.debug("已注册Langfuse加载器")
+            except Exception as e:
+                logger.warning(f"注册Langfuse加载器失败: {e}，将跳过")
+        
+        # 注册其他加载器
         cls.register("dynamic", DynamicLoader())
         cls.register("database", DatabaseLoader())
         cls.register("config", ConfigLoader())  # ConfigLoader在FileLoader之前，因为config/路径更具体

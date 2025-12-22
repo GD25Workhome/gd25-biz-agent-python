@@ -71,6 +71,16 @@ class Settings(BaseSettings):
     APP_HOST: str = "0.0.0.0"
     APP_PORT: int = 8000
     
+    # Langfuse 配置
+    LANGFUSE_ENABLED: bool = False
+    LANGFUSE_PUBLIC_KEY: Optional[str] = None
+    LANGFUSE_SECRET_KEY: Optional[str] = None
+    LANGFUSE_HOST: str = "https://cloud.langfuse.com"  # 或自托管地址
+    
+    # 提示词配置
+    PROMPT_USE_LANGFUSE: bool = True  # 是否优先使用Langfuse（默认true）
+    PROMPT_CACHE_TTL: int = 300  # 提示词缓存TTL（秒）
+    
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
