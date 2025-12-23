@@ -16,6 +16,7 @@ from domain.agents.registry import AgentRegistry
 from infrastructure.prompts.manager import PromptManager
 from infrastructure.observability.llm_logger import LlmLogContext
 from infrastructure.observability.langfuse_handler import get_langfuse_client, normalize_langfuse_trace_id
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -122,23 +123,28 @@ def create_router_graph(
             
             # 创建 Langfuse Span 追踪（如果启用）
             langfuse_client = get_langfuse_client()
-            if langfuse_client and trace_id:
+            # 检查是否启用 Span 追踪（支持通过配置禁用）
+            if (settings.LANGFUSE_ENABLED and 
+                settings.LANGFUSE_ENABLE_SPANS and 
+                langfuse_client and 
+                trace_id):
                 # 将 trace_id 转换为 Langfuse 要求的格式（32 个小写十六进制字符）
                 normalized_trace_id = normalize_langfuse_trace_id(trace_id)
                 
                 # 构建 span 参数，显式指定 trace_id
+                # 注意：
+                # 1. session_id 和 user_id 已在 Trace 级别设置，会自动继承，不需要在 Span 中重复传递
+                # 2. agent_key 在 input 中已有，不需要在 metadata 中重复
                 span_params = {
                     "name": f"agent_{agent_name}",
                     "input": {
                         "agent_key": agent_name,
                         "messages_count": len(messages),
-                        "user_id": user_id,
-                        "session_id": session_id,
+                        # 移除 user_id 和 session_id（已在 Trace 级别设置）
                     },
                     "metadata": {
-                        "agent_key": agent_name,
-                        "session_id": session_id,
-                        "user_id": user_id,
+                        # 移除 agent_key（已在 input 中）
+                        # 移除 session_id 和 user_id（已在 Trace 级别设置）
                         "intent_type": state.get("current_intent"),
                     },
                 }
@@ -157,10 +163,21 @@ def create_router_graph(
                     )
                     # 移除 trace_context 参数，使用默认方式
                     span_params.pop("trace_context", None)
-                    with langfuse_client.start_as_current_span(**span_params):
+                    try:
+                        with langfuse_client.start_as_current_span(**span_params):
+                            result = await agent_node.ainvoke({"messages": messages})
+                    except Exception as span_error:
+                        # 错误隔离：Span 创建失败不影响主流程
+                        logger.warning(
+                            f"创建 Langfuse Span 失败: {span_error}，继续执行主流程"
+                        )
                         result = await agent_node.ainvoke({"messages": messages})
+                except Exception as e:
+                    # 错误隔离：Span 创建失败不影响主流程
+                    logger.warning(f"创建 Langfuse Span 失败: {e}，继续执行主流程")
+                    result = await agent_node.ainvoke({"messages": messages})
             else:
-                # Langfuse 未启用或 trace_id 不存在，直接执行
+                # Langfuse 未启用、Span 追踪被禁用或 trace_id 不存在，直接执行
                 result = await agent_node.ainvoke({"messages": messages})
             
             # 保留路由状态中的关键字段，防止下游节点丢失上下文

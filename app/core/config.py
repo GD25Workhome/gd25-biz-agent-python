@@ -3,7 +3,8 @@
 使用 Pydantic Settings 管理配置
 """
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -109,6 +110,86 @@ class Settings(BaseSettings):
     LANGFUSE_PUBLIC_KEY: Optional[str] = None
     LANGFUSE_SECRET_KEY: Optional[str] = None
     LANGFUSE_HOST: Optional[str] = None
+    
+    # Langfuse 性能配置（可从 .env 文件读取，如果未配置或值为空则使用默认值）
+    LANGFUSE_FLUSH_AT: int = Field(
+        default=20,
+        description="批量发送阈值（每 N 条记录批量发送一次），可从 .env 文件中的 LANGFUSE_FLUSH_AT 配置"
+    )
+    LANGFUSE_FLUSH_INTERVAL: float = Field(
+        default=5.0,
+        description="自动发送间隔（秒），可从 .env 文件中的 LANGFUSE_FLUSH_INTERVAL 配置"
+    )
+    LANGFUSE_TIMEOUT: int = Field(
+        default=2,
+        description="HTTP 请求超时（秒），可从 .env 文件中的 LANGFUSE_TIMEOUT 配置"
+    )
+    LANGFUSE_DEBUG: bool = Field(
+        default=False,
+        description="是否启用调试模式，可从 .env 文件中的 LANGFUSE_DEBUG 配置"
+    )
+    LANGFUSE_TRACING_ENABLED: bool = Field(
+        default=True,
+        description="是否启用追踪（默认启用），可从 .env 文件中的 LANGFUSE_TRACING_ENABLED 配置"
+    )
+    LANGFUSE_ENABLE_SPANS: bool = Field(
+        default=True,
+        description="是否启用 Span 追踪（默认启用），可从 .env 文件中的 LANGFUSE_ENABLE_SPANS 配置"
+    )
+    
+    @field_validator('LANGFUSE_FLUSH_AT', mode='before')
+    @classmethod
+    def _validate_flush_at(cls, v: Union[int, str, None]) -> int:
+        """验证 LANGFUSE_FLUSH_AT，空值时使用默认值"""
+        if v is None or (isinstance(v, str) and v.strip() == ''):
+            return 20
+        return int(v)
+    
+    @field_validator('LANGFUSE_FLUSH_INTERVAL', mode='before')
+    @classmethod
+    def _validate_flush_interval(cls, v: Union[float, str, None]) -> float:
+        """验证 LANGFUSE_FLUSH_INTERVAL，空值时使用默认值"""
+        if v is None or (isinstance(v, str) and v.strip() == ''):
+            return 5.0
+        return float(v)
+    
+    @field_validator('LANGFUSE_TIMEOUT', mode='before')
+    @classmethod
+    def _validate_timeout(cls, v: Union[int, str, None]) -> int:
+        """验证 LANGFUSE_TIMEOUT，空值时使用默认值"""
+        if v is None or (isinstance(v, str) and v.strip() == ''):
+            return 2
+        return int(v)
+    
+    @field_validator('LANGFUSE_DEBUG', mode='before')
+    @classmethod
+    def _validate_debug(cls, v: Union[bool, str, None]) -> bool:
+        """验证 LANGFUSE_DEBUG，空值时使用默认值"""
+        if v is None or (isinstance(v, str) and v.strip() == ''):
+            return False
+        if isinstance(v, str):
+            return v.lower() in ('true', '1', 'yes', 'on')
+        return bool(v)
+    
+    @field_validator('LANGFUSE_TRACING_ENABLED', mode='before')
+    @classmethod
+    def _validate_tracing_enabled(cls, v: Union[bool, str, None]) -> bool:
+        """验证 LANGFUSE_TRACING_ENABLED，空值时使用默认值"""
+        if v is None or (isinstance(v, str) and v.strip() == ''):
+            return True
+        if isinstance(v, str):
+            return v.lower() in ('true', '1', 'yes', 'on')
+        return bool(v)
+    
+    @field_validator('LANGFUSE_ENABLE_SPANS', mode='before')
+    @classmethod
+    def _validate_enable_spans(cls, v: Union[bool, str, None]) -> bool:
+        """验证 LANGFUSE_ENABLE_SPANS，空值时使用默认值"""
+        if v is None or (isinstance(v, str) and v.strip() == ''):
+            return True
+        if isinstance(v, str):
+            return v.lower() in ('true', '1', 'yes', 'on')
+        return bool(v)
     
     # 提示词配置
     PROMPT_USE_LANGFUSE: bool = True  # 是否使用Langfuse（默认true，但Langfuse是唯一数据源）

@@ -139,11 +139,50 @@ def _get_langfuse_client() -> Optional["Langfuse"]:
     
     # 延迟初始化客户端
     if _langfuse_client is None:
-        _langfuse_client = Langfuse(
-            public_key=settings.LANGFUSE_PUBLIC_KEY,
-            secret_key=settings.LANGFUSE_SECRET_KEY,
-            host=settings.LANGFUSE_HOST,
-        )
+        try:
+            # 构建客户端配置参数
+            client_kwargs = {
+                "public_key": settings.LANGFUSE_PUBLIC_KEY,
+                "secret_key": settings.LANGFUSE_SECRET_KEY,
+                "host": settings.LANGFUSE_HOST,
+            }
+            
+            # 添加性能优化配置
+            # flush_at: 批量发送阈值（每 N 条记录批量发送一次）
+            # 减少 HTTP 请求次数，提高性能
+            if settings.LANGFUSE_FLUSH_AT > 0:
+                client_kwargs["flush_at"] = settings.LANGFUSE_FLUSH_AT
+            
+            # flush_interval: 自动发送间隔（秒）
+            # 定期批量发送数据，避免数据积压
+            if settings.LANGFUSE_FLUSH_INTERVAL > 0:
+                client_kwargs["flush_interval"] = settings.LANGFUSE_FLUSH_INTERVAL
+            
+            # timeout: HTTP 请求超时（秒）
+            # 防止 Langfuse 服务不可用时长时间等待
+            if settings.LANGFUSE_TIMEOUT > 0:
+                client_kwargs["timeout"] = settings.LANGFUSE_TIMEOUT
+            
+            # debug: 调试模式
+            client_kwargs["debug"] = settings.LANGFUSE_DEBUG
+            
+            # tracing_enabled: 是否启用追踪
+            client_kwargs["tracing_enabled"] = settings.LANGFUSE_TRACING_ENABLED
+            
+            _langfuse_client = Langfuse(**client_kwargs)
+            
+            logger.info(
+                f"Langfuse 客户端已初始化: "
+                f"flush_at={settings.LANGFUSE_FLUSH_AT}, "
+                f"flush_interval={settings.LANGFUSE_FLUSH_INTERVAL}, "
+                f"timeout={settings.LANGFUSE_TIMEOUT}, "
+                f"debug={settings.LANGFUSE_DEBUG}, "
+                f"tracing_enabled={settings.LANGFUSE_TRACING_ENABLED}"
+            )
+        except Exception as e:
+            # 错误隔离：客户端初始化失败不影响主流程
+            logger.error(f"Langfuse 客户端初始化失败: {e}，可观测性功能将不可用", exc_info=True)
+            _langfuse_client = None
     
     return _langfuse_client
 
@@ -218,6 +257,10 @@ def set_langfuse_trace_context(
             )
             
             return normalized_trace_id or trace_id
+        else:
+            # 客户端为 None，返回原始 trace_id（错误隔离）
+            logger.debug("Langfuse 客户端不可用，跳过 Trace 上下文设置")
+            return trace_id
     except Exception as e:
         # 如果设置失败，记录警告但不影响主流程
         logger.warning(f"设置Langfuse Trace上下文失败: {e}，继续执行但不记录到Langfuse")

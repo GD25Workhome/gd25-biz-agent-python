@@ -131,11 +131,16 @@ def route_node(state: RouterState) -> RouterState:
             return state
         
         # 在 Span 中执行路由逻辑（如果启用）
-        if langfuse_client and trace_id:
+        # 检查是否启用 Span 追踪（支持通过配置禁用）
+        if (settings.LANGFUSE_ENABLED and 
+            settings.LANGFUSE_ENABLE_SPANS and 
+            langfuse_client and 
+            trace_id):
             # 将 trace_id 转换为 Langfuse 要求的格式（32 个小写十六进制字符）
             normalized_trace_id = normalize_langfuse_trace_id(trace_id)
             
             # 构建 span 参数，显式指定 trace_id
+            # 注意：session_id 和 user_id 已在 Trace 级别设置，会自动继承，不需要在 Span 中重复传递
             span_params = {
                 "name": "route_node",
                 "input": {
@@ -144,8 +149,7 @@ def route_node(state: RouterState) -> RouterState:
                     "current_agent": current_agent,
                 },
                 "metadata": {
-                    "session_id": session_id,
-                    "user_id": user_id,
+                    # 移除 session_id 和 user_id（已在 Trace 级别设置，会自动继承）
                 },
             }
             # 尝试使用 trace_context 参数指定 trace_id（如果 SDK 支持）
@@ -162,10 +166,21 @@ def route_node(state: RouterState) -> RouterState:
                 )
                 # 移除 trace_context 参数，使用默认方式
                 span_params.pop("trace_context", None)
-                with langfuse_client.start_as_current_span(**span_params):
+                try:
+                    with langfuse_client.start_as_current_span(**span_params):
+                        return _execute_route_logic()
+                except Exception as span_error:
+                    # 错误隔离：Span 创建失败不影响主流程
+                    logger.warning(
+                        f"创建 Langfuse Span 失败: {span_error}，继续执行主流程"
+                    )
                     return _execute_route_logic()
+            except Exception as e:
+                # 错误隔离：Span 创建失败不影响主流程
+                logger.warning(f"创建 Langfuse Span 失败: {e}，继续执行主流程")
+                return _execute_route_logic()
         else:
-            # Langfuse 未启用或 trace_id 不存在，直接执行
+            # Langfuse 未启用、Span 追踪被禁用或 trace_id 不存在，直接执行
             return _execute_route_logic()
         
     except Exception as e:
@@ -213,11 +228,16 @@ def clarify_intent_node(state: RouterState) -> RouterState:
     # 调用澄清工具
     try:
         # 在 Span 中执行澄清逻辑
-        if langfuse_client and trace_id:
+        # 检查是否启用 Span 追踪（支持通过配置禁用）
+        if (settings.LANGFUSE_ENABLED and 
+            settings.LANGFUSE_ENABLE_SPANS and 
+            langfuse_client and 
+            trace_id):
             # 将 trace_id 转换为 Langfuse 要求的格式（32 个小写十六进制字符）
             normalized_trace_id = normalize_langfuse_trace_id(trace_id)
             
             # 构建 span 参数，显式指定 trace_id
+            # 注意：session_id 和 user_id 已在 Trace 级别设置，会自动继承，不需要在 Span 中重复传递
             span_params = {
                 "name": "clarify_intent_node",
                 "input": {
@@ -225,8 +245,7 @@ def clarify_intent_node(state: RouterState) -> RouterState:
                     "messages_count": len(messages),
                 },
                 "metadata": {
-                    "session_id": session_id,
-                    "user_id": user_id,
+                    # 移除 session_id 和 user_id（已在 Trace 级别设置，会自动继承）
                 },
             }
             # 尝试使用 trace_context 参数指定 trace_id（如果 SDK 支持）
@@ -243,10 +262,21 @@ def clarify_intent_node(state: RouterState) -> RouterState:
                 )
                 # 移除 trace_context 参数，使用默认方式
                 span_params.pop("trace_context", None)
-                with langfuse_client.start_as_current_span(**span_params):
+                try:
+                    with langfuse_client.start_as_current_span(**span_params):
+                        clarification = clarify_intent.invoke({"query": user_query})
+                except Exception as span_error:
+                    # 错误隔离：Span 创建失败不影响主流程
+                    logger.warning(
+                        f"创建 Langfuse Span 失败: {span_error}，继续执行主流程"
+                    )
                     clarification = clarify_intent.invoke({"query": user_query})
+            except Exception as e:
+                # 错误隔离：Span 创建失败不影响主流程
+                logger.warning(f"创建 Langfuse Span 失败: {e}，继续执行主流程")
+                clarification = clarify_intent.invoke({"query": user_query})
         else:
-            # Langfuse 未启用或 trace_id 不存在，直接执行
+            # Langfuse 未启用、Span 追踪被禁用或 trace_id 不存在，直接执行
             clarification = clarify_intent.invoke({"query": user_query})
         
         logger.info(f"澄清节点: 生成澄清问题: {clarification}")

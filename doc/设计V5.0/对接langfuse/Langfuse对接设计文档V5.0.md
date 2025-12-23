@@ -829,9 +829,9 @@ async def route_node(state: RouterState) -> RouterState:
 
 **待办事项**：
 - [x] 编写集成测试 ✅
-- [ ] 验证 Langfuse Dashboard 中的 Span 数据（需要 Langfuse 服务）
-- [ ] 验证链路追踪的完整性（Trace -> Span -> Generation）（需要 Langfuse 服务）
-- [ ] 性能测试（可选）
+- [X] 验证 Langfuse Dashboard 中的 Span 数据（需要 Langfuse 服务）
+- [X] 验证链路追踪的完整性（Trace -> Span -> Generation）（需要 Langfuse 服务）
+- [X] 性能测试（可选）
 
 ### 7.3 里程碑三：优化和扩展（M5.3）
 
@@ -850,6 +850,8 @@ async def route_node(state: RouterState) -> RouterState:
 - [ ] 性能测试和优化
 - [ ] 配置调优
 - [ ] 文档更新
+
+**详细任务拆分**：请参考 [步骤3.1性能优化任务详解](./步骤3.1性能优化任务详解.md)
 
 #### 步骤 3.2：功能扩展（可选）
 

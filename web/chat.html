@@ -51,6 +51,13 @@
     .form-group input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
     .form-actions { display: flex; gap: 8px; }
     .danger { background: #dc2626; color: #fff; }
+    
+    /* Trace ID 自动生成开关样式 */
+    .auto-trace-toggle { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .auto-trace-toggle label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
+    .auto-trace-toggle input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+    .form-row input:disabled { background: #f5f5f5; cursor: not-allowed; opacity: 0.6; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -73,6 +80,12 @@
     <div class="actions">
       <button id="sendBtn" class="primary">发送</button>
       <button id="resetBtn" class="ghost">重置会话</button>
+      <div class="auto-trace-toggle">
+        <label>
+          <input type="checkbox" id="autoTraceIdToggle">
+          <span>每次发送重新生成traceId</span>
+        </label>
+      </div>
     </div>
     <div id="error" class="error"></div>
     <div class="log" id="log"></div>
@@ -154,6 +167,7 @@
     const saveBtn = document.getElementById('saveBtn');
     const cancelBtn = document.getElementById('cancelBtn');
     const refreshBtn = document.getElementById('refreshBtn');
+    const autoTraceIdToggle = document.getElementById('autoTraceIdToggle');
 
     // 在前端维护对话历史和会话ID
     let history = [];
@@ -184,6 +198,18 @@
       history = [];
       logEl.innerHTML = '';
       errorEl.textContent = '';
+    }
+
+    // 更新 Trace ID 输入框和按钮的启用/禁用状态
+    function updateTraceIdControls() {
+      const isAutoMode = autoTraceIdToggle.checked;
+      traceIdEl.disabled = isAutoMode;
+      generateTraceIdBtn.disabled = isAutoMode;
+      
+      // 如果启用自动模式，清空输入框
+      if (isAutoMode) {
+        traceIdEl.value = '';
+      }
     }
 
     // 显示/隐藏弹窗
@@ -366,15 +392,22 @@
       sendBtn.disabled = true;
       sendBtn.textContent = '发送中...';
 
-      // 获取 Trace ID（如果用户输入了）
-      const traceId = traceIdEl.value.trim();
+      // 获取 Trace ID
+      let traceId = '';
+      if (autoTraceIdToggle.checked) {
+        // 自动模式：每次发送时重新生成
+        traceId = generateTraceId();
+      } else {
+        // 手动模式：使用用户输入的 Trace ID
+        traceId = traceIdEl.value.trim();
+      }
       
       // 构建请求头
       const headers = {
         'Content-Type': 'application/json'
       };
       
-      // 如果用户输入了 Trace ID，添加到请求头
+      // 如果 Trace ID 存在，添加到请求头
       if (traceId) {
         headers['X-Trace-ID'] = traceId;
       }
@@ -419,6 +452,9 @@
     generateTraceIdBtn.addEventListener('click', function() {
       traceIdEl.value = generateTraceId();
     });
+
+    // 绑定自动生成 Trace ID 开关事件
+    autoTraceIdToggle.addEventListener('change', updateTraceIdControls);
 
     // 事件监听
     sendBtn.addEventListener('click', sendMessage);
