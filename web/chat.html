@@ -61,6 +61,11 @@
       <input id="userId" value="" readonly>
       <button id="selectUserBtn" class="ghost">选择用户</button>
     </div>
+    <div class="form-row">
+      <label for="traceId">Trace ID</label>
+      <input id="traceId" type="text" placeholder="留空则自动生成" style="flex: 1;">
+      <button id="generateTraceIdBtn" class="ghost" type="button">生成ID</button>
+    </div>
     <div>
       <label for="message"><strong>输入消息</strong></label>
       <textarea id="message" placeholder="请输入要发送的内容，支持多轮上下文"></textarea>
@@ -130,6 +135,8 @@
     const logEl = document.getElementById('log');
     const messageEl = document.getElementById('message');
     const userEl = document.getElementById('userId');
+    const traceIdEl = document.getElementById('traceId');
+    const generateTraceIdBtn = document.getElementById('generateTraceIdBtn');
     const errorEl = document.getElementById('error');
     const sendBtn = document.getElementById('sendBtn');
     const resetBtn = document.getElementById('resetBtn');
@@ -151,6 +158,25 @@
     // 在前端维护对话历史和会话ID
     let history = [];
     let currentSessionId = null;
+
+    // 生成 Trace ID（符合 Langfuse 要求的格式：32 个小写十六进制字符，不带连字符）
+    function generateTraceId() {
+      // 生成 32 个随机十六进制字符（0-9, a-f）
+      let result = '';
+      const hexChars = '0123456789abcdef';
+      for (let i = 0; i < 32; i++) {
+        // 使用 crypto.getRandomValues 如果支持（更安全）
+        if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+          const randomBytes = new Uint8Array(1);
+          crypto.getRandomValues(randomBytes);
+          result += hexChars[randomBytes[0] % 16];
+        } else {
+          // 降级方案：使用 Math.random
+          result += hexChars[Math.floor(Math.random() * 16)];
+        }
+      }
+      return result;
+    }
 
     // 初始化会话
     function initSession() {
@@ -340,10 +366,23 @@
       sendBtn.disabled = true;
       sendBtn.textContent = '发送中...';
 
+      // 获取 Trace ID（如果用户输入了）
+      const traceId = traceIdEl.value.trim();
+      
+      // 构建请求头
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      
+      // 如果用户输入了 Trace ID，添加到请求头
+      if (traceId) {
+        headers['X-Trace-ID'] = traceId;
+      }
+
       try {
         const resp = await fetch(chatApiUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: headers,
           body: JSON.stringify({
             message: text,
             session_id: currentSessionId,
@@ -375,6 +414,11 @@
     function resetSession() {
       initSession();
     }
+
+    // 绑定生成 Trace ID 按钮事件
+    generateTraceIdBtn.addEventListener('click', function() {
+      traceIdEl.value = generateTraceId();
+    });
 
     // 事件监听
     sendBtn.addEventListener('click', sendMessage);

@@ -2,8 +2,9 @@
 API 路由定义
 """
 import logging
+import uuid
 from typing import Dict, Any, Optional
-from fastapi import APIRouter, HTTPException, Request, Depends
+from fastapi import APIRouter, HTTPException, Request, Depends, Header
 from langchain_core.messages import HumanMessage, AIMessage
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,7 +24,8 @@ router = APIRouter()
 @router.post("/chat", response_model=ChatResponse)
 async def chat(
     request: ChatRequest,
-    app_request: Request
+    app_request: Request,
+    x_trace_id: Optional[str] = Header(None, alias="X-Trace-ID")
 ) -> ChatResponse:
     """
     聊天接口
@@ -31,16 +33,21 @@ async def chat(
     Args:
         request: 聊天请求
         app_request: FastAPI 请求对象（用于获取应用状态）
+        x_trace_id: 请求头中的 Trace ID（可选，如果未提供则自动生成）
         
     Returns:
         聊天响应
     """
+    # 获取或生成 traceId
+    trace_id = x_trace_id or str(uuid.uuid4())
+    
     # 设置 Langfuse trace 上下文（如果启用）
     if settings.LANGFUSE_ENABLED:
         set_langfuse_trace_context(
             name="chat_request",
             user_id=request.user_id,
             session_id=request.session_id,
+            trace_id=trace_id,
             metadata={
                 "message_length": len(request.message),
                 "history_count": len(request.conversation_history) if request.conversation_history else 0,
@@ -81,14 +88,15 @@ async def chat(
     
     logger.debug(f"[Chat消息构建] session_id={request.session_id}, total_messages={len(messages)}")
     
-    # 构建初始状态
+    # 构建初始状态（包含 trace_id）
     initial_state: RouterState = {
         "messages": messages,
         "current_intent": None,
         "current_agent": None,
         "need_reroute": True,
         "session_id": request.session_id,
-        "user_id": request.user_id
+        "user_id": request.user_id,
+        "trace_id": trace_id
     }
     
     # 配置（包含 checkpointer）

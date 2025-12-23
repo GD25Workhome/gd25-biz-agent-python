@@ -15,7 +15,7 @@ from domain.agents.factory import AgentFactory
 from domain.agents.registry import AgentRegistry
 from infrastructure.prompts.manager import PromptManager
 from infrastructure.observability.llm_logger import LlmLogContext
-from infrastructure.observability.langfuse_handler import get_langfuse_client
+from infrastructure.observability.langfuse_handler import get_langfuse_client, normalize_langfuse_trace_id
 
 logger = logging.getLogger(__name__)
 
@@ -117,33 +117,55 @@ def create_router_graph(
                 f"session_id={session_id}, user_id={user_id}"
             )
             
+            # 获取 trace_id
+            trace_id = state.get("trace_id")
+            
             # 创建 Langfuse Span 追踪（如果启用）
             langfuse_client = get_langfuse_client()
-            if langfuse_client:
-                # 使用 Span 追踪 Agent 节点执行
-                with langfuse_client.start_as_current_span(
-                    name=f"agent_{agent_name}",
-                    input={
+            if langfuse_client and trace_id:
+                # 将 trace_id 转换为 Langfuse 要求的格式（32 个小写十六进制字符）
+                normalized_trace_id = normalize_langfuse_trace_id(trace_id)
+                
+                # 构建 span 参数，显式指定 trace_id
+                span_params = {
+                    "name": f"agent_{agent_name}",
+                    "input": {
                         "agent_key": agent_name,
                         "messages_count": len(messages),
                         "user_id": user_id,
                         "session_id": session_id,
                     },
-                    metadata={
+                    "metadata": {
                         "agent_key": agent_name,
                         "session_id": session_id,
                         "user_id": user_id,
                         "intent_type": state.get("current_intent"),
-                    }
-                ):
-                    result = await agent_node.ainvoke({"messages": messages})
+                    },
+                }
+                # 尝试使用 trace_context 参数指定 trace_id（如果 SDK 支持）
+                # 注意：Langfuse SDK 要求 trace_id 必须是 32 个小写十六进制字符
+                try:
+                    span_params["trace_context"] = {"trace_id": normalized_trace_id}
+                    # 使用 Span 追踪 Agent 节点执行
+                    with langfuse_client.start_as_current_span(**span_params):
+                        result = await agent_node.ainvoke({"messages": messages})
+                except (TypeError, AttributeError, ValueError) as e:
+                    # 如果 SDK 不支持 trace_context 参数或格式不正确，记录警告并使用默认方式
+                    logger.warning(
+                        f"Langfuse SDK 可能不支持 trace_context 参数或 trace_id 格式不正确，将使用默认行为。"
+                        f"trace_id={normalized_trace_id}, error={str(e)}"
+                    )
+                    # 移除 trace_context 参数，使用默认方式
+                    span_params.pop("trace_context", None)
+                    with langfuse_client.start_as_current_span(**span_params):
+                        result = await agent_node.ainvoke({"messages": messages})
             else:
-                # Langfuse 未启用，直接执行
+                # Langfuse 未启用或 trace_id 不存在，直接执行
                 result = await agent_node.ainvoke({"messages": messages})
             
             # 保留路由状态中的关键字段，防止下游节点丢失上下文
             # 注意：不再保留 bp_form，让 LLM 从对话历史中自己理解
-            for key in ("session_id", "user_id", "current_intent", "current_agent", "need_reroute"):
+            for key in ("session_id", "user_id", "current_intent", "current_agent", "need_reroute", "trace_id"):
                 if key in state and key not in result:
                     result[key] = state[key]
             

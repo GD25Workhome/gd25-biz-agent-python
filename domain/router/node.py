@@ -8,7 +8,7 @@ from domain.router.state import RouterState, IntentResult
 from domain.router.tools.router_tools import identify_intent, clarify_intent
 from domain.agents.registry import AgentRegistry
 from app.core.config import settings
-from infrastructure.observability.langfuse_handler import get_langfuse_client
+from infrastructure.observability.langfuse_handler import get_langfuse_client, normalize_langfuse_trace_id
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +49,7 @@ def route_node(state: RouterState) -> RouterState:
     current_agent = state.get("current_agent")
     session_id = state.get("session_id")
     user_id = state.get("user_id")
+    trace_id = state.get("trace_id")  # 获取 trace_id
     
     # 创建 Langfuse Span 追踪（如果启用）
     langfuse_client = get_langfuse_client()
@@ -130,22 +131,41 @@ def route_node(state: RouterState) -> RouterState:
             return state
         
         # 在 Span 中执行路由逻辑（如果启用）
-        if langfuse_client:
-            with langfuse_client.start_as_current_span(
-                name="route_node",
-                input={
+        if langfuse_client and trace_id:
+            # 将 trace_id 转换为 Langfuse 要求的格式（32 个小写十六进制字符）
+            normalized_trace_id = normalize_langfuse_trace_id(trace_id)
+            
+            # 构建 span 参数，显式指定 trace_id
+            span_params = {
+                "name": "route_node",
+                "input": {
                     "messages_count": len(messages),
                     "current_intent": current_intent,
                     "current_agent": current_agent,
                 },
-                metadata={
+                "metadata": {
                     "session_id": session_id,
                     "user_id": user_id,
-                }
-            ):
-                return _execute_route_logic()
+                },
+            }
+            # 尝试使用 trace_context 参数指定 trace_id（如果 SDK 支持）
+            # 注意：Langfuse SDK 要求 trace_id 必须是 32 个小写十六进制字符
+            try:
+                span_params["trace_context"] = {"trace_id": normalized_trace_id}
+                with langfuse_client.start_as_current_span(**span_params):
+                    return _execute_route_logic()
+            except (TypeError, AttributeError, ValueError) as e:
+                # 如果 SDK 不支持 trace_context 参数或格式不正确，记录警告并使用默认方式
+                logger.warning(
+                    f"Langfuse SDK 可能不支持 trace_context 参数或 trace_id 格式不正确，将使用默认行为。"
+                    f"trace_id={normalized_trace_id}, error={str(e)}"
+                )
+                # 移除 trace_context 参数，使用默认方式
+                span_params.pop("trace_context", None)
+                with langfuse_client.start_as_current_span(**span_params):
+                    return _execute_route_logic()
         else:
-            # Langfuse 未启用，直接执行
+            # Langfuse 未启用或 trace_id 不存在，直接执行
             return _execute_route_logic()
         
     except Exception as e:
@@ -185,6 +205,7 @@ def clarify_intent_node(state: RouterState) -> RouterState:
     
     session_id = state.get("session_id")
     user_id = state.get("user_id")
+    trace_id = state.get("trace_id")  # 获取 trace_id
     
     # 创建 Langfuse Span 追踪（如果启用）
     langfuse_client = get_langfuse_client()
@@ -192,21 +213,40 @@ def clarify_intent_node(state: RouterState) -> RouterState:
     # 调用澄清工具
     try:
         # 在 Span 中执行澄清逻辑
-        if langfuse_client:
-            with langfuse_client.start_as_current_span(
-                name="clarify_intent_node",
-                input={
+        if langfuse_client and trace_id:
+            # 将 trace_id 转换为 Langfuse 要求的格式（32 个小写十六进制字符）
+            normalized_trace_id = normalize_langfuse_trace_id(trace_id)
+            
+            # 构建 span 参数，显式指定 trace_id
+            span_params = {
+                "name": "clarify_intent_node",
+                "input": {
                     "user_query": user_query,
                     "messages_count": len(messages),
                 },
-                metadata={
+                "metadata": {
                     "session_id": session_id,
                     "user_id": user_id,
-                }
-            ):
-                clarification = clarify_intent.invoke({"query": user_query})
+                },
+            }
+            # 尝试使用 trace_context 参数指定 trace_id（如果 SDK 支持）
+            # 注意：Langfuse SDK 要求 trace_id 必须是 32 个小写十六进制字符
+            try:
+                span_params["trace_context"] = {"trace_id": normalized_trace_id}
+                with langfuse_client.start_as_current_span(**span_params):
+                    clarification = clarify_intent.invoke({"query": user_query})
+            except (TypeError, AttributeError, ValueError) as e:
+                # 如果 SDK 不支持 trace_context 参数或格式不正确，记录警告并使用默认方式
+                logger.warning(
+                    f"Langfuse SDK 可能不支持 trace_context 参数或 trace_id 格式不正确，将使用默认行为。"
+                    f"trace_id={normalized_trace_id}, error={str(e)}"
+                )
+                # 移除 trace_context 参数，使用默认方式
+                span_params.pop("trace_context", None)
+                with langfuse_client.start_as_current_span(**span_params):
+                    clarification = clarify_intent.invoke({"query": user_query})
         else:
-            # Langfuse 未启用，直接执行
+            # Langfuse 未启用或 trace_id 不存在，直接执行
             clarification = clarify_intent.invoke({"query": user_query})
         
         logger.info(f"澄清节点: 生成澄清问题: {clarification}")

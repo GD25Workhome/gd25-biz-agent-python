@@ -10,6 +10,43 @@ from infrastructure.observability.llm_logger import LlmLogContext
 
 logger = logging.getLogger(__name__)
 
+
+def normalize_langfuse_trace_id(trace_id: str) -> str:
+    """
+    将 trace_id 转换为 Langfuse 要求的格式
+    
+    Langfuse SDK 要求 trace_id 必须是 32 个小写十六进制字符（不带连字符）。
+    如果传入的是 UUID v4 格式（带连字符），需要转换为 32 位十六进制字符串。
+    
+    Args:
+        trace_id: 原始的 trace_id（可能是 UUID v4 格式或其他格式）
+        
+    Returns:
+        符合 Langfuse 要求的 trace_id（32 个小写十六进制字符）
+        
+    Example:
+        >>> normalize_langfuse_trace_id("2ae02464-a2ed-48dc-9802-ea8200e1ca6a")
+        "2ae02464a2ed48dc9802ea8200e1ca6a"
+    """
+    # 移除连字符并转换为小写
+    normalized = trace_id.replace("-", "").lower()
+    
+    # 验证是否为有效的十六进制字符串
+    try:
+        int(normalized, 16)
+    except ValueError:
+        logger.warning(f"trace_id 不是有效的十六进制字符串: {trace_id}")
+        # 如果无效，返回原值（让 Langfuse SDK 自己处理）
+        return trace_id
+    
+    # 如果长度不是 32，记录警告但返回转换后的值
+    if len(normalized) != 32:
+        logger.warning(
+            f"trace_id 长度不是 32 位: {trace_id} (转换后: {normalized}, 长度: {len(normalized)})"
+        )
+    
+    return normalized
+
 # 延迟导入 Langfuse，避免在未安装时出错
 try:
     from langfuse.langchain import CallbackHandler as LangfuseCallbackHandler
@@ -115,8 +152,9 @@ def set_langfuse_trace_context(
     name: str,
     user_id: Optional[str] = None,
     session_id: Optional[str] = None,
+    trace_id: Optional[str] = None,
     metadata: Optional[dict] = None,
-) -> None:
+) -> Optional[str]:
     """
     设置 Langfuse trace 上下文
     
@@ -127,33 +165,63 @@ def set_langfuse_trace_context(
         name: trace 名称（如 "chat_request"）
         user_id: 用户 ID
         session_id: 会话 ID
+        trace_id: Trace ID（如果提供，使用该 ID；否则由 Langfuse 生成）
         metadata: 元数据（如 message_length、history_count 等）
+        
+    Returns:
+        返回使用的 trace_id（如果 trace_id 为 None，返回传入的 trace_id）
     """
     if not LANGFUSE_AVAILABLE:
         logger.debug("Langfuse未安装，跳过Trace上下文设置")
-        return
+        return trace_id
     
     if not settings.LANGFUSE_ENABLED:
         logger.debug("Langfuse未启用，跳过Trace上下文设置")
-        return
+        return trace_id
     
     try:
         client = _get_langfuse_client()
         if client:
-            client.update_current_trace(
-                name=name,
-                user_id=user_id,
-                session_id=session_id,
-                metadata=metadata,
-            )
+            # 如果提供了 trace_id，先转换为 Langfuse 要求的格式
+            normalized_trace_id = None
+            if trace_id:
+                normalized_trace_id = normalize_langfuse_trace_id(trace_id)
+            
+            # 构建更新参数
+            update_params = {
+                "name": name,
+                "user_id": user_id,
+                "session_id": session_id,
+                "metadata": metadata,
+            }
+            
+            # 如果提供了 trace_id，尝试使用它（注意：Langfuse SDK 可能不支持 id 参数，需要根据实际 API 调整）
+            # 目前先尝试使用 id 参数，如果失败则回退到不使用 id
+            if normalized_trace_id:
+                try:
+                    # 尝试使用 id 参数（使用转换后的 trace_id）
+                    client.update_current_trace(id=normalized_trace_id, **update_params)
+                except (TypeError, AttributeError):
+                    # 如果 SDK 不支持 id 参数，记录警告但继续执行
+                    logger.warning(
+                        f"Langfuse SDK 可能不支持 id 参数，将使用默认行为。trace_id={normalized_trace_id}"
+                    )
+                    client.update_current_trace(**update_params)
+            else:
+                # 由 Langfuse 生成 trace_id
+                client.update_current_trace(**update_params)
+            
             logger.debug(
                 f"设置Langfuse Trace上下文: name={name}, "
                 f"user_id={user_id}, session_id={session_id}, "
-                f"metadata={metadata}"
+                f"trace_id={normalized_trace_id or trace_id}, metadata={metadata}"
             )
+            
+            return normalized_trace_id or trace_id
     except Exception as e:
         # 如果设置失败，记录警告但不影响主流程
         logger.warning(f"设置Langfuse Trace上下文失败: {e}，继续执行但不记录到Langfuse")
+        return trace_id
 
 
 def is_langfuse_available() -> bool:

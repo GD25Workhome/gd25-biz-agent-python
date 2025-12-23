@@ -15,6 +15,7 @@ class RouterState(TypedDict):
     need_reroute: bool  # 是否需要重新路由
     session_id: str  # 会话ID
     user_id: str  # 用户ID
+    trace_id: Optional[str]  # Langfuse Trace ID（用于链路追踪）
 
 
 class IntentResult(BaseModel):
