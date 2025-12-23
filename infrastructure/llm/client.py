@@ -4,6 +4,16 @@ LLM 客户端封装
 """
 import logging
 from typing import Optional, List, Any
+
+# 应用 reasoning_content 提取补丁（必须在导入 ChatOpenAI 之前）
+from infrastructure.llm.reasoning_patch import apply_reasoning_patch
+
+# 应用补丁（只执行一次）
+_patch_applied = False
+if not _patch_applied:
+    apply_reasoning_patch()
+    _patch_applied = True
+
 from langchain_openai import ChatOpenAI
 from langchain_core.language_models import BaseChatModel
 

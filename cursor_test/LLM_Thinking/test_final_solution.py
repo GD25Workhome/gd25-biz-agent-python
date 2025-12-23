@@ -7,6 +7,7 @@
 import os
 import json
 import logging
+import pprint
 from typing import Dict, Any
 
 from langchain_openai import ChatOpenAI
@@ -116,6 +117,91 @@ def test_comparison():
         
         message = HumanMessage(content=test_message)
         response = llm.invoke([message])
+        
+        # 打印 response 对象的完整结构
+        logger.info("\n" + "=" * 80)
+        logger.info("Response 对象详细信息")
+        logger.info("=" * 80)
+        
+        # 1. 打印 response 对象的类型
+        logger.info(f"Response 类型: {type(response)}")
+        logger.info(f"Response 类名: {response.__class__.__name__}")
+        logger.info(f"Response 模块: {response.__class__.__module__}")
+        
+        # 2. 打印 response 对象的所有属性
+        logger.info(f"\nResponse 对象的所有属性: {dir(response)}")
+        
+        # 3. 打印 response 对象的主要字段
+        logger.info("\n" + "-" * 80)
+        logger.info("Response 对象主要字段:")
+        logger.info("-" * 80)
+        
+        # content
+        if hasattr(response, "content"):
+            content_str = str(response.content)
+            logger.info(f"content (类型: {type(response.content)}):")
+            logger.info(f"  长度: {len(content_str)} 字符")
+            logger.info(f"  内容预览: {content_str[:500]}...")
+        
+        # additional_kwargs
+        if hasattr(response, "additional_kwargs"):
+            logger.info(f"\nadditional_kwargs (类型: {type(response.additional_kwargs)}):")
+            logger.info(f"  键: {list(response.additional_kwargs.keys()) if response.additional_kwargs else []}")
+            if response.additional_kwargs:
+                logger.info(f"  内容: {pprint.pformat(response.additional_kwargs, width=100, depth=3)}")
+        
+        # response_metadata
+        if hasattr(response, "response_metadata"):
+            logger.info(f"\nresponse_metadata (类型: {type(response.response_metadata)}):")
+            logger.info(f"  键: {list(response.response_metadata.keys()) if response.response_metadata else []}")
+            if response.response_metadata:
+                logger.info(f"  内容: {pprint.pformat(response.response_metadata, width=100, depth=5)}")
+        
+        # id
+        if hasattr(response, "id"):
+            logger.info(f"\nid: {response.id}")
+        
+        # usage_metadata
+        if hasattr(response, "usage_metadata"):
+            logger.info(f"\nusage_metadata: {pprint.pformat(response.usage_metadata, width=100)}")
+        
+        # tool_calls
+        if hasattr(response, "tool_calls"):
+            logger.info(f"\ntool_calls: {response.tool_calls}")
+        
+        # tool_call_id
+        if hasattr(response, "tool_call_id"):
+            logger.info(f"\ntool_call_id: {response.tool_call_id}")
+        
+        # 4. 尝试将 response 对象转换为字典（如果支持）
+        try:
+            if hasattr(response, "dict"):
+                response_dict = response.dict()
+                logger.info("\n" + "-" * 80)
+                logger.info("Response 对象字典表示 (response.dict()):")
+                logger.info("-" * 80)
+                logger.info(pprint.pformat(response_dict, width=100, depth=5))
+        except Exception as e:
+            logger.debug(f"无法调用 response.dict(): {e}")
+        
+        # 5. 尝试将 response 对象转换为 JSON（如果支持）
+        try:
+            if hasattr(response, "json"):
+                response_json = response.json()
+                logger.info("\n" + "-" * 80)
+                logger.info("Response 对象 JSON 表示 (response.json()):")
+                logger.info("-" * 80)
+                logger.info(json.dumps(json.loads(response_json), indent=2, ensure_ascii=False))
+        except Exception as e:
+            logger.debug(f"无法调用 response.json(): {e}")
+        
+        # 6. 打印 response 对象的字符串表示
+        logger.info("\n" + "-" * 80)
+        logger.info("Response 对象字符串表示 (str(response)):")
+        logger.info("-" * 80)
+        logger.info(str(response))
+        
+        logger.info("\n" + "=" * 80)
         
         content = response.content if hasattr(response, "content") else ""
         additional_kwargs = getattr(response, "additional_kwargs", {}) or {}

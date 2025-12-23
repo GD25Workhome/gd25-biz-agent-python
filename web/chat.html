@@ -82,7 +82,7 @@
       <button id="resetBtn" class="ghost">重置会话</button>
       <div class="auto-trace-toggle">
         <label>
-          <input type="checkbox" id="autoTraceIdToggle">
+          <input type="checkbox" id="autoTraceIdToggle" checked>
           <span>每次发送重新生成traceId</span>
         </label>
       </div>
@@ -240,8 +240,33 @@
         if (!resp.ok) throw new Error('加载用户列表失败');
         const data = await resp.json();
         renderUserList(data.users);
+        return data.users;
       } catch (e) {
         alert('加载用户列表失败: ' + e.message);
+        return [];
+      }
+    }
+
+    // 自动选择第一个用户（如果用户ID为空）
+    async function autoSelectFirstUser() {
+      // 如果用户ID不为空，不需要自动选择
+      if (userEl.value && userEl.value.trim() !== '') {
+        return;
+      }
+
+      try {
+        const resp = await fetch(usersApiUrl);
+        if (!resp.ok) throw new Error('加载用户列表失败');
+        const data = await resp.json();
+        
+        // 如果用户列表不为空，选择第一个用户
+        if (data.users && data.users.length > 0) {
+          const firstUser = data.users[0];
+          userEl.value = firstUser.id;
+        }
+      } catch (e) {
+        // 静默失败，不显示错误提示（因为这只是自动填充功能）
+        console.log('自动选择用户失败: ' + e.message);
       }
     }
 
@@ -480,6 +505,10 @@
 
     // 初始化
     initSession();
+    // 页面加载时自动选择第一个用户（如果用户ID为空）
+    autoSelectFirstUser();
+    // 初始化 Trace ID 控件状态（因为 checkbox 默认选中）
+    updateTraceIdControls();
   </script>
 </body>
 </html>
