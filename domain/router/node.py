@@ -8,6 +8,7 @@ from domain.router.state import RouterState, IntentResult
 from domain.router.tools.router_tools import identify_intent, clarify_intent
 from domain.agents.registry import AgentRegistry
 from app.core.config import settings
+from infrastructure.observability.langfuse_handler import get_langfuse_client
 
 logger = logging.getLogger(__name__)
 
@@ -46,79 +47,106 @@ def route_node(state: RouterState) -> RouterState:
     # 获取当前意图和智能体
     current_intent = state.get("current_intent")
     current_agent = state.get("current_agent")
+    session_id = state.get("session_id")
+    user_id = state.get("user_id")
+    
+    # 创建 Langfuse Span 追踪（如果启用）
+    langfuse_client = get_langfuse_client()
     
     # 识别意图
     try:
-        intent_result_dict = identify_intent.invoke({"messages": messages})
-        intent_result = IntentResult(**intent_result_dict)
-        
-        logger.info(
-            f"路由节点: 意图识别结果 - type={intent_result.intent_type}, "
-            f"confidence={intent_result.confidence}, "
-            f"need_clarification={intent_result.need_clarification}"
-        )
-        
-        new_intent = intent_result.intent_type
-        new_agent = None
-        
-        # 根据意图动态确定智能体（使用AgentRegistry）
-        if new_intent and new_intent != "unclear":
-            # 从AgentRegistry查找对应意图类型的Agent
-            agent_registry = AgentRegistry.get_all_agents()
-            for agent_key, agent_config in agent_registry.items():
-                routing_config = agent_config.get("routing", {})
-                intent_type = routing_config.get("intent_type")
-                if intent_type == new_intent:
-                    new_agent = agent_key
-                    break
-        
-        # 如果找不到对应的Agent，设置为None（unclear意图）
-        if not new_agent and new_intent != "unclear":
-            logger.warning(f"路由节点: 未找到对应意图 '{new_intent}' 的Agent，设置为None")
+        # 在 Span 中执行整个路由逻辑
+        def _execute_route_logic():
+            """执行路由逻辑的内部函数"""
+            intent_result_dict = identify_intent.invoke({"messages": messages})
+            intent_result = IntentResult(**intent_result_dict)
+            
+            logger.info(
+                f"路由节点: 意图识别结果 - type={intent_result.intent_type}, "
+                f"confidence={intent_result.confidence}, "
+                f"need_clarification={intent_result.need_clarification}"
+            )
+            
+            new_intent = intent_result.intent_type
             new_agent = None
-        
-        # 意图变化检测
-        intent_changed = False
-        if current_intent != new_intent:
-            intent_changed = True
-            logger.info(
-                f"路由节点: 检测到意图变化 - 从 '{current_intent}' 变为 '{new_intent}'"
-            )
-        
-        # 检查是否需要重新路由
-        need_reroute = False
-        has_new_user_input = isinstance(last_message, HumanMessage)
-        
-        # 如果意图不明确或需要澄清，需要路由到澄清节点
-        if new_intent == "unclear" or intent_result.need_clarification:
-            need_reroute = True
-            logger.info("路由节点: 意图不明确或需要澄清，将路由到澄清节点")
-        # 如果意图发生变化，需要重新路由
-        elif intent_changed:
-            need_reroute = True
-            logger.info("路由节点: 意图发生变化，需要重新路由")
-        # 如果当前没有智能体，需要路由
-        elif not current_agent:
-            need_reroute = True
-            logger.info("路由节点: 当前没有智能体，需要路由")
-        # 如果智能体发生变化，需要重新路由
-        elif current_agent != new_agent:
-            need_reroute = True
-            logger.info(
-                f"路由节点: 智能体发生变化 - 从 '{current_agent}' 变为 '{new_agent}'"
-            )
+            
+            # 根据意图动态确定智能体（使用AgentRegistry）
+            if new_intent and new_intent != "unclear":
+                # 从AgentRegistry查找对应意图类型的Agent
+                agent_registry = AgentRegistry.get_all_agents()
+                for agent_key, agent_config in agent_registry.items():
+                    routing_config = agent_config.get("routing", {})
+                    intent_type = routing_config.get("intent_type")
+                    if intent_type == new_intent:
+                        new_agent = agent_key
+                        break
+            
+            # 如果找不到对应的Agent，设置为None（unclear意图）
+            if not new_agent and new_intent != "unclear":
+                logger.warning(f"路由节点: 未找到对应意图 '{new_intent}' 的Agent，设置为None")
+                new_agent = None
+            
+            # 意图变化检测
+            intent_changed = False
+            if current_intent != new_intent:
+                intent_changed = True
+                logger.info(
+                    f"路由节点: 检测到意图变化 - 从 '{current_intent}' 变为 '{new_intent}'"
+                )
+            
+            # 检查是否需要重新路由
+            need_reroute = False
+            has_new_user_input = isinstance(last_message, HumanMessage)
+            
+            # 如果意图不明确或需要澄清，需要路由到澄清节点
+            if new_intent == "unclear" or intent_result.need_clarification:
+                need_reroute = True
+                logger.info("路由节点: 意图不明确或需要澄清，将路由到澄清节点")
+            # 如果意图发生变化，需要重新路由
+            elif intent_changed:
+                need_reroute = True
+                logger.info("路由节点: 意图发生变化，需要重新路由")
+            # 如果当前没有智能体，需要路由
+            elif not current_agent:
+                need_reroute = True
+                logger.info("路由节点: 当前没有智能体，需要路由")
+            # 如果智能体发生变化，需要重新路由
+            elif current_agent != new_agent:
+                need_reroute = True
+                logger.info(
+                    f"路由节点: 智能体发生变化 - 从 '{current_agent}' 变为 '{new_agent}'"
+                )
 
-        # 关键修正：只要检测到新的用户输入，就应再次执行当前智能体流程，避免新消息被直接 END 掉
-        if has_new_user_input:
-            need_reroute = True
-            logger.info("路由节点: 检测到新的用户输入，强制重新路由以执行当前智能体")
+            # 关键修正：只要检测到新的用户输入，就应再次执行当前智能体流程，避免新消息被直接 END 掉
+            if has_new_user_input:
+                need_reroute = True
+                logger.info("路由节点: 检测到新的用户输入，强制重新路由以执行当前智能体")
+            
+            # 更新状态
+            state["current_intent"] = new_intent
+            state["current_agent"] = new_agent
+            state["need_reroute"] = need_reroute
+            
+            return state
         
-        # 更新状态
-        state["current_intent"] = new_intent
-        state["current_agent"] = new_agent
-        state["need_reroute"] = need_reroute
-        
-        return state
+        # 在 Span 中执行路由逻辑（如果启用）
+        if langfuse_client:
+            with langfuse_client.start_as_current_span(
+                name="route_node",
+                input={
+                    "messages_count": len(messages),
+                    "current_intent": current_intent,
+                    "current_agent": current_agent,
+                },
+                metadata={
+                    "session_id": session_id,
+                    "user_id": user_id,
+                }
+            ):
+                return _execute_route_logic()
+        else:
+            # Langfuse 未启用，直接执行
+            return _execute_route_logic()
         
     except Exception as e:
         logger.error(f"路由节点执行失败: {str(e)}", exc_info=True)
@@ -155,9 +183,31 @@ def clarify_intent_node(state: RouterState) -> RouterState:
     else:
         user_query = str(last_message)
     
+    session_id = state.get("session_id")
+    user_id = state.get("user_id")
+    
+    # 创建 Langfuse Span 追踪（如果启用）
+    langfuse_client = get_langfuse_client()
+    
     # 调用澄清工具
     try:
-        clarification = clarify_intent.invoke({"query": user_query})
+        # 在 Span 中执行澄清逻辑
+        if langfuse_client:
+            with langfuse_client.start_as_current_span(
+                name="clarify_intent_node",
+                input={
+                    "user_query": user_query,
+                    "messages_count": len(messages),
+                },
+                metadata={
+                    "session_id": session_id,
+                    "user_id": user_id,
+                }
+            ):
+                clarification = clarify_intent.invoke({"query": user_query})
+        else:
+            # Langfuse 未启用，直接执行
+            clarification = clarify_intent.invoke({"query": user_query})
         
         logger.info(f"澄清节点: 生成澄清问题: {clarification}")
         

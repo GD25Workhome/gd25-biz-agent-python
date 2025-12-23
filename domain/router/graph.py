@@ -15,6 +15,7 @@ from domain.agents.factory import AgentFactory
 from domain.agents.registry import AgentRegistry
 from infrastructure.prompts.manager import PromptManager
 from infrastructure.observability.llm_logger import LlmLogContext
+from infrastructure.observability.langfuse_handler import get_langfuse_client
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +117,29 @@ def create_router_graph(
                 f"session_id={session_id}, user_id={user_id}"
             )
             
-            result = await agent_node.ainvoke({"messages": messages})
+            # 创建 Langfuse Span 追踪（如果启用）
+            langfuse_client = get_langfuse_client()
+            if langfuse_client:
+                # 使用 Span 追踪 Agent 节点执行
+                with langfuse_client.start_as_current_span(
+                    name=f"agent_{agent_name}",
+                    input={
+                        "agent_key": agent_name,
+                        "messages_count": len(messages),
+                        "user_id": user_id,
+                        "session_id": session_id,
+                    },
+                    metadata={
+                        "agent_key": agent_name,
+                        "session_id": session_id,
+                        "user_id": user_id,
+                        "intent_type": state.get("current_intent"),
+                    }
+                ):
+                    result = await agent_node.ainvoke({"messages": messages})
+            else:
+                # Langfuse 未启用，直接执行
+                result = await agent_node.ainvoke({"messages": messages})
             
             # 保留路由状态中的关键字段，防止下游节点丢失上下文
             # 注意：不再保留 bp_form，让 LLM 从对话历史中自己理解

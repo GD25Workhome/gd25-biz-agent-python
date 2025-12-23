@@ -10,9 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.schemas.user import UserCreate, UserUpdate, UserResponse, UserListResponse
+from app.core.config import settings
 from domain.router.state import RouterState
 from infrastructure.database.connection import get_async_session
 from infrastructure.database.repository.user_repository import UserRepository
+from infrastructure.observability.langfuse_handler import set_langfuse_trace_context
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -33,6 +35,18 @@ async def chat(
     Returns:
         聊天响应
     """
+    # 设置 Langfuse trace 上下文（如果启用）
+    if settings.LANGFUSE_ENABLED:
+        set_langfuse_trace_context(
+            name="chat_request",
+            user_id=request.user_id,
+            session_id=request.session_id,
+            metadata={
+                "message_length": len(request.message),
+                "history_count": len(request.conversation_history) if request.conversation_history else 0,
+            }
+        )
+    
     # 记录请求开始
     logger.info(
         f"[Chat请求开始] session_id={request.session_id}, "
