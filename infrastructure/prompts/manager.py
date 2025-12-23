@@ -126,13 +126,10 @@ class PromptManager:
                     continue
             
             # 加载模块内容
-            try:
-                content = self._load_module_content(module, context)
-                if content:
-                    modules_content[module_name] = content
-            except Exception as e:
-                logger.warning(f"加载模块 {module_name} 失败: {str(e)}，跳过该模块")
-                # 继续处理其他模块，不中断流程
+            content = self._load_module_content(module, context)
+            if not content:
+                raise ValueError(f"模块 {module_name} 内容为空")
+            modules_content[module_name] = content
         
         # 组合模块
         order = template.composition.get("order", list(modules_content.keys()))

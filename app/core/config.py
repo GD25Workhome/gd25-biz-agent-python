@@ -5,7 +5,6 @@
 from pathlib import Path
 from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import model_validator
 
 
 def find_project_root() -> Path:
@@ -37,22 +36,26 @@ def find_project_root() -> Path:
 class Settings(BaseSettings):
     """应用配置"""
     
-    # 数据库配置
-    DB_HOST: str = "localhost"
-    DB_PORT: int = 5432
-    DB_USER: str = "postgres"
-    DB_PASSWORD: str = "postgres"
-    DB_NAME: str = "langgraphflow"
-    DB_TIMEZONE: str = "Asia/Shanghai"
+    # 数据库配置（必须从 .env 读取，无默认值）
+    DB_HOST: Optional[str] = None
+    DB_PORT: Optional[int] = None
+    DB_USER: Optional[str] = None
+    DB_PASSWORD: Optional[str] = None
+    DB_NAME: Optional[str] = None
+    DB_TIMEZONE: str = "Asia/Shanghai"  # 时区配置保留默认值
     
     @property
     def DB_URI(self) -> str:
         """同步数据库连接 URI"""
+        if not all([self.DB_HOST, self.DB_PORT, self.DB_USER, self.DB_PASSWORD, self.DB_NAME]):
+            raise ValueError("数据库配置不完整，请设置 DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME")
         return f"postgresql+psycopg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
     
     @property
     def ASYNC_DB_URI(self) -> str:
         """异步数据库连接 URI"""
+        if not all([self.DB_HOST, self.DB_PORT, self.DB_USER, self.DB_PASSWORD, self.DB_NAME]):
+            raise ValueError("数据库配置不完整，请设置 DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME")
         return f"postgresql+psycopg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
     
     @property
@@ -63,6 +66,8 @@ class Settings(BaseSettings):
         注意：psycopg_pool.AsyncConnectionPool 需要标准的 PostgreSQL URI 格式（postgresql://），
         不能使用 SQLAlchemy 格式（postgresql+psycopg://）
         """
+        if not all([self.DB_HOST, self.DB_PORT, self.DB_USER, self.DB_PASSWORD, self.DB_NAME]):
+            raise ValueError("数据库配置不完整，请设置 DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME")
         uri = f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
         # 确保返回标准格式，移除任何 SQLAlchemy 驱动前缀
         if uri.startswith("postgresql+psycopg://"):
@@ -71,10 +76,10 @@ class Settings(BaseSettings):
             uri = uri.replace("postgresql+asyncpg://", "postgresql://", 1)
         return uri
     
-    # LLM 配置
-    OPENAI_API_KEY: str = ""
-    OPENAI_BASE_URL: str = "https://api.deepseek.com/v1"
-    LLM_MODEL: str = "deepseek-chat"
+    # LLM 配置（必须从 .env 读取，无默认值）
+    OPENAI_API_KEY: Optional[str] = None
+    OPENAI_BASE_URL: Optional[str] = None
+    LLM_MODEL: Optional[str] = None
     # 兼容旧参数，同时新增可配置默认/场景温度
     LLM_TEMPERATURE: float = 0.0
     LLM_TEMPERATURE_DEFAULT: float = 0.0
@@ -103,22 +108,10 @@ class Settings(BaseSettings):
     LANGFUSE_ENABLED: bool = False
     LANGFUSE_PUBLIC_KEY: Optional[str] = None
     LANGFUSE_SECRET_KEY: Optional[str] = None
-    # 支持两种环境变量名：LANGFUSE_BASE_URL（优先）和 LANGFUSE_HOST（向后兼容）
-    LANGFUSE_BASE_URL: Optional[str] = None
     LANGFUSE_HOST: Optional[str] = None
     
-    @model_validator(mode='after')
-    def resolve_langfuse_host(self):
-        """
-        解析 Langfuse Host 配置
-        优先使用 LANGFUSE_BASE_URL，如果未设置则使用 LANGFUSE_HOST
-        """
-        if not self.LANGFUSE_HOST and self.LANGFUSE_BASE_URL:
-            self.LANGFUSE_HOST = self.LANGFUSE_BASE_URL
-        return self
-    
     # 提示词配置
-    PROMPT_USE_LANGFUSE: bool = True  # 是否优先使用Langfuse（默认true）
+    PROMPT_USE_LANGFUSE: bool = True  # 是否使用Langfuse（默认true，但Langfuse是唯一数据源）
     PROMPT_CACHE_TTL: int = 300  # 提示词缓存TTL（秒）
     
     model_config = SettingsConfigDict(

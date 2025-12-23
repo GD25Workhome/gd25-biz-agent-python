@@ -222,16 +222,17 @@ def test_llm_graph_with_langfuse():
     print("=" * 60)
     
     # 初始化 Langfuse（从环境变量读取配置）
-    langfuse_public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
-    langfuse_secret_key = os.getenv("LANGFUSE_SECRET_KEY")
-    langfuse_host = os.getenv("LANGFUSE_BASE_URL") or os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
+    from app.core.config import settings
+    langfuse_public_key = settings.LANGFUSE_PUBLIC_KEY
+    langfuse_secret_key = settings.LANGFUSE_SECRET_KEY
+    langfuse_host = settings.LANGFUSE_HOST
     
-    if not langfuse_public_key or not langfuse_secret_key:
+    if not langfuse_public_key or not langfuse_secret_key or not langfuse_host:
         print("❌ 错误：未找到 Langfuse 凭据")
         print("   请确保 .env 文件中配置了：")
         print("   - LANGFUSE_PUBLIC_KEY")
         print("   - LANGFUSE_SECRET_KEY")
-        print("   - LANGFUSE_BASE_URL (可选)")
+        print("   - LANGFUSE_HOST")
         return False
     
     # 检查 LLM 配置

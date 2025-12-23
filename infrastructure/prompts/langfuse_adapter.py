@@ -1,6 +1,6 @@
 """
 Langfuse提示词模版适配器
-负责从Langfuse获取提示词模版，并提供缓存和降级机制
+负责从Langfuse获取提示词模版，并提供缓存机制
 """
 from typing import Dict, Optional, Tuple
 import logging
@@ -78,21 +78,20 @@ class LangfusePromptAdapter:
         else:
             logger.warning("Langfuse连接参数 - Secret Key: 未设置")
     
-    def get_template(self, template_name: str, version: Optional[str] = None, fallback_to_local: bool = True) -> str:
+    def get_template(self, template_name: str, version: Optional[str] = None) -> str:
         """
         从Langfuse获取提示词模版
         
         Args:
             template_name: 模版名称（如 "blood_pressure_agent_prompt"）
             version: 模版版本（可选，默认使用最新版本）
-            fallback_to_local: 如果Langfuse不可用，是否降级到本地文件
         
         Returns:
             模版内容（包含占位符）
         
         Raises:
-            ValueError: 模版不存在且无法降级
-            ConnectionError: Langfuse服务不可用且无法降级
+            ValueError: 模版不存在
+            ConnectionError: Langfuse服务不可用
         """
         cache_key = f"{template_name}:{version or 'latest'}"
         
@@ -137,52 +136,7 @@ class LangfusePromptAdapter:
             # 打印连接参数和详细错误信息
             logger.error(f"从Langfuse获取模版失败: {template_name}, 错误: {e}")
             self._log_connection_params_on_error()
-            
-            # 如果启用降级，尝试从本地文件加载
-            if fallback_to_local:
-                logger.warning(f"尝试从本地文件降级加载: {template_name}")
-                try:
-                    return self._load_from_local_fallback(template_name)
-                except Exception as fallback_error:
-                    logger.error(f"本地文件降级加载也失败: {template_name}, 错误: {fallback_error}")
-                    raise ValueError(
-                        f"无法从Langfuse获取模版且本地降级失败: {template_name}, "
-                        f"Langfuse错误: {e}, 本地错误: {fallback_error}"
-                    )
-            else:
-                raise ConnectionError(f"从Langfuse获取模版失败: {template_name}, 错误: {e}")
-    
-    def _load_from_local_fallback(self, template_name: str) -> str:
-        """
-        从本地文件降级加载模版
-        
-        Args:
-            template_name: 模版名称
-        
-        Returns:
-            模版内容
-        
-        Raises:
-            FileNotFoundError: 本地文件不存在
-        """
-        # 尝试从常见的本地路径查找
-        from pathlib import Path
-        
-        # 可能的本地文件路径
-        possible_paths = [
-            Path(f"config/prompts/{template_name}.txt"),
-            Path(f"config/prompts/templates/{template_name}.txt"),
-            Path(f"config/prompts/{template_name}.yaml"),
-        ]
-        
-        for path in possible_paths:
-            if path.exists():
-                with open(path, "r", encoding="utf-8") as f:
-                    content = f.read()
-                logger.info(f"从本地文件降级加载模版: {path}")
-                return content
-        
-        raise FileNotFoundError(f"未找到本地降级文件: {template_name}, 尝试路径: {possible_paths}")
+            raise ConnectionError(f"从Langfuse获取模版失败: {template_name}, 错误: {e}")
     
     def clear_cache(self, template_name: Optional[str] = None):
         """
@@ -245,7 +199,10 @@ class LangfusePromptAdapter:
         else:
             logger.error("Langfuse连接参数检查 - Secret Key: 未设置")
         
-        # 检查host格式
-        if not host.startswith(('http://', 'https://')):
-            logger.error(f"Langfuse连接参数检查 - Host格式可能不正确，当前值: {host}，应该以 http:// 或 https:// 开头")
+        # 检查host格式（需要先检查host是否为None）
+        if host:
+            if not host.startswith(('http://', 'https://')):
+                logger.error(f"Langfuse连接参数检查 - Host格式可能不正确，当前值: {host}，应该以 http:// 或 https:// 开头")
+        else:
+            logger.error("Langfuse连接参数检查 - Host未设置，这可能导致连接失败")
 

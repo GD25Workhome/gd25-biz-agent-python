@@ -59,6 +59,14 @@ def get_llm(
         )
     )
     
+    # 检查关键配置
+    if not settings.OPENAI_API_KEY:
+        raise ValueError("OPENAI_API_KEY 未配置，请设置 OPENAI_API_KEY")
+    if not settings.OPENAI_BASE_URL:
+        raise ValueError("OPENAI_BASE_URL 未配置，请设置 OPENAI_BASE_URL")
+    if not settings.LLM_MODEL and not model:
+        raise ValueError("LLM_MODEL 未配置，请设置 LLM_MODEL 或传入 model 参数")
+    
     # 构建参数字典，kwargs 中的参数会覆盖默认值
     params = {
         "model": model or settings.LLM_MODEL,

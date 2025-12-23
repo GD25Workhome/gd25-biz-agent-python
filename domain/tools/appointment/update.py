@@ -35,29 +35,25 @@ async def update_appointment(
     Returns:
         成功消息字符串
     """
-    # 如果配置了 Java 微服务，优先使用微服务
+    # 如果配置了 Java 微服务，必须使用微服务
     if settings.JAVA_SERVICE_BASE_URL:
-        try:
-            client = JavaServiceClient()
-            update_fields = {}
-            if department:
-                update_fields["department"] = department
-            if appointment_time:
-                update_fields["appointmentTime"] = appointment_time
-            if doctor_name:
-                update_fields["doctorName"] = doctor_name
-            if status:
-                update_fields["status"] = status
-            if notes:
-                update_fields["notes"] = notes
-            
-            result = await client.update_appointment(appointment_id, **update_fields)
-            return f"成功更新预约：{result}"
-        except Exception as e:
-            # 如果微服务调用失败，降级到本地数据库
-            pass
+        client = JavaServiceClient()
+        update_fields = {}
+        if department:
+            update_fields["department"] = department
+        if appointment_time:
+            update_fields["appointmentTime"] = appointment_time
+        if doctor_name:
+            update_fields["doctorName"] = doctor_name
+        if status:
+            update_fields["status"] = status
+        if notes:
+            update_fields["notes"] = notes
+        
+        result = await client.update_appointment(appointment_id, **update_fields)
+        return f"成功更新预约：{result}"
     
-    # 使用本地数据库更新预约
+    # 如果没有配置微服务，使用本地数据库更新预约
     # 构建更新字段
     update_fields = {}
     if department:

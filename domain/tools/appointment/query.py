@@ -25,20 +25,16 @@ async def query_appointment(
     Returns:
         预约信息的字符串表示
     """
-    # 如果配置了 Java 微服务，优先使用微服务
+    # 如果配置了 Java 微服务，必须使用微服务
     if settings.JAVA_SERVICE_BASE_URL:
-        try:
-            client = JavaServiceClient()
-            result = await client.query_appointment(
-                user_id=user_id,
-                appointment_id=appointment_id
-            )
-            return f"预约信息：{result}"
-        except Exception as e:
-            # 如果微服务调用失败，降级到本地数据库
-            pass
+        client = JavaServiceClient()
+        result = await client.query_appointment(
+            user_id=user_id,
+            appointment_id=appointment_id
+        )
+        return f"预约信息：{result}"
     
-    # 使用本地数据库查询预约
+    # 如果没有配置微服务，使用本地数据库查询预约
     session_factory = get_async_session_factory()
     async with session_factory() as session:
         repo = AppointmentRepository(session)

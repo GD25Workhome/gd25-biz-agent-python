@@ -27,9 +27,6 @@ agents:
     routing:
       node_name: "blood_pressure_agent"  # 路由图中的节点名称
       intent_type: "blood_pressure"       # 对应的意图类型
-    
-    # 降级配置（Langfuse不可用时使用）
-    system_prompt_path: "config/prompts/blood_pressure_prompt.txt"  # 可选：从文件加载提示词
 
   # 复诊管理智能体
   appointment_agent:
@@ -51,9 +48,6 @@ agents:
     routing:
       node_name: "appointment_agent"  # 路由图中的节点名称
       intent_type: "appointment"      # 对应的意图类型
-    
-    # 降级配置（Langfuse不可用时使用）
-    system_prompt_path: "config/prompts/appointment_prompt.txt"  # 可选：从文件加载提示词
 
   # 健康事件记录智能体
   health_event_agent:
@@ -75,9 +69,6 @@ agents:
     routing:
       node_name: "health_event_agent"  # 路由图中的节点名称
       intent_type: "health_event"     # 对应的意图类型
-    
-    # 降级配置（Langfuse不可用时使用）
-    system_prompt_path: "config/prompts/modules/health_event/role.txt"  # 使用模块化提示词
 
   # 用药记录智能体
   medication_agent:
@@ -99,9 +90,6 @@ agents:
     routing:
       node_name: "medication_agent"  # 路由图中的节点名称
       intent_type: "medication"      # 对应的意图类型
-    
-    # 降级配置（Langfuse不可用时使用）
-    system_prompt_path: "config/prompts/modules/medication/role.txt"  # 使用模块化提示词
 
   # 症状记录智能体
   symptom_agent:
@@ -123,7 +111,4 @@ agents:
     routing:
       node_name: "symptom_agent"  # 路由图中的节点名称
       intent_type: "symptom"      # 对应的意图类型
-    
-    # 降级配置（Langfuse不可用时使用）
-    system_prompt_path: "config/prompts/modules/symptom/role.txt"  # 使用模块化提示词
 

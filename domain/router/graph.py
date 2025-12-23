@@ -77,31 +77,17 @@ def create_router_graph(
                         include_modules=["user_info"]
                     )
                     
-                    if user_info_prompt:
-                        system_hint = SystemMessage(content=user_info_prompt)
-                        messages = [system_hint, *messages]
-                        logger.info(f"[AGENT_HINT] 使用PromptManager注入系统提示: {agent_name}")
-                    else:
-                        # 如果PromptManager返回空，使用fallback
-                        logger.warning(f"PromptManager返回空提示词，使用fallback: {agent_name}")
-                        hint_content = (
-                            f"系统提供的用户ID：{user_id}。"
-                            "调用工具时直接使用该 user_id，无需向用户索取。"
-                        )
-                        system_hint = SystemMessage(content=hint_content)
-                        messages = [system_hint, *messages]
-                        logger.info(f"[AGENT_HINT] 使用fallback注入系统提示: {agent_name}")
+                    if not user_info_prompt:
+                        raise ValueError(f"PromptManager返回空提示词: {agent_name}")
+                    
+                    system_hint = SystemMessage(content=user_info_prompt)
+                    messages = [system_hint, *messages]
+                    logger.info(f"[AGENT_HINT] 使用PromptManager注入系统提示: {agent_name}")
                         
                 except (FileNotFoundError, ValueError) as e:
-                    # 如果模板不存在，使用fallback
-                    logger.warning(f"提示词模板加载失败，使用fallback: {agent_name}, 错误: {str(e)}")
-                    hint_content = (
-                        f"系统提供的用户ID：{user_id}。"
-                        "调用工具时直接使用该 user_id，无需向用户索取。"
-                    )
-                    system_hint = SystemMessage(content=hint_content)
-                    messages = [system_hint, *messages]
-                    logger.info(f"[AGENT_HINT] 使用fallback注入系统提示: {agent_name}")
+                    # 如果模板不存在，直接抛出异常
+                    logger.error(f"提示词模板加载失败: {agent_name}, 错误: {str(e)}")
+                    raise ValueError(f"无法加载提示词模板: {agent_name}, 错误: {str(e)}")
             
             # 直接调用 Agent，由 LLM 决定如何回复和是否调用工具
             # LLM 可以通过 LangGraph 的 checkpointer 机制访问完整的对话历史

@@ -2,23 +2,9 @@
 路由智能体状态定义
 定义 RouterState 和 IntentResult 数据结构
 """
-from typing import TypedDict, List, Optional, Dict, Any, NotRequired
+from typing import TypedDict, List, Optional, Dict, Any
 from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, Field
-
-
-class BloodPressureForm(TypedDict, total=False):
-    """
-    血压记录表单槽位，显式记录已收集/待收集字段
-    
-    注意：此类型已废弃，不再使用。LLM 现在通过对话历史自主理解上下文和提取数据。
-    保留此类型仅用于向后兼容，新代码不应使用。
-    """
-    systolic: NotRequired[int]  # 收缩压（必填）
-    diastolic: NotRequired[int]  # 舒张压（必填）
-    heart_rate: NotRequired[int]  # 心率（可选）
-    record_time: NotRequired[str]  # 记录时间（可选，ISO 格式）
-    notes: NotRequired[str]  # 备注（可选）
 
 
 class RouterState(TypedDict):
@@ -29,7 +15,6 @@ class RouterState(TypedDict):
     need_reroute: bool  # 是否需要重新路由
     session_id: str  # 会话ID
     user_id: str  # 用户ID
-    bp_form: NotRequired[BloodPressureForm]  # 血压表单槽位（已废弃，不再使用，保留仅用于向后兼容）
 
 
 class IntentResult(BaseModel):

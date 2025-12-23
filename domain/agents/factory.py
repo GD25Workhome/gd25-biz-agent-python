@@ -182,61 +182,39 @@ class AgentFactory:
                 if name in TOOL_REGISTRY
             ]
         
-        # 3. 获取系统提示词
-        # 优先级：Langfuse模版 > 提示词管理系统 > 配置文件中的system_prompt > system_prompt_path文件
+        # 3. 获取系统提示词（只从Langfuse加载，无降级）
         system_prompt = None
         
         # 加载Agent特定占位符（如果配置了）
         PlaceholderManager.load_agent_placeholders(agent_key, agent_config)
         
-        # 3.1 优先尝试从Langfuse加载（如果配置了langfuse_template且启用了Langfuse）
+        # 从Langfuse加载提示词（必须配置且启用）
         langfuse_template = agent_config.get("langfuse_template")
-        if langfuse_template and settings.PROMPT_USE_LANGFUSE and settings.LANGFUSE_ENABLED:
-            try:
-                from infrastructure.prompts.langfuse_adapter import LangfusePromptAdapter
-                adapter = LangfusePromptAdapter()
-                template_version = agent_config.get("langfuse_template_version")
-                
-                # 从Langfuse获取模版
-                system_prompt = adapter.get_template(
-                    template_name=langfuse_template,
-                    version=template_version,
-                    fallback_to_local=True
-                )
-                
-                # 填充占位符（Agent创建时没有state，只填充Agent特定占位符）
-                placeholders = PlaceholderManager.get_placeholders(agent_key, state=None)
-                system_prompt = PlaceholderManager.fill_placeholders(system_prompt, placeholders)
-                
-                logger.info(f"从Langfuse加载提示词: {agent_key}, 模版: {langfuse_template}")
-            except Exception as e:
-                logger.warning(f"从Langfuse加载提示词失败: {agent_key}, 错误: {str(e)}, 尝试其他方式")
-                system_prompt = None
+        if not langfuse_template:
+            raise ValueError(f"Agent {agent_key} 未配置 langfuse_template，请配置 Langfuse 模版名称")
         
-        # 3.2 如果Langfuse加载失败，尝试使用提示词管理系统
-        if not system_prompt:
-            try:
-                prompt_manager = cls._get_prompt_manager()
-                # 尝试从模板加载提示词
-                system_prompt = prompt_manager.render(
-                    agent_key=agent_key,
-                    context={}  # Agent创建时没有上下文，上下文在运行时注入
-                )
-                logger.debug(f"使用PromptManager加载提示词: {agent_key}")
-            except (FileNotFoundError, ValueError) as e:
-                # 如果模板不存在，回退到原有方式
-                logger.debug(f"提示词模板不存在或加载失败: {agent_key}, 错误: {str(e)}, 使用原有方式加载")
-                system_prompt = None
+        if not settings.PROMPT_USE_LANGFUSE or not settings.LANGFUSE_ENABLED:
+            raise ValueError(f"Langfuse未启用，请设置 PROMPT_USE_LANGFUSE=True 和 LANGFUSE_ENABLED=True")
         
-        # 3.3 如果提示词管理系统也失败，回退到原有方式
-        if not system_prompt:
-            system_prompt = agent_config.get("system_prompt", "")
-            # 支持从文件加载提示词
-            prompt_path = agent_config.get("system_prompt_path")
-            if prompt_path and os.path.exists(prompt_path):
-                with open(prompt_path, "r", encoding="utf-8") as f:
-                    system_prompt = f.read()
-                    logger.debug(f"从文件加载提示词: {agent_key}, 路径: {prompt_path}")
+        try:
+            from infrastructure.prompts.langfuse_adapter import LangfusePromptAdapter
+            adapter = LangfusePromptAdapter()
+            template_version = agent_config.get("langfuse_template_version")
+            
+            # 从Langfuse获取模版
+            system_prompt = adapter.get_template(
+                template_name=langfuse_template,
+                version=template_version
+            )
+            
+            # 填充占位符（Agent创建时没有state，只填充Agent特定占位符）
+            placeholders = PlaceholderManager.get_placeholders(agent_key, state=None)
+            system_prompt = PlaceholderManager.fill_placeholders(system_prompt, placeholders)
+            
+            logger.info(f"从Langfuse加载提示词: {agent_key}, 模版: {langfuse_template}")
+        except Exception as e:
+            logger.error(f"从Langfuse加载提示词失败: {agent_key}, 错误: {str(e)}")
+            raise ValueError(f"无法从Langfuse加载提示词: {agent_key}, 错误: {str(e)}")
         
         # 如果仍然没有提示词，使用空字符串
         if not system_prompt:

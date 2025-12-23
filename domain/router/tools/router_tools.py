@@ -53,8 +53,7 @@ def _load_router_prompt(template_name: str, context: Dict[str, Any]) -> str:
     adapter = _get_langfuse_adapter()
     template = adapter.get_template(
         template_name=template_name,
-        version=None,
-        fallback_to_local=False  # 不降级，直接失败
+        version=None
     )
     
     # 填充占位符

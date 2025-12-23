@@ -66,8 +66,7 @@ class LangfuseLoader(DataLoader):
         # 从Langfuse获取模版
         template = self.adapter.get_template(
             template_name=source,
-            version=version,
-            fallback_to_local=True  # 启用降级机制
+            version=version
         )
         
         # 如果context中有占位符，进行填充
