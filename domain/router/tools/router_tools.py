@@ -35,6 +35,35 @@ def _get_langfuse_adapter() -> LangfusePromptAdapter:
     return _langfuse_adapter
 
 
+def _escape_braces_for_template(text: str) -> str:
+    """
+    转义文本中的花括号，防止 LangChain 将其识别为变量占位符
+    
+    当用户消息包含花括号（如 {test1}）时，LangChain 的 ChatPromptTemplate 
+    会将其识别为变量占位符，导致 KeyError。通过将单个花括号转义为双花括号，
+    可以防止这种误识别。
+    
+    Args:
+        text: 需要转义的文本
+        
+    Returns:
+        转义后的文本（{ 变为 {{，} 变为 }}）
+        
+    Examples:
+        >>> _escape_braces_for_template("测试{test1}")
+        '测试{{test1}}'
+        >>> _escape_braces_for_template("正常文本")
+        '正常文本'
+    """
+    if not text:
+        return text
+    
+    # 转义花括号：{ -> {{，} -> }}
+    # 注意：需要先转义 {，再转义 }，避免重复转义
+    escaped = text.replace("{", "{{").replace("}", "}}")
+    return escaped
+
+
 def _load_router_prompt(template_name: str, context: Dict[str, Any]) -> str:
     """
     从 Langfuse 或本地文件加载路由工具提示词
@@ -105,13 +134,16 @@ def _load_router_prompt(template_name: str, context: Dict[str, Any]) -> str:
 
 def _extract_conversation_context(messages: list[BaseMessage]) -> tuple[str, str]:
     """
-    从消息列表中提取当前用户消息和对话历史
+    从消息列表中提取当前用户消息和对话历史（已转义花括号）
+    
+    注意：提取的消息内容会进行花括号转义，防止 LangChain 将其识别为变量占位符。
+    例如：用户消息 "测试{test1}" 会被转义为 "测试{{test1}}"
     
     Args:
         messages: 消息列表
         
     Returns:
-        tuple: (当前用户消息, 对话历史文本)
+        tuple: (当前用户消息, 对话历史文本) - 已转义花括号
     """
     if not messages:
         return "", ""
@@ -139,6 +171,10 @@ def _extract_conversation_context(messages: list[BaseMessage]) -> tuple[str, str
             history_parts.append(f"消息: {msg.content}")
     
     history_text = "\n".join(history_parts) if history_parts else "无"
+    
+    # 转义花括号，防止 LangChain 误识别为变量占位符
+    current_query = _escape_braces_for_template(current_query)
+    history_text = _escape_braces_for_template(history_text)
     
     return current_query, history_text
 
@@ -356,10 +392,13 @@ def clarify_intent(query: str) -> str:
         str: 澄清问题文本
     """
     try:
-        # 从 Langfuse 加载提示词
+        # 转义用户查询中的花括号，防止 LangChain 误识别为变量占位符
+        escaped_query = _escape_braces_for_template(query)
+        
+        # 从 Langfuse 加载提示词（使用转义后的查询）
         prompt_template = _load_router_prompt(
             template_name="router_clarify_intent_prompt",
-            context={"query": query}
+            context={"query": escaped_query}
         )
         
         prompt = ChatPromptTemplate.from_messages([
@@ -370,7 +409,7 @@ def clarify_intent(query: str) -> str:
         # 调用LLM（使用可配置的温度以生成更友好的问题）
         llm = get_llm(temperature=settings.LLM_TEMPERATURE_CLARIFY)
         chain = prompt | llm
-        response = chain.invoke({"query": query})
+        response = chain.invoke({"query": escaped_query})
         
         clarification = response.content if hasattr(response, 'content') else str(response)
         clarification = clarification.strip()
