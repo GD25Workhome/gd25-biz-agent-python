@@ -24,6 +24,13 @@
     .meta { color: #666; font-size: 12px; margin-bottom: 4px; }
     .error { color: #b91c1c; margin-top: 8px; }
     
+    /* 完整响应显示区域样式 */
+    .response-detail { margin-top: 8px; padding: 8px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; font-size: 12px; }
+    .response-detail-header { font-weight: bold; color: #495057; margin-bottom: 4px; cursor: pointer; }
+    .response-detail-content { display: none; white-space: pre-wrap; word-break: break-all; font-family: 'Courier New', monospace; color: #212529; }
+    .response-detail-content.expanded { display: block; }
+    .response-detail-toggle { color: #2563eb; text-decoration: underline; }
+    
     /* 用户选择弹窗样式 */
     .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
     .modal-content { background: #fff; margin: 5% auto; padding: 24px; border-radius: 12px; width: 80%; max-width: 800px; max-height: 80vh; overflow-y: auto; }
@@ -89,6 +96,13 @@
     </div>
     <div id="error" class="error"></div>
     <div class="log" id="log"></div>
+    <div id="responseDetail" class="response-detail" style="display: none;">
+      <div class="response-detail-header">
+        <span>完整接口响应</span>
+        <span class="response-detail-toggle" id="toggleResponseDetail">展开</span>
+      </div>
+      <div class="response-detail-content" id="responseDetailContent"></div>
+    </div>
   </div>
 
   <!-- 用户选择弹窗 -->
@@ -168,10 +182,14 @@
     const cancelBtn = document.getElementById('cancelBtn');
     const refreshBtn = document.getElementById('refreshBtn');
     const autoTraceIdToggle = document.getElementById('autoTraceIdToggle');
+    const responseDetail = document.getElementById('responseDetail');
+    const responseDetailContent = document.getElementById('responseDetailContent');
+    const toggleResponseDetail = document.getElementById('toggleResponseDetail');
 
     // 在前端维护对话历史和会话ID
     let history = [];
     let currentSessionId = null;
+    let lastFullResponse = null; // 保存最后一次完整的接口响应
 
     // 生成 Trace ID（符合 Langfuse 要求的格式：32 个小写十六进制字符，不带连字符）
     function generateTraceId() {
@@ -198,6 +216,10 @@
       history = [];
       logEl.innerHTML = '';
       errorEl.textContent = '';
+      lastFullResponse = null;
+      responseDetail.style.display = 'none';
+      responseDetailContent.classList.remove('expanded');
+      toggleResponseDetail.textContent = '展开';
     }
 
     // 更新 Trace ID 输入框和按钮的启用/禁用状态
@@ -381,12 +403,37 @@
     }
 
     // 添加消息到日志
-    function appendMessage(role, content) {
+    function appendMessage(role, content, fullResponse = null) {
       const msg = document.createElement('div');
       msg.className = `message ${role === 'user' ? 'user' : 'assistant'}`;
-      msg.innerHTML = `<div class="meta">${role === 'user' ? '用户' : '助手'}</div><div>${content}</div>`;
+      
+      // 创建元信息元素
+      const metaEl = document.createElement('div');
+      metaEl.className = 'meta';
+      metaEl.textContent = role === 'user' ? '用户' : '助手';
+      
+      // 创建内容元素，使用 textContent 安全显示内容
+      const contentEl = document.createElement('div');
+      // 如果内容是字符串，直接显示；如果是对象，转换为字符串
+      if (typeof content === 'string') {
+        contentEl.textContent = content;
+      } else {
+        contentEl.textContent = JSON.stringify(content, null, 2);
+      }
+      
+      msg.appendChild(metaEl);
+      msg.appendChild(contentEl);
       logEl.appendChild(msg);
       logEl.scrollTop = logEl.scrollHeight;
+      
+      // 如果有完整响应，更新响应详情显示区域
+      if (fullResponse && role === 'assistant') {
+        lastFullResponse = fullResponse;
+        responseDetailContent.textContent = JSON.stringify(fullResponse, null, 2);
+        responseDetail.style.display = 'block';
+        responseDetailContent.classList.remove('expanded');
+        toggleResponseDetail.textContent = '展开';
+      }
     }
 
     // 发送消息
@@ -411,8 +458,6 @@
       errorEl.textContent = '';
       appendMessage('user', text);
 
-      // 将当前消息加入历史
-      history.push({ role: 'user', content: text });
       messageEl.value = '';
       sendBtn.disabled = true;
       sendBtn.textContent = '发送中...';
@@ -438,6 +483,7 @@
       }
 
       try {
+        // 发送请求时，conversation_history 不包含当前消息
         const resp = await fetch(chatApiUrl, {
           method: 'POST',
           headers: headers,
@@ -445,7 +491,7 @@
             message: text,
             session_id: currentSessionId,
             user_id: userId,
-            conversation_history: history
+            conversation_history: history  // 这里只包含之前的对话历史，不包含当前消息
           })
         });
 
@@ -455,12 +501,71 @@
         }
 
         const data = await resp.json();
-        const reply = data.response || '助手未返回内容';
+        
+        // 提取实际消息内容：优先使用 response_content，否则使用 response
+        let reply = '';
+        if (data && typeof data === 'object') {
+          // 首先检查 response_content 字段（直接存在）
+          if (data.response_content !== undefined && data.response_content !== null) {
+            reply = String(data.response_content);
+          } 
+          // 如果 response 字段存在，检查它的类型和内容
+          else if (data.response !== undefined && data.response !== null) {
+            const responseValue = data.response;
+            
+            // 如果 response 是对象，检查是否包含 response_content
+            if (typeof responseValue === 'object' && responseValue !== null) {
+              if (responseValue.response_content !== undefined && responseValue.response_content !== null) {
+                reply = String(responseValue.response_content);
+              } else {
+                // response 是对象但没有 response_content，转换为 JSON 字符串（用于调试）
+                console.warn('response 是对象但未包含 response_content：', responseValue);
+                reply = JSON.stringify(responseValue, null, 2);
+              }
+            }
+            // 如果 response 是字符串，尝试解析为 JSON
+            else if (typeof responseValue === 'string') {
+              try {
+                const parsedResponse = JSON.parse(responseValue);
+                // 如果解析成功且包含 response_content，使用它
+                if (parsedResponse && typeof parsedResponse === 'object' && parsedResponse.response_content) {
+                  reply = String(parsedResponse.response_content);
+                } else {
+                  // 解析成功但没有 response_content，使用原始字符串
+                  reply = responseValue;
+                }
+              } catch (e) {
+                // 解析失败，说明 response 不是 JSON 字符串，直接使用
+                reply = responseValue;
+              }
+            } else {
+              // response 是其他类型，直接转换为字符串
+              reply = String(responseValue);
+            }
+          } else {
+            // 如果都没有，尝试将整个 data 转换为字符串（用于调试）
+            console.warn('未找到 response_content 或 response 字段，完整响应：', data);
+            reply = '助手未返回有效内容';
+          }
+        } else {
+          // 如果 data 不是对象，直接使用
+          reply = String(data);
+        }
+        
+        // 调试日志
+        console.log('提取的消息内容：', reply);
+        console.log('完整响应数据：', data);
+        
+        // 收到响应后，将当前消息和助手回复一起添加到历史
+        // 注意：history 中保存的是提取后的消息内容（response_content），而不是完整的 JSON
+        history.push({ role: 'user', content: text });
         history.push({ role: 'assistant', content: reply });
-        appendMessage('assistant', reply);
+        
+        // 显示消息，并传递完整的响应数据用于详情显示
+        appendMessage('assistant', reply, data);
       } catch (e) {
         errorEl.textContent = e.message;
-        history.pop(); // 移除未成功发送的用户消息
+        // 请求失败时不需要从 history 中移除消息，因为当前消息本来就没添加到 history
       } finally {
         sendBtn.disabled = false;
         sendBtn.textContent = '发送';
@@ -500,6 +605,18 @@
     window.addEventListener('click', (e) => {
       if (e.target === userModal) {
         hideModal();
+      }
+    });
+    
+    // 切换完整响应显示
+    toggleResponseDetail.addEventListener('click', () => {
+      const isExpanded = responseDetailContent.classList.contains('expanded');
+      if (isExpanded) {
+        responseDetailContent.classList.remove('expanded');
+        toggleResponseDetail.textContent = '展开';
+      } else {
+        responseDetailContent.classList.add('expanded');
+        toggleResponseDetail.textContent = '收起';
       }
     });
 
