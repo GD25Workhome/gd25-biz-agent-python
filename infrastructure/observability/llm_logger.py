@@ -314,6 +314,14 @@ class LlmLogCallbackHandler(BaseCallbackHandler):
                 message = generations[0][0].message
                 content = getattr(message, "content", None)
                 
+                # ===== 优先从 additional_kwargs 提取 reasoning_content =====
+                # 这是 Monkey Patch 方案的核心：reasoning_content 会被放入 additional_kwargs
+                if hasattr(message, "additional_kwargs"):
+                    additional_kwargs = getattr(message, "additional_kwargs", {}) or {}
+                    reasoning_content = additional_kwargs.get("reasoning_content")
+                    if reasoning_content:
+                        logger.debug(f"✅ 从 additional_kwargs 中提取到 reasoning_content，长度: {len(reasoning_content)} 字符")
+                
                 # 处理结构化内容（当使用 reasoning 参数时，content 可能是列表）
                 if isinstance(content, list):
                     # 结构化响应：包含 reasoning 和 text 类型的块
@@ -361,15 +369,14 @@ class LlmLogCallbackHandler(BaseCallbackHandler):
                     else:
                         response_text = content_str
                 
-                # 如果还没有找到思考过程，尝试从 additional_kwargs 中查找
+                # 如果还没有找到思考过程，尝试从 additional_kwargs 中查找其他可能的字段名（后备方案）
                 if not reasoning_content and hasattr(message, "additional_kwargs"):
                     additional_kwargs = getattr(message, "additional_kwargs", {}) or {}
-                    # 检查常见的思考过程字段名
+                    # 检查常见的思考过程字段名（作为后备方案）
                     reasoning_content = (
                         additional_kwargs.get("reasoning") or
                         additional_kwargs.get("thinking") or
                         additional_kwargs.get("thought") or
-                        additional_kwargs.get("reasoning_content") or
                         additional_kwargs.get("thinking_content")
                     )
                     # 如果没有找到，检查是否有其他可能的字段

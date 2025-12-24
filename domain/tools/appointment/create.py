@@ -33,23 +33,19 @@ async def create_appointment(
     Returns:
         成功消息字符串
     """
-    # 如果配置了 Java 微服务，优先使用微服务
+    # 如果配置了 Java 微服务，必须使用微服务
     if settings.JAVA_SERVICE_BASE_URL:
-        try:
-            client = JavaServiceClient()
-            result = await client.create_appointment(
-                user_id=user_id,
-                department=department,
-                appointment_time=appointment_time,
-                doctor_name=doctor_name,
-                notes=notes
-            )
-            return f"成功创建预约：{result}"
-        except Exception as e:
-            # 如果微服务调用失败，降级到本地数据库
-            pass
+        client = JavaServiceClient()
+        result = await client.create_appointment(
+            user_id=user_id,
+            department=department,
+            appointment_time=appointment_time,
+            doctor_name=doctor_name,
+            notes=notes
+        )
+        return f"成功创建预约：{result}"
     
-    # 使用本地数据库创建预约
+    # 如果没有配置微服务，使用本地数据库创建预约
     try:
         appointment_datetime = datetime.fromisoformat(appointment_time.replace('Z', '+00:00'))
     except ValueError:

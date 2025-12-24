@@ -113,116 +113,99 @@
 
 #### 阶段一：数据库层开发
 
-**任务1.1：创建数据库模型**
+**任务1.1：创建数据库模型** - [x] ✅ 已完成
 
-- 文件：`infrastructure/database/models/health_event.py`
-- 文件：`infrastructure/database/models/medication.py`
-- 文件：`infrastructure/database/models/symptom.py`
+- [x] 文件：`infrastructure/database/models/health_event.py` ✅
+- [x] 文件：`infrastructure/database/models/medication.py` ✅
+- [x] 文件：`infrastructure/database/models/symptom.py` ✅
 - 参考：`infrastructure/database/models/blood_pressure.py`
 
-**任务1.2：创建Repository**
+**任务1.2：创建Repository** - [x] ✅ 已完成
 
-- 文件：`infrastructure/database/repository/health_event_repository.py`
-- 文件：`infrastructure/database/repository/medication_repository.py`
-- 文件：`infrastructure/database/repository/symptom_repository.py`
+- [x] 文件：`infrastructure/database/repository/health_event_repository.py` ✅
+- [x] 文件：`infrastructure/database/repository/medication_repository.py` ✅
+- [x] 文件：`infrastructure/database/repository/symptom_repository.py` ✅
 - 参考：`infrastructure/database/repository/blood_pressure_repository.py`
 
-**任务1.3：数据库迁移**
+**任务1.3：数据库迁移** - [x] ✅ 已完成
 
-- 创建数据库迁移脚本（如使用Alembic）
-- 执行迁移，创建数据表
+- [x] 更新 `infrastructure/database/models/__init__.py` 导入新模型 ✅
+- [x] 更新 `alembic/env.py` 导入新模型 ✅
+- [x] 创建数据库迁移脚本（使用Alembic）✅
+  - 迁移脚本：`alembic/versions/b65f9b55f4e3_add_health_event_medication_symptom_.py`
+- [ ] 执行迁移，创建数据表（需要手动执行：`alembic upgrade head`）
 
 #### 阶段二：工具层开发
 
-**任务2.1：创建工具目录结构**
+**任务2.1：创建工具目录结构** - [x] ✅ 已完成
 
-```
-domain/tools/
-├── health_event/
-│   ├── __init__.py
-│   ├── record.py
-│   ├── query.py
-│   └── update.py
-├── medication/
-│   ├── __init__.py
-│   ├── record.py
-│   ├── query.py
-│   └── update.py
-└── symptom/
-    ├── __init__.py
-    ├── record.py
-    ├── query.py
-    └── update.py
-```
+- [x] 创建 `domain/tools/health_event/` 目录及文件 ✅
+- [x] 创建 `domain/tools/medication/` 目录及文件 ✅
+- [x] 创建 `domain/tools/symptom/` 目录及文件 ✅
 
-**任务2.2：实现工具函数**
+**任务2.2：实现工具函数** - [x] ✅ 已完成
 
 每个工具需要实现：
-- `record_{agent_name}`：记录数据
-- `query_{agent_name}`：查询数据
-- `update_{agent_name}`：更新数据
+- [x] `record_health_event`：记录健康事件数据 ✅
+- [x] `query_health_event`：查询健康事件数据 ✅
+- [x] `update_health_event`：更新健康事件数据 ✅
+- [x] `record_medication`：记录用药数据 ✅
+- [x] `query_medication`：查询用药数据 ✅
+- [x] `update_medication`：更新用药数据 ✅
+- [x] `record_symptom`：记录症状数据 ✅
+- [x] `query_symptom`：查询症状数据 ✅
+- [x] `update_symptom`：更新症状数据 ✅
 
 参考实现：`domain/tools/blood_pressure/`
 
-**任务2.3：注册工具**
+**任务2.3：注册工具** - [x] ✅ 已完成
 
-在 `domain/tools/registry.py` 的 `init_tools()` 函数中注册所有新工具。
+- [x] 在 `domain/tools/registry.py` 的 `init_tools()` 函数中注册所有新工具 ✅
 
 #### 阶段三：Agent配置与提示词
 
-**任务3.1：创建提示词模块目录**
+**任务3.1：创建提示词模块目录** - [x] ✅ 已完成
 
-```
-config/prompts/modules/
-├── health_event/
-│   ├── role.txt
-│   ├── function_description.txt
-│   ├── clarification.txt
-│   ├── data_validation.txt
-│   ├── response_format.txt
-│   ├── few_shot_examples.txt
-│   └── notes.txt
-├── medication/
-│   └── (同上)
-└── symptom/
-    └── (同上)
-```
+- [x] 创建 `config/prompts/modules/health_event/` 目录及所有提示词文件 ✅
+- [x] 创建 `config/prompts/modules/medication/` 目录及所有提示词文件 ✅
+- [x] 创建 `config/prompts/modules/symptom/` 目录及所有提示词文件 ✅
 
-**任务3.2：编写提示词内容**
+**任务3.2：编写提示词内容** - [x] ✅ 已完成
 
-参考：`config/prompts/modules/blood_pressure/`
+- [x] 参考：`config/prompts/modules/blood_pressure/` ✅
+- [x] 为每个Agent创建了完整的提示词模块（role, function_description, clarification, data_validation, response_format, few_shot_examples, notes）✅
 
-**任务3.3：配置Agent**
+**任务3.3：配置Agent** - [x] ✅ 已完成
 
-在 `config/agents.yaml` 中添加三个Agent配置：
-- `health_event_agent`
-- `medication_agent`
-- `symptom_agent`
+- [x] 在 `config/agents.yaml` 中添加三个Agent配置 ✅：
+  - [x] `health_event_agent` ✅
+  - [x] `medication_agent` ✅
+  - [x] `symptom_agent` ✅
 
 #### 阶段四：路由层集成
 
-**任务4.1：更新意图识别**
+**任务4.1：更新意图识别** - [x] ✅ 已完成
 
-在 `domain/router/tools/router_tools.py` 中：
-- 更新 `INTENT_IDENTIFICATION_PROMPT_FALLBACK`，添加新意图类型
-- 更新 `_parse_intent_result()` 函数，添加新意图验证
-- 更新 `identify_intent()` 工具的描述
+- [x] 在 `domain/router/tools/router_tools.py` 中：
+  - [x] 更新 `INTENT_IDENTIFICATION_PROMPT_FALLBACK`，添加新意图类型 ✅
+  - [x] 更新 `_parse_intent_result()` 函数，添加新意图验证 ✅
+  - [x] 更新 `identify_intent()` 工具的描述 ✅
 
-**任务4.2：更新路由节点**
+**任务4.2：更新路由节点** - [x] ✅ 已完成
 
-在 `domain/router/node.py` 中：
-- 在 `route_node()` 函数中添加新意图到Agent的映射
+- [x] 在 `domain/router/node.py` 中：
+  - [x] 在 `route_node()` 函数中添加新意图到Agent的映射 ✅
 
-**任务4.3：更新路由图**
+**任务4.3：更新路由图** - [x] ✅ 已完成
 
-在 `domain/router/graph.py` 中：
-- 创建新Agent节点
-- 在 `route_to_agent()` 函数中添加路由逻辑
+- [x] 在 `domain/router/graph.py` 中：
+  - [x] 创建新Agent节点 ✅
+  - [x] 在 `route_to_agent()` 函数中添加路由逻辑 ✅
 
-**任务4.4：更新澄清提示词**
+**任务4.4：更新澄清提示词** - [x] ✅ 已完成
 
-在 `domain/router/tools/router_tools.py` 中：
-- 更新 `CLARIFY_INTENT_PROMPT_FALLBACK`，添加新功能说明
+- [x] 在 `domain/router/tools/router_tools.py` 中：
+  - [x] 更新 `CLARIFY_INTENT_PROMPT_FALLBACK`，添加新功能说明 ✅
 
 ## 4. 详细实现计划
 

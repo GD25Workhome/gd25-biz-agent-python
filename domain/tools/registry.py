@@ -53,6 +53,21 @@ def init_tools():
     from domain.tools.appointment.query import query_appointment
     from domain.tools.appointment.update import update_appointment
     
+    # 导入健康事件工具
+    from domain.tools.health_event.record import record_health_event
+    from domain.tools.health_event.query import query_health_event
+    from domain.tools.health_event.update import update_health_event
+    
+    # 导入用药记录工具
+    from domain.tools.medication.record import record_medication
+    from domain.tools.medication.query import query_medication
+    from domain.tools.medication.update import update_medication
+    
+    # 导入症状记录工具
+    from domain.tools.symptom.record import record_symptom
+    from domain.tools.symptom.query import query_symptom
+    from domain.tools.symptom.update import update_symptom
+    
     # 注册工具
     register_tool("record_blood_pressure", record_blood_pressure)
     register_tool("query_blood_pressure", query_blood_pressure)
@@ -60,6 +75,15 @@ def init_tools():
     register_tool("create_appointment", create_appointment)
     register_tool("query_appointment", query_appointment)
     register_tool("update_appointment", update_appointment)
+    register_tool("record_health_event", record_health_event)
+    register_tool("query_health_event", query_health_event)
+    register_tool("update_health_event", update_health_event)
+    register_tool("record_medication", record_medication)
+    register_tool("query_medication", query_medication)
+    register_tool("update_medication", update_medication)
+    register_tool("record_symptom", record_symptom)
+    register_tool("query_symptom", query_symptom)
+    register_tool("update_symptom", update_symptom)
 
 # 初始化工具注册表
 init_tools()

@@ -51,6 +51,13 @@
     .form-group input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
     .form-actions { display: flex; gap: 8px; }
     .danger { background: #dc2626; color: #fff; }
+    
+    /* Trace ID 自动生成开关样式 */
+    .auto-trace-toggle { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .auto-trace-toggle label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
+    .auto-trace-toggle input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+    .form-row input:disabled { background: #f5f5f5; cursor: not-allowed; opacity: 0.6; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -61,6 +68,11 @@
       <input id="userId" value="" readonly>
       <button id="selectUserBtn" class="ghost">选择用户</button>
     </div>
+    <div class="form-row">
+      <label for="traceId">Trace ID</label>
+      <input id="traceId" type="text" placeholder="留空则自动生成" style="flex: 1;">
+      <button id="generateTraceIdBtn" class="ghost" type="button">生成ID</button>
+    </div>
     <div>
       <label for="message"><strong>输入消息</strong></label>
       <textarea id="message" placeholder="请输入要发送的内容，支持多轮上下文"></textarea>
@@ -68,6 +80,12 @@
     <div class="actions">
       <button id="sendBtn" class="primary">发送</button>
       <button id="resetBtn" class="ghost">重置会话</button>
+      <div class="auto-trace-toggle">
+        <label>
+          <input type="checkbox" id="autoTraceIdToggle" checked>
+          <span>每次发送重新生成traceId</span>
+        </label>
+      </div>
     </div>
     <div id="error" class="error"></div>
     <div class="log" id="log"></div>
@@ -130,6 +148,8 @@
     const logEl = document.getElementById('log');
     const messageEl = document.getElementById('message');
     const userEl = document.getElementById('userId');
+    const traceIdEl = document.getElementById('traceId');
+    const generateTraceIdBtn = document.getElementById('generateTraceIdBtn');
     const errorEl = document.getElementById('error');
     const sendBtn = document.getElementById('sendBtn');
     const resetBtn = document.getElementById('resetBtn');
@@ -147,10 +167,30 @@
     const saveBtn = document.getElementById('saveBtn');
     const cancelBtn = document.getElementById('cancelBtn');
     const refreshBtn = document.getElementById('refreshBtn');
+    const autoTraceIdToggle = document.getElementById('autoTraceIdToggle');
 
     // 在前端维护对话历史和会话ID
     let history = [];
     let currentSessionId = null;
+
+    // 生成 Trace ID（符合 Langfuse 要求的格式：32 个小写十六进制字符，不带连字符）
+    function generateTraceId() {
+      // 生成 32 个随机十六进制字符（0-9, a-f）
+      let result = '';
+      const hexChars = '0123456789abcdef';
+      for (let i = 0; i < 32; i++) {
+        // 使用 crypto.getRandomValues 如果支持（更安全）
+        if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+          const randomBytes = new Uint8Array(1);
+          crypto.getRandomValues(randomBytes);
+          result += hexChars[randomBytes[0] % 16];
+        } else {
+          // 降级方案：使用 Math.random
+          result += hexChars[Math.floor(Math.random() * 16)];
+        }
+      }
+      return result;
+    }
 
     // 初始化会话
     function initSession() {
@@ -158,6 +198,18 @@
       history = [];
       logEl.innerHTML = '';
       errorEl.textContent = '';
+    }
+
+    // 更新 Trace ID 输入框和按钮的启用/禁用状态
+    function updateTraceIdControls() {
+      const isAutoMode = autoTraceIdToggle.checked;
+      traceIdEl.disabled = isAutoMode;
+      generateTraceIdBtn.disabled = isAutoMode;
+      
+      // 如果启用自动模式，清空输入框
+      if (isAutoMode) {
+        traceIdEl.value = '';
+      }
     }
 
     // 显示/隐藏弹窗
@@ -188,8 +240,33 @@
         if (!resp.ok) throw new Error('加载用户列表失败');
         const data = await resp.json();
         renderUserList(data.users);
+        return data.users;
       } catch (e) {
         alert('加载用户列表失败: ' + e.message);
+        return [];
+      }
+    }
+
+    // 自动选择第一个用户（如果用户ID为空）
+    async function autoSelectFirstUser() {
+      // 如果用户ID不为空，不需要自动选择
+      if (userEl.value && userEl.value.trim() !== '') {
+        return;
+      }
+
+      try {
+        const resp = await fetch(usersApiUrl);
+        if (!resp.ok) throw new Error('加载用户列表失败');
+        const data = await resp.json();
+        
+        // 如果用户列表不为空，选择第一个用户
+        if (data.users && data.users.length > 0) {
+          const firstUser = data.users[0];
+          userEl.value = firstUser.id;
+        }
+      } catch (e) {
+        // 静默失败，不显示错误提示（因为这只是自动填充功能）
+        console.log('自动选择用户失败: ' + e.message);
       }
     }
 
@@ -340,10 +417,30 @@
       sendBtn.disabled = true;
       sendBtn.textContent = '发送中...';
 
+      // 获取 Trace ID
+      let traceId = '';
+      if (autoTraceIdToggle.checked) {
+        // 自动模式：每次发送时重新生成
+        traceId = generateTraceId();
+      } else {
+        // 手动模式：使用用户输入的 Trace ID
+        traceId = traceIdEl.value.trim();
+      }
+      
+      // 构建请求头
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      
+      // 如果 Trace ID 存在，添加到请求头
+      if (traceId) {
+        headers['X-Trace-ID'] = traceId;
+      }
+
       try {
         const resp = await fetch(chatApiUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: headers,
           body: JSON.stringify({
             message: text,
             session_id: currentSessionId,
@@ -376,6 +473,14 @@
       initSession();
     }
 
+    // 绑定生成 Trace ID 按钮事件
+    generateTraceIdBtn.addEventListener('click', function() {
+      traceIdEl.value = generateTraceId();
+    });
+
+    // 绑定自动生成 Trace ID 开关事件
+    autoTraceIdToggle.addEventListener('change', updateTraceIdControls);
+
     // 事件监听
     sendBtn.addEventListener('click', sendMessage);
     resetBtn.addEventListener('click', resetSession);
@@ -400,6 +505,10 @@
 
     // 初始化
     initSession();
+    // 页面加载时自动选择第一个用户（如果用户ID为空）
+    autoSelectFirstUser();
+    // 初始化 Trace ID 控件状态（因为 checkbox 默认选中）
+    updateTraceIdControls();
   </script>
 </body>
 </html>
