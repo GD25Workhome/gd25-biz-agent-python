@@ -294,7 +294,7 @@ def clarify_intent_node(state: RouterState) -> RouterState:
     except Exception as e:
         logger.error(f"澄清节点执行失败: {str(e)}", exc_info=True)
         # 返回默认澄清问题
-        default_clarification = "抱歉，我没有理解您的意图。请告诉我您是想记录血压、预约复诊、记录健康事件、记录用药、记录症状，还是需要其他帮助？"
+        default_clarification = "抱歉，我没有理解您的意图。请告诉我您是想记录血压、记录健康事件、记录用药、记录症状，还是需要其他帮助？"
         
         updated_messages = list(messages)
         updated_messages.append(AIMessage(content=default_clarification))

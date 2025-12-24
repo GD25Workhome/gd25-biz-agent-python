@@ -48,11 +48,6 @@ def init_tools():
     from domain.tools.blood_pressure.query import query_blood_pressure
     from domain.tools.blood_pressure.update import update_blood_pressure
     
-    # 导入复诊管理工具
-    from domain.tools.appointment.create import create_appointment
-    from domain.tools.appointment.query import query_appointment
-    from domain.tools.appointment.update import update_appointment
-    
     # 导入健康事件工具
     from domain.tools.health_event.record import record_health_event
     from domain.tools.health_event.query import query_health_event
@@ -72,9 +67,6 @@ def init_tools():
     register_tool("record_blood_pressure", record_blood_pressure)
     register_tool("query_blood_pressure", query_blood_pressure)
     register_tool("update_blood_pressure", update_blood_pressure)
-    register_tool("create_appointment", create_appointment)
-    register_tool("query_appointment", query_appointment)
-    register_tool("update_appointment", update_appointment)
     register_tool("record_health_event", record_health_event)
     register_tool("query_health_event", query_health_event)
     register_tool("update_health_event", update_health_event)

@@ -191,8 +191,26 @@ class Settings(BaseSettings):
             return v.lower() in ('true', '1', 'yes', 'on')
         return bool(v)
     
+    @field_validator('PROMPT_SOURCE_MODE', mode='before')
+    @classmethod
+    def _validate_prompt_source_mode(cls, v: Union[str, None]) -> str:
+        """验证提示词读取模式"""
+        if v is None or (isinstance(v, str) and v.strip() == ''):
+            return "auto"
+        v = v.strip().lower()
+        if v not in ("langfuse", "local", "auto"):
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"无效的PROMPT_SOURCE_MODE值: {v}，使用默认值auto")
+            return "auto"
+        return v
+    
     # 提示词配置
     PROMPT_USE_LANGFUSE: bool = True  # 是否使用Langfuse（默认true，但Langfuse是唯一数据源）
+    PROMPT_SOURCE_MODE: str = Field(
+        default="auto",
+        description="提示词读取模式: langfuse(仅Langfuse) | local(仅本地) | auto(自动降级)"
+    )
     PROMPT_CACHE_TTL: int = 300  # 提示词缓存TTL（秒）
     
     model_config = SettingsConfigDict(

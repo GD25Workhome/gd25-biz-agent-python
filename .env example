@@ -34,3 +34,6 @@ LANGFUSE_ENABLED=true
 LANGFUSE_SECRET_KEY="sk-lf-***-1a4da3578ef9"
 LANGFUSE_PUBLIC_KEY="pk-lf-***-c57c7decaa03"
 LANGFUSE_HOST="https://us.cloud.langfuse.com"
+
+# 提示词获取方式，langfuse、local、auto
+PROMPT_SOURCE_MODE=local

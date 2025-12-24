@@ -6,6 +6,7 @@
 import yaml
 import os
 import threading
+from pathlib import Path
 from typing import Dict, List, Any, Optional, TYPE_CHECKING
 from langchain_core.tools import BaseTool
 from langgraph.prebuilt import create_react_agent
@@ -182,44 +183,85 @@ class AgentFactory:
                 if name in TOOL_REGISTRY
             ]
         
-        # 3. 获取系统提示词（只从Langfuse加载，无降级）
+        # 3. 获取系统提示词（支持多源读取）
         system_prompt = None
+        prompt_source_mode = settings.PROMPT_SOURCE_MODE.lower()
         
         # 加载Agent特定占位符（如果配置了）
         PlaceholderManager.load_agent_placeholders(agent_key, agent_config)
         
-        # 从Langfuse加载提示词（必须配置且启用）
-        langfuse_template = agent_config.get("langfuse_template")
-        if not langfuse_template:
-            raise ValueError(f"Agent {agent_key} 未配置 langfuse_template，请配置 Langfuse 模版名称")
+        # 从Langfuse加载提示词（如果模式为langfuse或auto）
+        if prompt_source_mode in ("langfuse", "auto"):
+            langfuse_template = agent_config.get("langfuse_template")
+            if langfuse_template:
+                try:
+                    from infrastructure.prompts.langfuse_adapter import LangfusePromptAdapter
+                    adapter = LangfusePromptAdapter()
+                    template_version = agent_config.get("langfuse_template_version")
+                    
+                    system_prompt = adapter.get_template(
+                        template_name=langfuse_template,
+                        version=template_version
+                    )
+                    
+                    logger.info(f"从Langfuse加载提示词: {agent_key}, 模版: {langfuse_template}")
+                except Exception as e:
+                    logger.warning(f"从Langfuse加载提示词失败: {agent_key}, 错误: {str(e)}")
+                    if prompt_source_mode == "langfuse":
+                        # 如果模式为langfuse且失败，抛出异常
+                        raise ValueError(f"无法从Langfuse加载提示词: {agent_key}, 错误: {str(e)}")
+                    # 如果模式为auto，继续尝试从本地文件加载
+                    logger.info(f"尝试从本地文件加载提示词: {agent_key}")
+            else:
+                if prompt_source_mode == "langfuse":
+                    raise ValueError(f"Agent {agent_key} 未配置 langfuse_template，请配置 Langfuse 模版名称")
+                # 如果模式为auto，继续尝试从本地文件加载
+                logger.info(f"Agent {agent_key} 未配置 langfuse_template，尝试从本地文件加载")
         
-        if not settings.PROMPT_USE_LANGFUSE or not settings.LANGFUSE_ENABLED:
-            raise ValueError(f"Langfuse未启用，请设置 PROMPT_USE_LANGFUSE=True 和 LANGFUSE_ENABLED=True")
+        # 从本地文件加载提示词（如果模式为local，或auto模式下Langfuse失败）
+        if not system_prompt and prompt_source_mode in ("local", "auto"):
+            # 构建本地文件路径
+            # 映射关系：langfuse_template名称 -> 本地文件名
+            langfuse_template = agent_config.get("langfuse_template", "")
+            if langfuse_template:
+                # 直接使用langfuse_template名称作为文件名（去掉可能的版本后缀）
+                local_filename = f"{langfuse_template}.txt"
+            else:
+                # 如果没有配置langfuse_template，使用agent_key作为文件名
+                local_filename = f"{agent_key}_prompt.txt"
+            
+            local_file_path = Path("config/prompts/local") / local_filename
+            
+            # 尝试从项目根目录查找
+            if not local_file_path.exists():
+                local_file_path = Path.cwd() / local_file_path
+            
+            if local_file_path.exists():
+                try:
+                    with open(local_file_path, "r", encoding="utf-8") as f:
+                        system_prompt = f.read()
+                    
+                    logger.info(f"从本地文件加载提示词: {agent_key}, 文件: {local_file_path}")
+                except Exception as e:
+                    logger.error(f"从本地文件加载提示词失败: {agent_key}, 错误: {str(e)}")
+                    if prompt_source_mode == "local":
+                        raise ValueError(f"无法从本地文件加载提示词: {agent_key}, 错误: {str(e)}")
+            else:
+                if prompt_source_mode == "local":
+                    raise FileNotFoundError(f"未找到本地提示词文件: {agent_key}, 路径: {local_file_path}")
         
-        try:
-            from infrastructure.prompts.langfuse_adapter import LangfusePromptAdapter
-            adapter = LangfusePromptAdapter()
-            template_version = agent_config.get("langfuse_template_version")
-            
-            # 从Langfuse获取模版
-            system_prompt = adapter.get_template(
-                template_name=langfuse_template,
-                version=template_version
-            )
-            
-            # 填充占位符（Agent创建时没有state，只填充Agent特定占位符）
+        # 如果仍然没有提示词，使用空字符串或抛出异常
+        if not system_prompt:
+            if prompt_source_mode == "local":
+                raise ValueError(f"未找到本地提示词文件: {agent_key}, 路径: {local_file_path}")
+            else:
+                logger.warning(f"未找到提示词配置: {agent_key}, 使用空提示词")
+                system_prompt = ""
+        
+        # 填充占位符（Agent创建时没有state，只填充Agent特定占位符）
+        if system_prompt:
             placeholders = PlaceholderManager.get_placeholders(agent_key, state=None)
             system_prompt = PlaceholderManager.fill_placeholders(system_prompt, placeholders)
-            
-            logger.info(f"从Langfuse加载提示词: {agent_key}, 模版: {langfuse_template}")
-        except Exception as e:
-            logger.error(f"从Langfuse加载提示词失败: {agent_key}, 错误: {str(e)}")
-            raise ValueError(f"无法从Langfuse加载提示词: {agent_key}, 错误: {str(e)}")
-        
-        # 如果仍然没有提示词，使用空字符串
-        if not system_prompt:
-            logger.warning(f"未找到提示词配置: {agent_key}, 使用空提示词")
-            system_prompt = ""
         
         # 4. 创建 ReAct Agent
         return create_react_agent(

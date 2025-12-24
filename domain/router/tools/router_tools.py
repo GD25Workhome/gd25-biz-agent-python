@@ -1,15 +1,16 @@
 """
 路由工具：意图识别和澄清
 
-提示词统一从 Langfuse 加载，如果获取失败则抛出异常。
+提示词支持从 Langfuse 或本地文件加载，根据 PROMPT_SOURCE_MODE 配置决定。
 
-路由工具提示词模版名称（Langfuse）：
+路由工具提示词模版名称（Langfuse/本地文件）：
 - router_intent_identification_prompt：意图识别
 - router_clarify_intent_prompt：意图澄清
 """
 from typing import Dict, Any, Optional
 import json
 import logging
+from pathlib import Path
 from langchain_core.tools import tool
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 from langchain_core.prompts import ChatPromptTemplate
@@ -36,32 +37,69 @@ def _get_langfuse_adapter() -> LangfusePromptAdapter:
 
 def _load_router_prompt(template_name: str, context: Dict[str, Any]) -> str:
     """
-    从 Langfuse 加载路由工具提示词
+    从 Langfuse 或本地文件加载路由工具提示词
     
     Args:
-        template_name: Langfuse模版名称（如 "router_intent_identification_prompt"）
+        template_name: 模版名称（Langfuse模版名称或本地文件名）
         context: 上下文信息（用于占位符填充）
         
     Returns:
         填充后的提示词内容
         
     Raises:
-        ValueError: Langfuse未启用或配置不完整
-        ConnectionError: 无法从Langfuse获取模版
+        ValueError: 无法加载提示词
+        FileNotFoundError: 本地文件不存在（local模式）
     """
-    # 从 Langfuse 获取模版
-    adapter = _get_langfuse_adapter()
-    template = adapter.get_template(
-        template_name=template_name,
-        version=None
-    )
+    prompt_source_mode = settings.PROMPT_SOURCE_MODE.lower()
+    template_content = None
+    
+    # 从Langfuse加载（如果模式为langfuse或auto）
+    if prompt_source_mode in ("langfuse", "auto"):
+        try:
+            adapter = _get_langfuse_adapter()
+            template_content = adapter.get_template(
+                template_name=template_name,
+                version=None
+            )
+            logger.debug(f"从Langfuse加载提示词成功: {template_name}")
+        except Exception as e:
+            logger.warning(f"从Langfuse加载提示词失败: {template_name}, 错误: {str(e)}")
+            if prompt_source_mode == "langfuse":
+                raise ValueError(f"无法从Langfuse加载提示词: {template_name}, 错误: {str(e)}")
+            # 如果模式为auto，继续尝试从本地文件加载
+            logger.info(f"尝试从本地文件加载提示词: {template_name}")
+    
+    # 从本地文件加载（如果模式为local，或auto模式下Langfuse失败）
+    if not template_content and prompt_source_mode in ("local", "auto"):
+        # 构建本地文件路径
+        local_filename = f"{template_name}.txt"
+        local_file_path = Path("config/prompts/local") / local_filename
+        
+        # 尝试从项目根目录查找
+        if not local_file_path.exists():
+            local_file_path = Path.cwd() / local_file_path
+        
+        if local_file_path.exists():
+            try:
+                with open(local_file_path, "r", encoding="utf-8") as f:
+                    template_content = f.read()
+                logger.info(f"从本地文件加载提示词: {template_name}, 文件: {local_file_path}")
+            except Exception as e:
+                logger.error(f"从本地文件加载提示词失败: {template_name}, 错误: {str(e)}")
+                if prompt_source_mode == "local":
+                    raise ValueError(f"无法从本地文件加载提示词: {template_name}, 错误: {str(e)}")
+        else:
+            if prompt_source_mode == "local":
+                raise FileNotFoundError(f"本地提示词文件不存在: {template_name}, 路径: {local_file_path}")
+    
+    if not template_content:
+        raise ValueError(f"无法加载提示词: {template_name}, 模式: {prompt_source_mode}")
     
     # 填充占位符
     placeholders = PlaceholderManager.get_placeholders("router_tools", state=None)
     placeholders.update(context)
-    prompt_template = PlaceholderManager.fill_placeholders(template, placeholders)
+    prompt_template = PlaceholderManager.fill_placeholders(template_content, placeholders)
     
-    logger.debug(f"从Langfuse加载提示词成功: {template_name}")
     return prompt_template
 
 
@@ -154,7 +192,7 @@ def _parse_intent_result(llm_response: str) -> IntentResult:
         
         # 验证并创建IntentResult
         intent_type = data.get("intent_type", "unclear")
-        valid_intents = ["blood_pressure", "appointment", "health_event", "medication", "symptom", "unclear"]
+        valid_intents = ["blood_pressure", "health_event", "medication", "symptom", "unclear"]
         if intent_type not in valid_intents:
             logger.warning(f"无效的意图类型: {intent_type}，使用unclear")
             intent_type = "unclear"
@@ -201,7 +239,6 @@ def identify_intent(messages: list[BaseMessage]) -> Dict[str, Any]:
     
     支持的意图类型：
     - blood_pressure: 血压相关（记录、查询、更新血压）
-    - appointment: 预约相关（创建、查询、更新预约）
     - health_event: 健康事件相关（记录、查询、更新健康事件）
     - medication: 用药相关（记录、查询、更新用药）
     - symptom: 症状相关（记录、查询、更新症状）
@@ -292,8 +329,8 @@ def identify_intent(messages: list[BaseMessage]) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"意图识别失败: {str(e)}", exc_info=True)
         # 如果是提示词加载失败，直接抛出异常
-        if "Langfuse" in str(e) or "模版" in str(e) or "template" in str(e).lower():
-            raise ValueError(f"无法从Langfuse加载意图识别提示词: {str(e)}") from e
+        if "模版" in str(e) or "template" in str(e).lower() or "文件不存在" in str(e):
+            raise ValueError(f"无法加载意图识别提示词: {str(e)}") from e
         # 其他错误返回默认结果
         default_result = IntentResult(
             intent_type="unclear",
@@ -339,11 +376,11 @@ def clarify_intent(query: str) -> str:
         clarification = clarification.strip()
         
         # 验证澄清问题是否包含关键功能
-        key_terms = ["血压", "预约", "健康事件", "用药", "症状"]
+        key_terms = ["血压", "健康事件", "用药", "症状"]
         if not any(term in clarification for term in key_terms):
             logger.warning(f"生成的澄清问题可能不完整: {clarification}")
             # 如果生成的澄清问题不包含关键功能，使用默认问题
-            clarification = "抱歉，我没有理解您的意图。请告诉我您是想记录血压、预约复诊、记录健康事件、记录用药、记录症状，还是需要其他帮助？"
+            clarification = "抱歉，我没有理解您的意图。请告诉我您是想记录血压、记录健康事件、记录用药、记录症状，还是需要其他帮助？"
         
         logger.info(f"生成澄清问题: {clarification}")
         
@@ -352,8 +389,8 @@ def clarify_intent(query: str) -> str:
     except Exception as e:
         logger.error(f"生成澄清问题失败: {str(e)}", exc_info=True)
         # 如果是提示词加载失败，直接抛出异常
-        if "Langfuse" in str(e) or "模版" in str(e) or "template" in str(e).lower():
-            raise ValueError(f"无法从Langfuse加载意图澄清提示词: {str(e)}") from e
+        if "模版" in str(e) or "template" in str(e).lower() or "文件不存在" in str(e):
+            raise ValueError(f"无法加载意图澄清提示词: {str(e)}") from e
         # 其他错误返回默认澄清问题
-        default_clarification = "抱歉，我没有理解您的意图。请告诉我您是想记录血压、预约复诊、记录健康事件、记录用药、记录症状，还是需要其他帮助？"
+        default_clarification = "抱歉，我没有理解您的意图。请告诉我您是想记录血压、记录健康事件、记录用药、记录症状，还是需要其他帮助？"
         return default_clarification

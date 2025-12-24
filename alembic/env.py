@@ -21,8 +21,6 @@ from infrastructure.database import models  # noqa: F401
 from infrastructure.database.models import (
     User,
     BloodPressureRecord,
-    Appointment,
-    AppointmentStatus,
     LlmCallLog,
     LlmCallMessage,
     HealthEventRecord,

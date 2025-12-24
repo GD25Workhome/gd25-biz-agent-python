@@ -28,27 +28,6 @@ agents:
       node_name: "blood_pressure_agent"  # 路由图中的节点名称
       intent_type: "blood_pressure"       # 对应的意图类型
 
-  # 复诊管理智能体
-  appointment_agent:
-    name: "复诊管理智能体"
-    description: "负责处理用户预约相关的请求，包括创建、查询和更新预约"
-    llm:
-      # model: 不指定则使用环境变量中的 LLM_MODEL（deepseek-v3-2-251201）
-      temperature: 0.0
-    tools:
-      - create_appointment
-      - query_appointment
-      - update_appointment
-    
-    # 提示词配置（优先使用Langfuse）
-    langfuse_template: "appointment_agent_prompt"  # Langfuse模版名称
-    # langfuse_template_version: "v1.0"  # 可选：指定模版版本
-    
-    # 路由配置
-    routing:
-      node_name: "appointment_agent"  # 路由图中的节点名称
-      intent_type: "appointment"      # 对应的意图类型
-
   # 健康事件记录智能体
   health_event_agent:
     name: "健康事件记录智能体"
