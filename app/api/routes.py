@@ -88,7 +88,19 @@ async def chat(
     
     logger.debug(f"[Chat消息构建] session_id={request.session_id}, total_messages={len(messages)}")
     
-    # 构建初始状态（包含 trace_id）
+    # 格式化历史消息（从 conversation_history 生成）
+    history_msg = "暂无历史对话"
+    if request.conversation_history:
+        history_lines = []
+        for msg in request.conversation_history:
+            if msg.role == "user":
+                history_lines.append(f"用户: {msg.content}")
+            elif msg.role == "assistant":
+                history_lines.append(f"助手: {msg.content}")
+        if history_lines:
+            history_msg = "\n".join(history_lines)
+    
+    # 构建初始状态（包含 trace_id、user_info 和 current_date）
     initial_state: RouterState = {
         "messages": messages,
         "current_intent": None,
@@ -96,7 +108,10 @@ async def chat(
         "need_reroute": True,
         "session_id": request.session_id,
         "user_id": request.user_id,
-        "trace_id": trace_id
+        "trace_id": trace_id,
+        "user_info": request.user_info or "暂无患者基础信息",
+        "history_msg": history_msg,
+        "current_date": request.current_date  # 新增：传入日期时间（如果提供）
     }
     
     # 配置（包含 checkpointer）
@@ -181,14 +196,16 @@ async def chat(
 
 @router.get("/users", response_model=UserListResponse)
 async def list_users(
+    username_search: Optional[str] = None,
     limit: int = 100,
     offset: int = 0,
     session: AsyncSession = Depends(get_async_session)
 ) -> UserListResponse:
     """
-    获取用户列表
+    获取用户列表（支持用户名搜索）
     
     Args:
+        username_search: 用户名搜索关键词（可选，支持模糊匹配）
         limit: 限制数量
         offset: 偏移量
         session: 数据库会话
@@ -198,7 +215,12 @@ async def list_users(
     """
     try:
         user_repo = UserRepository(session)
-        users = await user_repo.get_all(limit=limit, offset=offset)
+        
+        # 如果提供了用户名搜索，使用模糊查询
+        if username_search:
+            users = await user_repo.search_by_username(username_search, limit=limit, offset=offset)
+        else:
+            users = await user_repo.get_all(limit=limit, offset=offset)
         
         # 转换为响应模型
         user_responses = [UserResponse.model_validate(user) for user in users]
@@ -313,6 +335,12 @@ async def update_user(
         
         # 更新用户（只更新提供的字段）
         update_data = {k: v for k, v in user_data.model_dump().items() if v is not None}
+        
+        # 如果更新了user_info，需要更新user_info_updated_at
+        if 'user_info' in update_data and update_data['user_info'] is not None:
+            from datetime import datetime
+            update_data['user_info_updated_at'] = datetime.now()
+        
         updated_user = await user_repo.update(user_id, **update_data)
         await session.commit()
         await session.refresh(updated_user)

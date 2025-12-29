@@ -20,6 +20,11 @@ class ChatRequest(BaseModel):
         default=None,
         description="对话历史（可选）"
     )
+    user_info: Optional[str] = Field(default=None, description="患者基础信息（多行文本）")
+    current_date: Optional[str] = Field(
+        default=None, 
+        description="当前日期时间（格式：YYYY-MM-DD HH:mm，可选，如果不提供则使用系统当前时间）"
+    )
 
 
 class ChatResponse(BaseModel):

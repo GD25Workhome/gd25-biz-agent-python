@@ -3,20 +3,30 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>简易聊天界面</title>
+  <title>多轮问答调试台</title>
   <style>
     body { font-family: Arial, sans-serif; background: #f7f7f7; margin: 0; padding: 0; }
-    .container { max-width: 960px; margin: 32px auto; background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+    .container { max-width: 1200px; margin: 32px auto; background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
     h1 { margin-top: 0; }
+    
+    /* Tab页样式 */
+    .tabs { display: flex; border-bottom: 2px solid #e5e7eb; margin-bottom: 24px; }
+    .tab { padding: 12px 24px; cursor: pointer; font-size: 16px; font-weight: 500; color: #6b7280; background: none; border: none; border-bottom: 3px solid transparent; transition: all 0.2s; }
+    .tab:hover { color: #2563eb; background: #f3f4f6; }
+    .tab.active { color: #2563eb; border-bottom-color: #2563eb; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
     .form-row { display: flex; gap: 12px; margin-bottom: 12px; align-items: center; }
     .form-row label { min-width: 80px; font-weight: bold; }
-    .form-row input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 8px; }
+    .form-row input, .form-row select { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 8px; }
     .form-row input[readonly] { background: #f5f5f5; cursor: not-allowed; }
     textarea { width: 100%; min-height: 100px; padding: 12px; border-radius: 8px; border: 1px solid #ddd; resize: vertical; }
-    .actions { margin-top: 12px; display: flex; gap: 12px; }
+    .actions { margin-top: 12px; display: flex; gap: 12px; align-items: center; }
     button { padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
     .primary { background: #2563eb; color: #fff; }
     .ghost { background: #eef2ff; color: #1e1b4b; }
+    .danger { background: #dc2626; color: #fff; }
     .log { margin-top: 16px; max-height: 480px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 12px; background: #fafafa; }
     .message { margin-bottom: 12px; padding: 10px; border-radius: 8px; }
     .user { background: #e0f2fe; }
@@ -31,17 +41,22 @@
     .response-detail-content.expanded { display: block; }
     .response-detail-toggle { color: #2563eb; text-decoration: underline; }
     
-    /* 用户选择弹窗样式 */
-    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
-    .modal-content { background: #fff; margin: 5% auto; padding: 24px; border-radius: 12px; width: 80%; max-width: 800px; max-height: 80vh; overflow-y: auto; }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .modal-header h2 { margin: 0; }
-    .close { font-size: 28px; font-weight: bold; color: #aaa; cursor: pointer; }
-    .close:hover { color: #000; }
+    /* 用户管理Tab样式 */
+    .user-form { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 20px; background: #fafafa; }
+    .user-form h3 { margin-top: 0; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; margin-bottom: 4px; font-weight: bold; }
+    .form-group input, .form-group textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+    .form-group textarea { min-height: 120px; font-family: inherit; }
+    .form-group-row { display: flex; gap: 8px; align-items: center; }
+    .form-group-row label { margin: 0; min-width: auto; }
+    .example-btn { padding: 6px 12px; font-size: 12px; margin-left: 8px; }
+    .form-actions { display: flex; gap: 8px; }
     
-    /* 用户列表样式 */
     .user-list { margin-bottom: 20px; }
-    .user-item { padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+    .user-search { margin-bottom: 12px; display: flex; gap: 8px; }
+    .user-search input { flex: 1; }
+    .user-item { padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
     .user-item:hover { background: #f5f5f5; }
     .user-item.selected { background: #e0f2fe; border-color: #2563eb; }
     .user-info { flex: 1; }
@@ -50,14 +65,14 @@
     .user-actions { display: flex; gap: 8px; }
     .user-actions button { padding: 6px 12px; font-size: 12px; }
     
-    /* 用户表单样式 */
-    .user-form { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 20px; background: #fafafa; }
-    .user-form h3 { margin-top: 0; }
-    .form-group { margin-bottom: 12px; }
-    .form-group label { display: block; margin-bottom: 4px; font-weight: bold; }
-    .form-group input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
-    .form-actions { display: flex; gap: 8px; }
-    .danger { background: #dc2626; color: #fff; }
+    /* 示例弹窗样式 */
+    .example-modal { display: none; position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+    .example-modal-content { background: #fff; margin: 10% auto; padding: 24px; border-radius: 12px; width: 80%; max-width: 600px; }
+    .example-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .example-modal-header h3 { margin: 0; }
+    .example-modal-close { font-size: 24px; font-weight: bold; color: #aaa; cursor: pointer; }
+    .example-modal-close:hover { color: #000; }
+    .example-content { background: #f9fafb; padding: 16px; border-radius: 8px; white-space: pre-wrap; font-family: monospace; font-size: 14px; }
     
     /* Trace ID 自动生成开关样式 */
     .auto-trace-toggle { display: flex; align-items: center; gap: 8px; margin-left: auto; }
@@ -65,54 +80,75 @@
     .auto-trace-toggle input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
     .form-row input:disabled { background: #f5f5f5; cursor: not-allowed; opacity: 0.6; }
     button:disabled { opacity: 0.6; cursor: not-allowed; }
+    
+    /* 用户选择下拉框样式 */
+    .user-select-wrapper { position: relative; flex: 1; }
+    #userSelect { width: 100%; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>多轮问答调试台</h1>
-    <div class="form-row">
-      <label for="userId">用户ID</label>
-      <input id="userId" value="" readonly>
-      <button id="selectUserBtn" class="ghost">选择用户</button>
+    
+    <!-- Tab页导航 -->
+    <div class="tabs">
+      <button class="tab active" data-tab="chat">会话</button>
+      <button class="tab" data-tab="users">用户管理</button>
     </div>
-    <div class="form-row">
-      <label for="traceId">Trace ID</label>
-      <input id="traceId" type="text" placeholder="留空则自动生成" style="flex: 1;">
-      <button id="generateTraceIdBtn" class="ghost" type="button">生成ID</button>
-    </div>
-    <div>
-      <label for="message"><strong>输入消息</strong></label>
-      <textarea id="message" placeholder="请输入要发送的内容，支持多轮上下文"></textarea>
-    </div>
-    <div class="actions">
-      <button id="sendBtn" class="primary">发送</button>
-      <button id="resetBtn" class="ghost">重置会话</button>
-      <div class="auto-trace-toggle">
-        <label>
-          <input type="checkbox" id="autoTraceIdToggle" checked>
-          <span>每次发送重新生成traceId</span>
-        </label>
+    
+    <!-- 会话Tab -->
+    <div id="chatTab" class="tab-content active">
+      <div class="form-row">
+        <label for="userSelect">用户选择</label>
+        <div class="user-select-wrapper">
+          <select id="userSelect">
+            <option value="">-- 请选择用户 --</option>
+          </select>
+        </div>
+        <input id="userId" type="hidden" value="">
+      </div>
+      <div class="form-row">
+        <label for="recordDateTime">记录日期时间</label>
+        <input 
+          type="datetime-local" 
+          id="recordDateTime" 
+          step="60"
+          title="格式：YYYY-MM-DD HH:mm，可以直接粘贴日期时间"
+          style="flex: 1;"
+        />
+      </div>
+      <div class="form-row">
+        <label for="traceId">Trace ID</label>
+        <input id="traceId" type="text" placeholder="留空则自动生成" style="flex: 1;">
+        <button id="generateTraceIdBtn" class="ghost" type="button">生成ID</button>
+      </div>
+      <div>
+        <label for="message"><strong>输入消息</strong></label>
+        <textarea id="message" placeholder="请输入要发送的内容，支持多轮上下文"></textarea>
+      </div>
+      <div class="actions">
+        <button id="sendBtn" class="primary">发送</button>
+        <button id="resetBtn" class="ghost">重置会话</button>
+        <div class="auto-trace-toggle">
+          <label>
+            <input type="checkbox" id="autoTraceIdToggle" checked>
+            <span>每次发送重新生成traceId</span>
+          </label>
+        </div>
+      </div>
+      <div id="error" class="error"></div>
+      <div class="log" id="log"></div>
+      <div id="responseDetail" class="response-detail" style="display: none;">
+        <div class="response-detail-header">
+          <span>完整接口响应</span>
+          <span class="response-detail-toggle" id="toggleResponseDetail">展开</span>
+        </div>
+        <div class="response-detail-content" id="responseDetailContent"></div>
       </div>
     </div>
-    <div id="error" class="error"></div>
-    <div class="log" id="log"></div>
-    <div id="responseDetail" class="response-detail" style="display: none;">
-      <div class="response-detail-header">
-        <span>完整接口响应</span>
-        <span class="response-detail-toggle" id="toggleResponseDetail">展开</span>
-      </div>
-      <div class="response-detail-content" id="responseDetailContent"></div>
-    </div>
-  </div>
-
-  <!-- 用户选择弹窗 -->
-  <div id="userModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>用户管理</h2>
-        <span class="close" id="closeModal">&times;</span>
-      </div>
-      
+    
+    <!-- 用户管理Tab -->
+    <div id="usersTab" class="tab-content">
       <!-- 用户表单 -->
       <div class="user-form">
         <h3 id="formTitle">新增用户</h3>
@@ -131,9 +167,16 @@
             <input type="email" id="formEmail">
           </div>
           <div class="form-group">
-            <label>
+            <label class="form-group-row">
               <input type="checkbox" id="formIsActive" checked> 是否激活
             </label>
+          </div>
+          <div class="form-group">
+            <label>
+              患者基础信息
+              <button type="button" class="example-btn ghost" id="showExampleBtn">查看示例</button>
+            </label>
+            <textarea id="formUserInfo" placeholder="请输入患者基础信息（多行文本）"></textarea>
           </div>
           <div class="form-actions">
             <button type="submit" class="primary" id="saveBtn">保存</button>
@@ -144,11 +187,28 @@
       
       <!-- 用户列表 -->
       <div class="user-list">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-          <h3 style="margin: 0;">用户列表</h3>
-          <button class="primary" id="refreshBtn">刷新</button>
+        <div class="user-search">
+          <input type="text" id="userSearchInput" placeholder="搜索用户名（支持模糊匹配）">
+          <button class="ghost" id="refreshBtn">刷新</button>
         </div>
         <div id="userList"></div>
+      </div>
+    </div>
+    
+    <!-- 示例弹窗 -->
+    <div id="exampleModal" class="example-modal">
+      <div class="example-modal-content">
+        <div class="example-modal-header">
+          <h3>患者基础信息示例</h3>
+          <span class="example-modal-close" id="closeExampleModal">&times;</span>
+        </div>
+        <div class="example-content">患者姓名：张三
+年龄：55岁
+性别：男
+疾病诊断：高血压、高血脂
+目标血压值：收缩压130mmHg，舒张压80mmHg
+用药情况：降压药A、降脂药B
+其他信息：备注信息</div>
       </div>
     </div>
   </div>
@@ -161,16 +221,19 @@
     // DOM 元素
     const logEl = document.getElementById('log');
     const messageEl = document.getElementById('message');
-    const userEl = document.getElementById('userId');
+    const userSelect = document.getElementById('userSelect');
+    const userIdEl = document.getElementById('userId');
     const traceIdEl = document.getElementById('traceId');
     const generateTraceIdBtn = document.getElementById('generateTraceIdBtn');
     const errorEl = document.getElementById('error');
     const sendBtn = document.getElementById('sendBtn');
     const resetBtn = document.getElementById('resetBtn');
-    const selectUserBtn = document.getElementById('selectUserBtn');
-    const userModal = document.getElementById('userModal');
-    const closeModal = document.getElementById('closeModal');
-    const userList = document.getElementById('userList');
+    const autoTraceIdToggle = document.getElementById('autoTraceIdToggle');
+    const responseDetail = document.getElementById('responseDetail');
+    const responseDetailContent = document.getElementById('responseDetailContent');
+    const toggleResponseDetail = document.getElementById('toggleResponseDetail');
+    
+    // 用户管理相关DOM
     const userForm = document.getElementById('userForm');
     const formTitle = document.getElementById('formTitle');
     const formUserId = document.getElementById('formUserId');
@@ -178,38 +241,61 @@
     const formPhone = document.getElementById('formPhone');
     const formEmail = document.getElementById('formEmail');
     const formIsActive = document.getElementById('formIsActive');
+    const formUserInfo = document.getElementById('formUserInfo');
     const saveBtn = document.getElementById('saveBtn');
     const cancelBtn = document.getElementById('cancelBtn');
     const refreshBtn = document.getElementById('refreshBtn');
-    const autoTraceIdToggle = document.getElementById('autoTraceIdToggle');
-    const responseDetail = document.getElementById('responseDetail');
-    const responseDetailContent = document.getElementById('responseDetailContent');
-    const toggleResponseDetail = document.getElementById('toggleResponseDetail');
-
-    // 在前端维护对话历史和会话ID
+    const userList = document.getElementById('userList');
+    const userSearchInput = document.getElementById('userSearchInput');
+    const showExampleBtn = document.getElementById('showExampleBtn');
+    const exampleModal = document.getElementById('exampleModal');
+    const closeExampleModal = document.getElementById('closeExampleModal');
+    
+    // 全局状态
     let history = [];
     let currentSessionId = null;
-    let lastFullResponse = null; // 保存最后一次完整的接口响应
-
-    // 生成 Trace ID（符合 Langfuse 要求的格式：32 个小写十六进制字符，不带连字符）
+    let lastFullResponse = null;
+    let allUsers = []; // 存储所有用户数据
+    let searchTimeout = null; // 防抖定时器
+    
+    // Tab切换
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', function() {
+        const tabName = this.dataset.tab;
+        
+        // 更新Tab按钮状态
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+        
+        // 更新Tab内容显示
+        document.querySelectorAll('.tab-content').forEach(content => {
+          content.classList.remove('active');
+        });
+        document.getElementById(tabName + 'Tab').classList.add('active');
+        
+        // 如果切换到用户管理Tab，加载用户列表
+        if (tabName === 'users') {
+          loadUsers();
+        }
+      });
+    });
+    
+    // 生成 Trace ID
     function generateTraceId() {
-      // 生成 32 个随机十六进制字符（0-9, a-f）
       let result = '';
       const hexChars = '0123456789abcdef';
       for (let i = 0; i < 32; i++) {
-        // 使用 crypto.getRandomValues 如果支持（更安全）
         if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
           const randomBytes = new Uint8Array(1);
           crypto.getRandomValues(randomBytes);
           result += hexChars[randomBytes[0] % 16];
         } else {
-          // 降级方案：使用 Math.random
           result += hexChars[Math.floor(Math.random() * 16)];
         }
       }
       return result;
     }
-
+    
     // 初始化会话
     function initSession() {
       currentSessionId = `session-${Date.now()}`;
@@ -221,44 +307,98 @@
       responseDetailContent.classList.remove('expanded');
       toggleResponseDetail.textContent = '展开';
     }
-
-    // 更新 Trace ID 输入框和按钮的启用/禁用状态
+    
+    // 更新 Trace ID 控件状态
     function updateTraceIdControls() {
       const isAutoMode = autoTraceIdToggle.checked;
       traceIdEl.disabled = isAutoMode;
       generateTraceIdBtn.disabled = isAutoMode;
-      
-      // 如果启用自动模式，清空输入框
       if (isAutoMode) {
         traceIdEl.value = '';
       }
     }
-
-    // 显示/隐藏弹窗
-    function showModal() {
-      userModal.style.display = 'block';
-      loadUsers();
+    
+    // 检测浏览器是否支持 datetime-local
+    function supportsDateTimeLocal() {
+      const input = document.createElement('input');
+      input.setAttribute('type', 'datetime-local');
+      return input.type === 'datetime-local';
     }
     
-    function hideModal() {
-      userModal.style.display = 'none';
-      resetForm();
+    // 初始化日期时间输入框
+    function initDateTimeInput() {
+      const dateTimeInput = document.getElementById('recordDateTime');
+      if (!dateTimeInput) return;
+      
+      // 如果不支持 datetime-local，降级为 text 类型
+      if (!supportsDateTimeLocal()) {
+        dateTimeInput.type = 'text';
+        dateTimeInput.placeholder = 'YYYY-MM-DD HH:mm (例如：2025-01-14 08:00)';
+        dateTimeInput.pattern = '\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}';
+      }
+      
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      
+      if (dateTimeInput.type === 'datetime-local') {
+        // datetime-local 输入框需要的格式：YYYY-MM-DDTHH:mm
+        const defaultValue = `${year}-${month}-${day}T${hours}:${minutes}`;
+        dateTimeInput.value = defaultValue;
+      } else {
+        // text 类型使用空格分隔的格式：YYYY-MM-DD HH:mm
+        const defaultValue = `${year}-${month}-${day} ${hours}:${minutes}`;
+        dateTimeInput.value = defaultValue;
+      }
     }
-
-    // 重置表单
-    function resetForm() {
-      formTitle.textContent = '新增用户';
-      formUserId.value = '';
-      formUsername.value = '';
-      formPhone.value = '';
-      formEmail.value = '';
-      formIsActive.checked = true;
-    }
-
-    // 加载用户列表
-    async function loadUsers() {
+    
+    // 加载用户列表（用于下拉框）
+    async function loadUsersForSelect() {
       try {
         const resp = await fetch(usersApiUrl);
+        if (!resp.ok) throw new Error('加载用户列表失败');
+        const data = await resp.json();
+        allUsers = data.users || [];
+        
+        // 更新下拉框
+        userSelect.innerHTML = '<option value="">-- 请选择用户 --</option>';
+        allUsers.forEach(user => {
+          const option = document.createElement('option');
+          option.value = user.id;
+          option.textContent = user.username;
+          if (user.id === userIdEl.value) {
+            option.selected = true;
+          }
+          userSelect.appendChild(option);
+        });
+        
+        return allUsers;
+      } catch (e) {
+        console.error('加载用户列表失败:', e);
+        return [];
+      }
+    }
+    
+    // 根据用户ID获取用户对象
+    function getUserById(userId) {
+      return allUsers.find(u => u.id === userId) || null;
+    }
+    
+    // 用户选择变化
+    userSelect.addEventListener('change', function() {
+      userIdEl.value = this.value;
+    });
+    
+    // 加载用户列表（用于用户管理Tab）
+    async function loadUsers(searchTerm = '') {
+      try {
+        const url = searchTerm 
+          ? `${usersApiUrl}?username_search=${encodeURIComponent(searchTerm)}`
+          : usersApiUrl;
+        const resp = await fetch(url);
         if (!resp.ok) throw new Error('加载用户列表失败');
         const data = await resp.json();
         renderUserList(data.users);
@@ -268,41 +408,22 @@
         return [];
       }
     }
-
-    // 自动选择第一个用户（如果用户ID为空）
-    async function autoSelectFirstUser() {
-      // 如果用户ID不为空，不需要自动选择
-      if (userEl.value && userEl.value.trim() !== '') {
-        return;
-      }
-
-      try {
-        const resp = await fetch(usersApiUrl);
-        if (!resp.ok) throw new Error('加载用户列表失败');
-        const data = await resp.json();
-        
-        // 如果用户列表不为空，选择第一个用户
-        if (data.users && data.users.length > 0) {
-          const firstUser = data.users[0];
-          userEl.value = firstUser.id;
-        }
-      } catch (e) {
-        // 静默失败，不显示错误提示（因为这只是自动填充功能）
-        console.log('自动选择用户失败: ' + e.message);
-      }
-    }
-
+    
     // 渲染用户列表
     function renderUserList(users) {
       userList.innerHTML = '';
+      if (users.length === 0) {
+        userList.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">暂无用户</div>';
+        return;
+      }
+      
       users.forEach(user => {
         const item = document.createElement('div');
         item.className = 'user-item';
-        if (user.id === userEl.value) {
+        if (user.id === userIdEl.value) {
           item.classList.add('selected');
         }
         
-        // 安全地转义 HTML
         const username = user.username.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         const userId = user.id.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         
@@ -312,109 +433,142 @@
             <span>ID: ${userId} | 手机: ${user.phone || '未设置'} | 邮箱: ${user.email || '未设置'} | ${user.is_active ? '激活' : '未激活'}</span>
           </div>
           <div class="user-actions">
-            <button class="ghost" data-action="select" data-user-id="${userId}" data-username="${username}">选择</button>
-            <button class="ghost" data-action="edit" data-user-data='${JSON.stringify(user)}'>编辑</button>
+            <button class="ghost" data-action="select" data-user-id="${userId}">选择</button>
+            <button class="ghost" data-action="edit" data-user-id="${userId}">编辑</button>
             <button class="danger" data-action="delete" data-user-id="${userId}">删除</button>
           </div>
         `;
         
-        // 使用事件委托处理按钮点击
-        const selectBtn = item.querySelector('[data-action="select"]');
-        const editBtn = item.querySelector('[data-action="edit"]');
-        const deleteBtn = item.querySelector('[data-action="delete"]');
-        
-        selectBtn.addEventListener('click', () => selectUser(userId, username));
-        editBtn.addEventListener('click', () => editUser(JSON.parse(editBtn.dataset.userData)));
-        deleteBtn.addEventListener('click', () => deleteUser(userId));
+        item.querySelector('[data-action="select"]').addEventListener('click', () => selectUser(userId));
+        item.querySelector('[data-action="edit"]').addEventListener('click', () => editUser(user));
+        item.querySelector('[data-action="delete"]').addEventListener('click', () => deleteUser(userId));
         
         userList.appendChild(item);
       });
     }
-
+    
     // 选择用户
-    function selectUser(userId, username) {
-      userEl.value = userId;
-      hideModal();
+    function selectUser(userId) {
+      userIdEl.value = userId;
+      userSelect.value = userId;
+      // 切换到会话Tab
+      document.querySelector('[data-tab="chat"]').click();
     }
-
+    
     // 编辑用户
-    function editUser(user) {
+    async function editUser(user) {
       formTitle.textContent = '编辑用户';
       formUserId.value = user.id;
       formUsername.value = user.username;
       formPhone.value = user.phone || '';
       formEmail.value = user.email || '';
       formIsActive.checked = user.is_active;
+      formUserInfo.value = user.user_info || '';
     }
-
+    
     // 删除用户
     async function deleteUser(userId) {
       if (!confirm('确定要删除这个用户吗？')) return;
       try {
         const resp = await fetch(`${usersApiUrl}/${userId}`, { method: 'DELETE' });
         if (!resp.ok) throw new Error('删除用户失败');
-        await loadUsers();
-        if (userEl.value === userId) {
-          userEl.value = '';
+        await loadUsers(userSearchInput.value.trim());
+        if (userIdEl.value === userId) {
+          userIdEl.value = '';
+          userSelect.value = '';
         }
+        // 重新加载下拉框
+        await loadUsersForSelect();
       } catch (e) {
         alert('删除用户失败: ' + e.message);
       }
     }
-
-    // 保存用户（新增或更新）
+    
+    // 重置表单
+    function resetForm() {
+      formTitle.textContent = '新增用户';
+      formUserId.value = '';
+      formUsername.value = '';
+      formPhone.value = '';
+      formEmail.value = '';
+      formIsActive.checked = true;
+      formUserInfo.value = '';
+    }
+    
+    // 保存用户
     async function saveUser(e) {
       e.preventDefault();
       const userData = {
         username: formUsername.value.trim(),
         phone: formPhone.value.trim() || null,
         email: formEmail.value.trim() || null,
-        is_active: formIsActive.checked
+        is_active: formIsActive.checked,
+        user_info: formUserInfo.value.trim() || null
       };
-
+      
       try {
         let resp;
         if (formUserId.value) {
-          // 更新用户
           resp = await fetch(`${usersApiUrl}/${formUserId.value}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(userData)
           });
         } else {
-          // 创建用户
           resp = await fetch(usersApiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(userData)
           });
         }
-
+        
         if (!resp.ok) {
           const err = await resp.json().catch(() => ({}));
           throw new Error(err.detail || '保存用户失败');
         }
-
-        await loadUsers();
+        
+        await loadUsers(userSearchInput.value.trim());
         resetForm();
+        // 重新加载下拉框
+        await loadUsersForSelect();
       } catch (e) {
         alert('保存用户失败: ' + e.message);
       }
     }
-
+    
+    // 用户搜索（防抖）
+    userSearchInput.addEventListener('input', function() {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        loadUsers(this.value.trim());
+      }, 300);
+    });
+    
+    // 示例按钮
+    showExampleBtn.addEventListener('click', function() {
+      exampleModal.style.display = 'block';
+    });
+    
+    closeExampleModal.addEventListener('click', function() {
+      exampleModal.style.display = 'none';
+    });
+    
+    window.addEventListener('click', function(e) {
+      if (e.target === exampleModal) {
+        exampleModal.style.display = 'none';
+      }
+    });
+    
     // 添加消息到日志
     function appendMessage(role, content, fullResponse = null) {
       const msg = document.createElement('div');
       msg.className = `message ${role === 'user' ? 'user' : 'assistant'}`;
       
-      // 创建元信息元素
       const metaEl = document.createElement('div');
       metaEl.className = 'meta';
       metaEl.textContent = role === 'user' ? '用户' : '助手';
       
-      // 创建内容元素，使用 textContent 安全显示内容
       const contentEl = document.createElement('div');
-      // 如果内容是字符串，直接显示；如果是对象，转换为字符串
       if (typeof content === 'string') {
         contentEl.textContent = content;
       } else {
@@ -426,7 +580,6 @@
       logEl.appendChild(msg);
       logEl.scrollTop = logEl.scrollHeight;
       
-      // 如果有完整响应，更新响应详情显示区域
       if (fullResponse && role === 'assistant') {
         lastFullResponse = fullResponse;
         responseDetailContent.textContent = JSON.stringify(fullResponse, null, 2);
@@ -435,12 +588,12 @@
         toggleResponseDetail.textContent = '展开';
       }
     }
-
+    
     // 发送消息
     async function sendMessage() {
       const text = messageEl.value.trim();
-      const userId = userEl.value.trim();
-
+      const userId = userIdEl.value.trim();
+      
       if (!text) {
         errorEl.textContent = '请输入要发送的内容';
         return;
@@ -449,41 +602,53 @@
         errorEl.textContent = '请先选择用户';
         return;
       }
-
-      // 如果没有会话ID，初始化一个
+      
       if (!currentSessionId) {
         initSession();
       }
-
+      
       errorEl.textContent = '';
       appendMessage('user', text);
-
+      
       messageEl.value = '';
       sendBtn.disabled = true;
       sendBtn.textContent = '发送中...';
-
-      // 获取 Trace ID
+      
       let traceId = '';
       if (autoTraceIdToggle.checked) {
-        // 自动模式：每次发送时重新生成
         traceId = generateTraceId();
       } else {
-        // 手动模式：使用用户输入的 Trace ID
         traceId = traceIdEl.value.trim();
       }
       
-      // 构建请求头
       const headers = {
         'Content-Type': 'application/json'
       };
       
-      // 如果 Trace ID 存在，添加到请求头
       if (traceId) {
         headers['X-Trace-ID'] = traceId;
       }
-
+      
       try {
-        // 发送请求时，conversation_history 不包含当前消息
+        // 获取用户信息
+        const selectedUser = getUserById(userId);
+        const userInfo = selectedUser?.user_info || '';
+        
+        // 获取日期时间输入框的值
+        const dateTimeInput = document.getElementById('recordDateTime');
+        let currentDateTime = null;
+        
+        if (dateTimeInput && dateTimeInput.value) {
+          const dateTimeValue = dateTimeInput.value;
+          // 如果是 datetime-local 类型，格式为 YYYY-MM-DDTHH:mm，需要转换为 YYYY-MM-DD HH:mm
+          if (dateTimeInput.type === 'datetime-local') {
+            currentDateTime = dateTimeValue.replace('T', ' ');
+          } else {
+            // text 类型已经是 YYYY-MM-DD HH:mm 格式，直接使用
+            currentDateTime = dateTimeValue.trim();
+          }
+        }
+        
         const resp = await fetch(chatApiUrl, {
           method: 'POST',
           headers: headers,
@@ -491,108 +656,86 @@
             message: text,
             session_id: currentSessionId,
             user_id: userId,
-            conversation_history: history  // 这里只包含之前的对话历史，不包含当前消息
+            conversation_history: history,
+            user_info: userInfo,
+            current_date: currentDateTime
           })
         });
-
+        
         if (!resp.ok) {
           const err = await resp.json().catch(() => ({}));
           throw new Error(err.detail || `请求失败，状态码 ${resp.status}`);
         }
-
+        
         const data = await resp.json();
         
-        // 提取实际消息内容：优先使用 response_content，否则使用 response
         let reply = '';
         if (data && typeof data === 'object') {
-          // 首先检查 response_content 字段（直接存在）
           if (data.response_content !== undefined && data.response_content !== null) {
             reply = String(data.response_content);
-          } 
-          // 如果 response 字段存在，检查它的类型和内容
-          else if (data.response !== undefined && data.response !== null) {
+          } else if (data.response !== undefined && data.response !== null) {
             const responseValue = data.response;
-            
-            // 如果 response 是对象，检查是否包含 response_content
             if (typeof responseValue === 'object' && responseValue !== null) {
               if (responseValue.response_content !== undefined && responseValue.response_content !== null) {
                 reply = String(responseValue.response_content);
               } else {
-                // response 是对象但没有 response_content，转换为 JSON 字符串（用于调试）
                 console.warn('response 是对象但未包含 response_content：', responseValue);
                 reply = JSON.stringify(responseValue, null, 2);
               }
-            }
-            // 如果 response 是字符串，尝试解析为 JSON
-            else if (typeof responseValue === 'string') {
+            } else if (typeof responseValue === 'string') {
               try {
                 const parsedResponse = JSON.parse(responseValue);
-                // 如果解析成功且包含 response_content，使用它
                 if (parsedResponse && typeof parsedResponse === 'object' && parsedResponse.response_content) {
                   reply = String(parsedResponse.response_content);
                 } else {
-                  // 解析成功但没有 response_content，使用原始字符串
                   reply = responseValue;
                 }
               } catch (e) {
-                // 解析失败，说明 response 不是 JSON 字符串，直接使用
                 reply = responseValue;
               }
             } else {
-              // response 是其他类型，直接转换为字符串
               reply = String(responseValue);
             }
           } else {
-            // 如果都没有，尝试将整个 data 转换为字符串（用于调试）
             console.warn('未找到 response_content 或 response 字段，完整响应：', data);
             reply = '助手未返回有效内容';
           }
         } else {
-          // 如果 data 不是对象，直接使用
           reply = String(data);
         }
         
-        // 调试日志
-        console.log('提取的消息内容：', reply);
-        console.log('完整响应数据：', data);
-        
-        // 收到响应后，将当前消息和助手回复一起添加到历史
-        // 注意：history 中保存的是提取后的消息内容（response_content），而不是完整的 JSON
         history.push({ role: 'user', content: text });
         history.push({ role: 'assistant', content: reply });
         
-        // 显示消息，并传递完整的响应数据用于详情显示
         appendMessage('assistant', reply, data);
       } catch (e) {
         errorEl.textContent = e.message;
-        // 请求失败时不需要从 history 中移除消息，因为当前消息本来就没添加到 history
       } finally {
         sendBtn.disabled = false;
         sendBtn.textContent = '发送';
         messageEl.focus();
       }
     }
-
+    
     // 重置会话
     function resetSession() {
       initSession();
     }
-
-    // 绑定生成 Trace ID 按钮事件
+    
+    // 事件监听
     generateTraceIdBtn.addEventListener('click', function() {
       traceIdEl.value = generateTraceId();
     });
-
-    // 绑定自动生成 Trace ID 开关事件
+    
     autoTraceIdToggle.addEventListener('change', updateTraceIdControls);
-
-    // 事件监听
+    
     sendBtn.addEventListener('click', sendMessage);
     resetBtn.addEventListener('click', resetSession);
-    selectUserBtn.addEventListener('click', showModal);
-    closeModal.addEventListener('click', hideModal);
     cancelBtn.addEventListener('click', resetForm);
-    refreshBtn.addEventListener('click', loadUsers);
+    refreshBtn.addEventListener('click', () => {
+      userSearchInput.value = '';
+      loadUsers();
+    });
     userForm.addEventListener('submit', saveUser);
     
     messageEl.addEventListener('keydown', (e) => {
@@ -600,15 +743,7 @@
         sendMessage();
       }
     });
-
-    // 点击弹窗外部关闭
-    window.addEventListener('click', (e) => {
-      if (e.target === userModal) {
-        hideModal();
-      }
-    });
     
-    // 切换完整响应显示
     toggleResponseDetail.addEventListener('click', () => {
       const isExpanded = responseDetailContent.classList.contains('expanded');
       if (isExpanded) {
@@ -619,12 +754,17 @@
         toggleResponseDetail.textContent = '收起';
       }
     });
-
+    
     // 初始化
     initSession();
-    // 页面加载时自动选择第一个用户（如果用户ID为空）
-    autoSelectFirstUser();
-    // 初始化 Trace ID 控件状态（因为 checkbox 默认选中）
+    initDateTimeInput();
+    loadUsersForSelect().then(users => {
+      if (users.length > 0) {
+        const firstUser = users[0];
+        userIdEl.value = firstUser.id;
+        userSelect.value = firstUser.id;
+      }
+    });
     updateTraceIdControls();
   </script>
 </body>

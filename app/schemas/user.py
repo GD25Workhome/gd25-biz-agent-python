@@ -12,6 +12,7 @@ class UserBase(BaseModel):
     phone: Optional[str] = Field(default=None, description="手机号", max_length=20)
     email: Optional[str] = Field(default=None, description="邮箱", max_length=100)
     is_active: bool = Field(default=True, description="是否激活")
+    user_info: Optional[str] = Field(default=None, description="患者基础信息（多行文本）")
 
 
 class UserCreate(UserBase):
@@ -25,6 +26,7 @@ class UserUpdate(BaseModel):
     phone: Optional[str] = Field(default=None, description="手机号", max_length=20)
     email: Optional[str] = Field(default=None, description="邮箱", max_length=100)
     is_active: Optional[bool] = Field(default=None, description="是否激活")
+    user_info: Optional[str] = Field(default=None, description="患者基础信息（多行文本）")
 
 
 class UserResponse(UserBase):
@@ -32,6 +34,7 @@ class UserResponse(UserBase):
     id: str = Field(..., description="用户ID")
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
+    user_info_updated_at: Optional[datetime] = Field(default=None, description="患者基础信息更新时间")
     
     class Config:
         from_attributes = True

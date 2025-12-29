@@ -1,7 +1,7 @@
 """
 用户仓储实现
 """
-from typing import Optional
+from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -50,4 +50,25 @@ class UserRepository(BaseRepository[User]):
             select(User).where(User.phone == phone)
         )
         return result.scalar_one_or_none()
+    
+    async def search_by_username(self, username: str, limit: int = 100, offset: int = 0) -> List[User]:
+        """
+        根据用户名模糊查询用户
+        
+        Args:
+            username: 用户名（支持部分匹配）
+            limit: 限制数量
+            offset: 偏移量
+            
+        Returns:
+            用户列表
+        """
+        result = await self.session.execute(
+            select(User)
+            .where(User.username.ilike(f"%{username}%"))
+            .limit(limit)
+            .offset(offset)
+            .order_by(User.created_at.desc())
+        )
+        return list(result.scalars().all())
 

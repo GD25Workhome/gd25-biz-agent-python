@@ -5,14 +5,16 @@ agents:
   # 血压记录智能体
   blood_pressure_agent:
     name: "血压记录智能体"
-    description: "负责处理用户血压相关的请求，包括记录、查询和更新血压数据"
+    description: "负责处理用户血压相关的请求，包括记录血压数据"
     llm:
       # model: 不指定则使用环境变量中的 LLM_MODEL（deepseek-v3-2-251201）
       temperature: 0.7
     tools:
       - record_blood_pressure
-      - query_blood_pressure
-      - update_blood_pressure
+      # 以下工具已注释，原因：根据新的业务逻辑，历史数据由系统自动提供，Agent不需要主动查询
+      # 如需恢复，取消注释即可（同时需要更新提示词和确保系统提供历史数据的机制）
+      # - query_blood_pressure
+      # - update_blood_pressure
     
     # 提示词配置（优先使用Langfuse）
     langfuse_template: "blood_pressure_agent_prompt"  # Langfuse模版名称

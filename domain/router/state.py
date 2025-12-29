@@ -7,7 +7,7 @@ from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, Field
 
 
-class RouterState(TypedDict):
+class RouterState(TypedDict, total=False):
     """路由状态数据结构"""
     messages: List[BaseMessage]  # 消息列表
     current_intent: Optional[str]  # 当前意图：blood_pressure, health_event, medication, symptom, unclear
@@ -16,6 +16,9 @@ class RouterState(TypedDict):
     session_id: str  # 会话ID
     user_id: str  # 用户ID
     trace_id: Optional[str]  # Langfuse Trace ID（用于链路追踪）
+    user_info: Optional[str]  # 患者基础信息（多行文本）
+    history_msg: Optional[str]  # 历史对话信息（格式化文本，由API层从conversation_history生成）
+    current_date: Optional[str]  # 当前日期时间（格式：YYYY-MM-DD HH:mm，可选，如果不提供则使用系统当前时间）
 
 
 class IntentResult(BaseModel):

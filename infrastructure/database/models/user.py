@@ -2,7 +2,7 @@
 用户模型
 """
 from uuid import uuid4
-from sqlalchemy import Column, String, DateTime, Boolean, func
+from sqlalchemy import Column, String, DateTime, Boolean, Text, func
 
 from infrastructure.database.base import Base
 
@@ -23,6 +23,7 @@ class User(Base):
     phone = Column(String(20), nullable=True, comment="手机号")
     email = Column(String(100), nullable=True, comment="邮箱")
     is_active = Column(Boolean, default=True, comment="是否激活")
+    user_info = Column(Text, nullable=True, comment="患者基础信息（多行文本）")
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -33,6 +34,11 @@ class User(Base):
         server_default=func.now(),
         onupdate=func.now(),
         comment="更新时间"
+    )
+    user_info_updated_at = Column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="患者基础信息更新时间"
     )
     
     def __repr__(self):
