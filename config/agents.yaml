@@ -93,3 +93,21 @@ agents:
       node_name: "symptom_agent"  # 路由图中的节点名称
       intent_type: "symptom"      # 对应的意图类型
 
+  # 安全边界问答智能体
+  safety_boundary_agent:
+    name: "安全边界问答智能体"
+    description: "负责处理安全边界相关的问答场景，作为兜底Agent确保系统能够响应所有用户问题，并保证回复符合医疗安全边界规范"
+    llm:
+      # model: 不指定则使用环境变量中的 LLM_MODEL（deepseek-v3-2-251201）
+      temperature: 0.7
+    tools: []  # 安全边界Agent不需要工具，主要是问答式回复
+    
+    # 提示词配置（优先使用Langfuse）
+    langfuse_template: "safety_boundary_agent_prompt"  # Langfuse模版名称
+    # langfuse_template_version: "v1.0"  # 可选：指定模版版本
+    
+    # 路由配置
+    routing:
+      node_name: "safety_boundary_agent"  # 路由图中的节点名称
+      intent_type: "safety_boundary"      # 对应的意图类型
+

@@ -228,7 +228,7 @@ def _parse_intent_result(llm_response: str) -> IntentResult:
         
         # 验证并创建IntentResult
         intent_type = data.get("intent_type", "unclear")
-        valid_intents = ["blood_pressure", "health_event", "medication", "symptom", "unclear"]
+        valid_intents = ["blood_pressure", "health_event", "medication", "symptom", "safety_boundary", "unclear"]
         if intent_type not in valid_intents:
             logger.warning(f"无效的意图类型: {intent_type}，使用unclear")
             intent_type = "unclear"
