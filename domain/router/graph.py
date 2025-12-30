@@ -15,10 +15,10 @@ from domain.agents.factory import AgentFactory
 from domain.agents.registry import AgentRegistry
 from infrastructure.prompts.manager import PromptManager
 from infrastructure.prompts.placeholder import PlaceholderManager
+from infrastructure.prompts.template_loader import AgentTemplateLoader
 from infrastructure.observability.llm_logger import LlmLogContext
 from infrastructure.observability.langfuse_handler import get_langfuse_client, normalize_langfuse_trace_id
 from app.core.config import settings
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +29,8 @@ _prompt_manager = PromptManager()
 def _load_agent_template(agent_key: str) -> str:
     """
     加载 Agent 的原始提示词模板（包含占位符）
+    
+    使用统一的提示词加载服务，避免代码重复。
     
     Args:
         agent_key: Agent键名
@@ -44,63 +46,8 @@ def _load_agent_template(agent_key: str) -> str:
     if not agent_config:
         raise ValueError(f"Agent配置不存在: {agent_key}")
     
-    prompt_source_mode = settings.PROMPT_SOURCE_MODE.lower()
-    template = None
-    
-    # 从Langfuse加载提示词（如果模式为langfuse或auto）
-    if prompt_source_mode in ("langfuse", "auto"):
-        langfuse_template = agent_config.get("langfuse_template")
-        if langfuse_template:
-            try:
-                from infrastructure.prompts.langfuse_adapter import LangfusePromptAdapter
-                adapter = LangfusePromptAdapter()
-                template_version = agent_config.get("langfuse_template_version")
-                
-                template = adapter.get_template(
-                    template_name=langfuse_template,
-                    version=template_version
-                )
-                
-                logger.debug(f"从Langfuse加载提示词模板: {agent_key}, 模版: {langfuse_template}")
-            except Exception as e:
-                logger.warning(f"从Langfuse加载提示词模板失败: {agent_key}, 错误: {str(e)}")
-                if prompt_source_mode == "langfuse":
-                    raise ValueError(f"无法从Langfuse加载提示词模板: {agent_key}, 错误: {str(e)}")
-                # 如果模式为auto，继续尝试从本地文件加载
-                logger.debug(f"尝试从本地文件加载提示词模板: {agent_key}")
-    
-    # 从本地文件加载提示词（如果模式为local，或auto模式下Langfuse失败）
-    if not template and prompt_source_mode in ("local", "auto"):
-        langfuse_template = agent_config.get("langfuse_template", "")
-        if langfuse_template:
-            local_filename = f"{langfuse_template}.txt"
-        else:
-            local_filename = f"{agent_key}_prompt.txt"
-        
-        local_file_path = Path("config/prompts/local") / local_filename
-        
-        # 尝试从项目根目录查找
-        if not local_file_path.exists():
-            local_file_path = Path.cwd() / local_file_path
-        
-        if local_file_path.exists():
-            try:
-                with open(local_file_path, "r", encoding="utf-8") as f:
-                    template = f.read()
-                
-                logger.debug(f"从本地文件加载提示词模板: {agent_key}, 文件: {local_file_path}")
-            except Exception as e:
-                logger.error(f"从本地文件加载提示词模板失败: {agent_key}, 错误: {str(e)}")
-                if prompt_source_mode == "local":
-                    raise ValueError(f"无法从本地文件加载提示词模板: {agent_key}, 错误: {str(e)}")
-        else:
-            if prompt_source_mode == "local":
-                raise FileNotFoundError(f"未找到本地提示词文件: {agent_key}, 路径: {local_file_path}")
-    
-    if not template:
-        raise ValueError(f"未找到提示词模板: {agent_key}")
-    
-    return template
+    # 使用统一的提示词加载服务
+    return AgentTemplateLoader.load_template(agent_key, agent_config)
 
 
 def create_router_graph(
