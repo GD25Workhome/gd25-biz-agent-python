@@ -56,7 +56,7 @@ def get_llm(
         resolved_temperature = settings.LLM_TEMPERATURE
     
     resolved_top_p = kwargs.pop("top_p", settings.LLM_TOP_P_DEFAULT)
-    resolved_max_tokens = kwargs.pop("max_tokens", settings.LLM_MAX_TOKENS_DEFAULT)
+    # 移除 max_tokens 限制，使用 API 默认行为（无限制）
     
     log_enabled = enable_logging if enable_logging is not None else settings.LLM_LOG_ENABLE
     langfuse_enabled = enable_langfuse if enable_langfuse is not None else settings.LANGFUSE_ENABLED
@@ -85,7 +85,7 @@ def get_llm(
             model=model or settings.LLM_MODEL,
             temperature=resolved_temperature,
             top_p=resolved_top_p,
-            max_tokens=resolved_max_tokens,
+            max_tokens=None,  # 不限制 max_tokens，使用 API 默认行为
             log_enabled=log_enabled,  # 控制数据库日志，但不影响控制台日志
         )
     )
@@ -99,15 +99,17 @@ def get_llm(
         raise ValueError("LLM_MODEL 未配置，请设置 LLM_MODEL 或传入 model 参数")
     
     # 构建参数字典，kwargs 中的参数会覆盖默认值
+    # 注意：不设置 max_tokens，使用 API 默认行为（无限制）
     params = {
         "model": model or settings.LLM_MODEL,
         "temperature": resolved_temperature,
         "top_p": resolved_top_p,
-        "max_tokens": resolved_max_tokens,
         "openai_api_key": settings.OPENAI_API_KEY,
         "base_url": settings.OPENAI_BASE_URL,
     }
     # kwargs 中的参数会覆盖默认值
+    # 如果 kwargs 中包含 max_tokens，也会被移除（不设置限制）
+    kwargs.pop("max_tokens", None)
     params.update(kwargs)
     
     if callbacks:

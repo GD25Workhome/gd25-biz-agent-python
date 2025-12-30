@@ -87,7 +87,7 @@ class Settings(BaseSettings):
     LLM_TEMPERATURE_INTENT: float = 0.0
     LLM_TEMPERATURE_CLARIFY: float = 0.3
     LLM_TOP_P_DEFAULT: float = 1.0
-    LLM_MAX_TOKENS_DEFAULT: Optional[int] = None
+    # 注意：已移除 LLM_MAX_TOKENS_DEFAULT，不再限制 max_tokens，使用 API 默认行为
     LLM_LOG_ENABLE: bool = False
     LLM_LOG_SAMPLE_RATE: float = 1.0
     LLM_LOG_MAX_TEXT_LENGTH: int = 2000

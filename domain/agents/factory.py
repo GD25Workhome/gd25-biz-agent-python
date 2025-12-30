@@ -9,7 +9,7 @@ import threading
 from pathlib import Path
 from typing import Dict, List, Any, Optional, TYPE_CHECKING
 from langchain_core.tools import BaseTool
-from langgraph.prebuilt import create_react_agent
+from langchain.agents import create_agent
 from langchain_core.language_models import BaseChatModel
 
 if TYPE_CHECKING:
@@ -258,21 +258,21 @@ class AgentFactory:
                 logger.warning(f"未找到提示词配置: {agent_key}, 使用空提示词")
                 system_prompt = ""
         
-        # 填充占位符（Agent创建时没有state，只填充时间相关占位符）
-        # 注意：保留需要从 state 中获取的占位符（user_id, session_id, user_info, history_msg）
-        # 这些占位符将在运行时（有 state 时）被替换
-        if system_prompt:
-            # 只填充时间相关的占位符（这些不依赖 state）
-            placeholders = PlaceholderManager.get_placeholders(agent_key, state=None)
-            system_prompt = PlaceholderManager.fill_placeholders(system_prompt, placeholders)
-            # 此时 system_prompt 中仍包含 {{user_id}}, {{session_id}} 等占位符
-            # 这些占位符将在运行时（domain/router/graph.py:with_user_context）被替换
+        # 注意：不再在 Agent 创建时传入 prompt 参数
+        # 原因：
+        # 1. 避免 create_agent 自动添加系统消息，导致运行时系统消息重复
+        # 2. 系统消息将在运行时（domain/router/graph.py:with_user_context）动态注入
+        # 3. 这样可以确保系统消息包含完整的上下文信息（已填充所有占位符）
+        # 
+        # system_prompt 的加载逻辑仍然保留，因为运行时需要加载模板来填充占位符
+        # 占位符填充将在运行时进行（domain/router/graph.py:with_user_context）
         
-        # 4. 创建 ReAct Agent
-        return create_react_agent(
+        # 4. 创建 ReAct Agent（不传入 prompt，由运行时动态注入系统消息）
+        return create_agent(
             model=llm,
             tools=tools,
-            prompt=system_prompt
+            # 不传入 prompt 参数，避免 create_agent 自动添加系统消息
+            # 系统消息将在运行时（domain/router/graph.py:with_user_context）动态注入
         )
     
     @classmethod
