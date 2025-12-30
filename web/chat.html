@@ -21,6 +21,14 @@
     .form-row label { min-width: 80px; font-weight: bold; }
     .form-row input, .form-row select { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 8px; }
     .form-row input[readonly] { background: #f5f5f5; cursor: not-allowed; }
+    
+    /* 两列布局样式 */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .form-grid-item { display: flex; flex-direction: column; gap: 8px; }
+    .form-grid-item label { min-width: auto; font-weight: bold; }
+    .form-grid-item .form-control { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+    .form-grid-item textarea.form-control { min-height: 80px; resize: vertical; font-family: inherit; }
+    .form-grid-item-full { grid-column: 1 / -1; }
     textarea { width: 100%; min-height: 100px; padding: 12px; border-radius: 8px; border: 1px solid #ddd; resize: vertical; }
     .actions { margin-top: 12px; display: flex; gap: 12px; align-items: center; }
     button { padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
@@ -75,15 +83,36 @@
     .example-content { background: #f9fafb; padding: 16px; border-radius: 8px; white-space: pre-wrap; font-family: monospace; font-size: 14px; }
     
     /* Trace ID 自动生成开关样式 */
-    .auto-trace-toggle { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .auto-trace-toggle { display: flex; align-items: center; gap: 8px; }
     .auto-trace-toggle label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
     .auto-trace-toggle input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
     .form-row input:disabled { background: #f5f5f5; cursor: not-allowed; opacity: 0.6; }
     button:disabled { opacity: 0.6; cursor: not-allowed; }
     
-    /* 用户选择下拉框样式 */
+    /* 用户选择按钮样式 */
     .user-select-wrapper { position: relative; flex: 1; }
-    #userSelect { width: 100%; }
+    #userSelectBtn { width: 100%; text-align: left; position: relative; }
+    #userSelectBtn::after { content: ' ▼'; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 12px; pointer-events: none; }
+    
+    /* 用户选择弹框样式 */
+    .user-select-modal { display: none; position: fixed; z-index: 1002; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+    .user-select-modal-content { background: #fff; margin: 5% auto; padding: 24px; border-radius: 12px; width: 80%; max-width: 600px; max-height: 70vh; display: flex; flex-direction: column; }
+    .user-select-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .user-select-modal-header h3 { margin: 0; }
+    .user-select-modal-close { font-size: 24px; font-weight: bold; color: #aaa; cursor: pointer; }
+    .user-select-modal-close:hover { color: #000; }
+    .user-select-search { margin-bottom: 12px; }
+    .user-select-search input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+    .user-select-list { flex: 1; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; padding: 8px; }
+    .user-select-item { padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; }
+    .user-select-item:hover { background: #f3f4f6; border-color: #2563eb; }
+    .user-select-item.selected { background: #e0f2fe; border-color: #2563eb; }
+    .user-select-item-info { display: flex; flex-direction: column; }
+    .user-select-item-info strong { margin-bottom: 4px; }
+    .user-select-item-info span { color: #666; font-size: 12px; }
+    .user-select-item-info .user-info-field { color: #666; font-size: 12px; margin-top: 4px; }
+    .user-select-item-info .user-info-label { font-weight: bold; color: #495057; }
+    .user-select-item-info .user-info-content { color: #6b7280; white-space: pre-wrap; word-break: break-word; max-height: 60px; overflow: hidden; text-overflow: ellipsis; }
   </style>
 </head>
 <body>
@@ -98,30 +127,52 @@
     
     <!-- 会话Tab -->
     <div id="chatTab" class="tab-content active">
-      <div class="form-row">
-        <label for="userSelect">用户选择</label>
-        <div class="user-select-wrapper">
-          <select id="userSelect">
-            <option value="">-- 请选择用户 --</option>
-          </select>
+      <div class="form-grid">
+        <!-- 第一列：Trace ID 和 自动生成开关 -->
+        <div class="form-grid-item">
+          <label for="traceId">Trace ID</label>
+          <div style="display: flex; gap: 8px;">
+            <input id="traceId" type="text" placeholder="留空则自动生成" class="form-control" style="flex: 1;">
+            <button id="generateTraceIdBtn" class="ghost" type="button">生成ID</button>
+          </div>
+          <div class="auto-trace-toggle" style="margin-top: 4px;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" id="autoTraceIdToggle" checked>
+              <span>每次发送重新生成traceId</span>
+            </label>
+          </div>
         </div>
-        <input id="userId" type="hidden" value="">
+        
+        <!-- 第二列：记录日期时间 -->
+        <div class="form-grid-item">
+          <label for="recordDateTime">记录日期时间</label>
+          <input 
+            type="datetime-local" 
+            id="recordDateTime" 
+            step="60"
+            title="格式：YYYY-MM-DD HH:mm，可以直接粘贴日期时间"
+            class="form-control"
+          />
+        </div>
+        
+        <!-- 第三列：用户选择 -->
+        <div class="form-grid-item">
+          <label for="userSelectBtn">用户选择</label>
+          <button id="userSelectBtn" class="ghost form-control" type="button" style="text-align: left;">-- 请选择用户 --</button>
+          <input id="userId" type="hidden" value="">
+        </div>
+        
+        <!-- 第四列：患者基础信息 -->
+        <div class="form-grid-item">
+          <label for="userInfoInput">患者基础信息</label>
+          <textarea 
+            id="userInfoInput" 
+            class="form-control" 
+            placeholder="患者基础信息（可编辑，仅用于本次请求参数，不影响实际用户信息）"
+          ></textarea>
+        </div>
       </div>
-      <div class="form-row">
-        <label for="recordDateTime">记录日期时间</label>
-        <input 
-          type="datetime-local" 
-          id="recordDateTime" 
-          step="60"
-          title="格式：YYYY-MM-DD HH:mm，可以直接粘贴日期时间"
-          style="flex: 1;"
-        />
-      </div>
-      <div class="form-row">
-        <label for="traceId">Trace ID</label>
-        <input id="traceId" type="text" placeholder="留空则自动生成" style="flex: 1;">
-        <button id="generateTraceIdBtn" class="ghost" type="button">生成ID</button>
-      </div>
+      
       <div>
         <label for="message"><strong>输入消息</strong></label>
         <textarea id="message" placeholder="请输入要发送的内容，支持多轮上下文"></textarea>
@@ -129,12 +180,6 @@
       <div class="actions">
         <button id="sendBtn" class="primary">发送</button>
         <button id="resetBtn" class="ghost">重置会话</button>
-        <div class="auto-trace-toggle">
-          <label>
-            <input type="checkbox" id="autoTraceIdToggle" checked>
-            <span>每次发送重新生成traceId</span>
-          </label>
-        </div>
       </div>
       <div id="error" class="error"></div>
       <div class="log" id="log"></div>
@@ -211,6 +256,22 @@
 其他信息：备注信息</div>
       </div>
     </div>
+    
+    <!-- 用户选择弹框 -->
+    <div id="userSelectModal" class="user-select-modal">
+      <div class="user-select-modal-content">
+        <div class="user-select-modal-header">
+          <h3>选择用户</h3>
+          <span class="user-select-modal-close" id="closeUserSelectModal">&times;</span>
+        </div>
+        <div class="user-select-search">
+          <input type="text" id="userSelectSearchInput" placeholder="搜索用户名（支持模糊匹配）">
+        </div>
+        <div class="user-select-list" id="userSelectList">
+          <div style="padding: 20px; text-align: center; color: #999;">加载中...</div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -221,8 +282,9 @@
     // DOM 元素
     const logEl = document.getElementById('log');
     const messageEl = document.getElementById('message');
-    const userSelect = document.getElementById('userSelect');
+    const userSelectBtn = document.getElementById('userSelectBtn');
     const userIdEl = document.getElementById('userId');
+    const userInfoInput = document.getElementById('userInfoInput');
     const traceIdEl = document.getElementById('traceId');
     const generateTraceIdBtn = document.getElementById('generateTraceIdBtn');
     const errorEl = document.getElementById('error');
@@ -251,12 +313,19 @@
     const exampleModal = document.getElementById('exampleModal');
     const closeExampleModal = document.getElementById('closeExampleModal');
     
+    // 用户选择弹框相关DOM
+    const userSelectModal = document.getElementById('userSelectModal');
+    const closeUserSelectModalBtn = document.getElementById('closeUserSelectModal');
+    const userSelectList = document.getElementById('userSelectList');
+    const userSelectSearchInput = document.getElementById('userSelectSearchInput');
+    
     // 全局状态
     let history = [];
     let currentSessionId = null;
     let lastFullResponse = null;
     let allUsers = []; // 存储所有用户数据
     let searchTimeout = null; // 防抖定时器
+    let userSelectSearchTimeout = null; // 用户选择弹框搜索防抖定时器
     
     // Tab切换
     document.querySelectorAll('.tab').forEach(tab => {
@@ -337,25 +406,69 @@
         dateTimeInput.pattern = '\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}';
       }
       
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
+      // 从 localStorage 读取保存的日期时间值
+      const savedDateTime = localStorage.getItem('chat_record_datetime');
+      let defaultValue = '';
       
-      if (dateTimeInput.type === 'datetime-local') {
-        // datetime-local 输入框需要的格式：YYYY-MM-DDTHH:mm
-        const defaultValue = `${year}-${month}-${day}T${hours}:${minutes}`;
-        dateTimeInput.value = defaultValue;
+      if (savedDateTime) {
+        // 如果保存的值存在，需要根据输入框类型进行格式转换
+        if (dateTimeInput.type === 'datetime-local') {
+          // 如果输入框是 datetime-local 类型，但保存的值是空格格式，需要转换
+          if (savedDateTime.includes(' ')) {
+            defaultValue = savedDateTime.replace(' ', 'T');
+          } else {
+            defaultValue = savedDateTime;
+          }
+        } else {
+          // 如果输入框是 text 类型，但保存的值是 T 格式，需要转换
+          if (savedDateTime.includes('T')) {
+            defaultValue = savedDateTime.replace('T', ' ');
+          } else {
+            defaultValue = savedDateTime;
+          }
+        }
       } else {
-        // text 类型使用空格分隔的格式：YYYY-MM-DD HH:mm
-        const defaultValue = `${year}-${month}-${day} ${hours}:${minutes}`;
-        dateTimeInput.value = defaultValue;
+        // 如果没有保存的值，使用当前时间
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        
+        if (dateTimeInput.type === 'datetime-local') {
+          // datetime-local 输入框需要的格式：YYYY-MM-DDTHH:mm
+          defaultValue = `${year}-${month}-${day}T${hours}:${minutes}`;
+        } else {
+          // text 类型使用空格分隔的格式：YYYY-MM-DD HH:mm
+          defaultValue = `${year}-${month}-${day} ${hours}:${minutes}`;
+        }
       }
+      
+      // 设置输入框的值
+      dateTimeInput.value = defaultValue;
+      
+      // 监听日期时间变化，保存到 localStorage
+      dateTimeInput.addEventListener('change', function() {
+        const value = this.value;
+        if (value) {
+          localStorage.setItem('chat_record_datetime', value);
+        } else {
+          // 如果值为空，清除保存的值
+          localStorage.removeItem('chat_record_datetime');
+        }
+      });
+      
+      // 监听输入事件（实时保存，适用于手动输入的情况）
+      dateTimeInput.addEventListener('input', function() {
+        const value = this.value;
+        if (value) {
+          localStorage.setItem('chat_record_datetime', value);
+        }
+      });
     }
     
-    // 加载用户列表（用于下拉框）
+    // 加载用户列表（用于选择弹框）
     async function loadUsersForSelect() {
       try {
         const resp = await fetch(usersApiUrl);
@@ -363,17 +476,8 @@
         const data = await resp.json();
         allUsers = data.users || [];
         
-        // 更新下拉框
-        userSelect.innerHTML = '<option value="">-- 请选择用户 --</option>';
-        allUsers.forEach(user => {
-          const option = document.createElement('option');
-          option.value = user.id;
-          option.textContent = user.username;
-          if (user.id === userIdEl.value) {
-            option.selected = true;
-          }
-          userSelect.appendChild(option);
-        });
+        // 更新按钮显示
+        updateUserSelectButton();
         
         return allUsers;
       } catch (e) {
@@ -382,15 +486,177 @@
       }
     }
     
+    // 更新用户选择按钮显示
+    // @param {boolean} forceUpdateUserInfo - 是否强制更新患者基础信息（重新选择用户时使用）
+    function updateUserSelectButton(forceUpdateUserInfo = false) {
+      const userId = userIdEl.value;
+      if (userId) {
+        const user = getUserById(userId);
+        if (user) {
+          userSelectBtn.textContent = user.username;
+          // 自动填充患者基础信息
+          if (userInfoInput) {
+            // 如果强制更新，或者输入框为空，或者之前是自动填充的，则更新
+            if (forceUpdateUserInfo || !userInfoInput.value.trim() || userInfoInput.dataset.autoFilled === 'true') {
+              userInfoInput.value = user.user_info || '';
+              userInfoInput.dataset.autoFilled = 'true';
+            }
+          }
+        } else {
+          userSelectBtn.textContent = '-- 请选择用户 --';
+        }
+      } else {
+        userSelectBtn.textContent = '-- 请选择用户 --';
+      }
+    }
+    
+    // 保存用户选择和患者基础信息到 localStorage
+    function saveUserSelection() {
+      const userId = userIdEl.value;
+      const userInfo = userInfoInput ? userInfoInput.value.trim() : '';
+      
+      if (userId) {
+        localStorage.setItem('chat_selected_user_id', userId);
+        localStorage.setItem('chat_user_info', userInfo);
+      } else {
+        // 如果用户ID为空，清除保存的值
+        localStorage.removeItem('chat_selected_user_id');
+        localStorage.removeItem('chat_user_info');
+      }
+    }
+    
+    // 从 localStorage 恢复用户选择和患者基础信息
+    function restoreUserSelection() {
+      const savedUserId = localStorage.getItem('chat_selected_user_id');
+      const savedUserInfo = localStorage.getItem('chat_user_info');
+      
+      if (savedUserId) {
+        userIdEl.value = savedUserId;
+        const user = getUserById(savedUserId);
+        
+        if (user) {
+          // 更新按钮显示
+          userSelectBtn.textContent = user.username;
+          
+          // 恢复患者基础信息
+          if (userInfoInput) {
+            if (savedUserInfo !== null) {
+              // 使用保存的患者基础信息
+              userInfoInput.value = savedUserInfo;
+              // 如果恢复的值与用户的实际信息不同，标记为手动修改
+              if (user.user_info !== savedUserInfo) {
+                userInfoInput.dataset.autoFilled = 'false';
+              } else {
+                userInfoInput.dataset.autoFilled = 'true';
+              }
+            } else {
+              // 如果没有保存的患者基础信息，使用用户的默认信息
+              userInfoInput.value = user.user_info || '';
+              userInfoInput.dataset.autoFilled = 'true';
+            }
+          }
+        } else {
+          // 如果找不到用户，只恢复用户ID和按钮显示
+          userSelectBtn.textContent = '-- 请选择用户 --';
+          if (userInfoInput && savedUserInfo !== null) {
+            userInfoInput.value = savedUserInfo;
+            userInfoInput.dataset.autoFilled = 'false';
+          }
+        }
+      }
+    }
+    
+    // 监听患者基础信息输入框变化，标记为手动修改并保存
+    if (userInfoInput) {
+      userInfoInput.addEventListener('input', function() {
+        this.dataset.autoFilled = 'false';
+        // 保存修改后的患者基础信息
+        saveUserSelection();
+      });
+    }
+    
+    // 渲染用户选择列表
+    function renderUserSelectList(users, selectedUserId = null) {
+      userSelectList.innerHTML = '';
+      if (users.length === 0) {
+        userSelectList.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">暂无用户</div>';
+        return;
+      }
+      
+      users.forEach(user => {
+        const item = document.createElement('div');
+        item.className = 'user-select-item';
+        if (user.id === selectedUserId) {
+          item.classList.add('selected');
+        }
+        
+        const username = user.username.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        const userId = user.id.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        const userInfo = (user.user_info || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        
+        item.innerHTML = `
+          <div class="user-select-item-info">
+            <strong>${username}</strong>
+            <span>ID: ${userId} | 手机: ${user.phone || '未设置'} | 邮箱: ${user.email || '未设置'} | ${user.is_active ? '激活' : '未激活'}</span>
+            ${userInfo ? `<div class="user-info-field"><span class="user-info-label">患者基础信息：</span><span class="user-info-content">${userInfo}</span></div>` : ''}
+          </div>
+        `;
+        
+        item.addEventListener('click', () => {
+          selectUserFromModal(userId);
+        });
+        
+        userSelectList.appendChild(item);
+      });
+    }
+    
+    // 打开用户选择弹框
+    async function openUserSelectModal() {
+      userSelectModal.style.display = 'block';
+      userSelectSearchInput.value = '';
+      await loadUsersForSelectModal();
+    }
+    
+    // 关闭用户选择弹框
+    function closeUserSelectModal() {
+      userSelectModal.style.display = 'none';
+    }
+    
+    // 加载用户列表到选择弹框
+    async function loadUsersForSelectModal(searchTerm = '') {
+      try {
+        const url = searchTerm 
+          ? `${usersApiUrl}?username_search=${encodeURIComponent(searchTerm)}`
+          : usersApiUrl;
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error('加载用户列表失败');
+        const data = await resp.json();
+        renderUserSelectList(data.users || [], userIdEl.value);
+        return data.users || [];
+      } catch (e) {
+        console.error('加载用户列表失败:', e);
+        userSelectList.innerHTML = '<div style="padding: 20px; text-align: center; color: #b91c1c;">加载失败: ' + e.message + '</div>';
+        return [];
+      }
+    }
+    
+    // 从弹框选择用户
+    function selectUserFromModal(userId) {
+      userIdEl.value = userId;
+      // 重新选择用户时，强制更新患者基础信息
+      updateUserSelectButton(true);
+      // 保存用户选择
+      saveUserSelection();
+      closeUserSelectModal();
+    }
+    
     // 根据用户ID获取用户对象
     function getUserById(userId) {
       return allUsers.find(u => u.id === userId) || null;
     }
     
-    // 用户选择变化
-    userSelect.addEventListener('change', function() {
-      userIdEl.value = this.value;
-    });
+    // 用户选择按钮点击
+    userSelectBtn.addEventListener('click', openUserSelectModal);
     
     // 加载用户列表（用于用户管理Tab）
     async function loadUsers(searchTerm = '') {
@@ -447,10 +713,13 @@
       });
     }
     
-    // 选择用户
+    // 选择用户（从用户管理Tab）
     function selectUser(userId) {
       userIdEl.value = userId;
-      userSelect.value = userId;
+      // 重新选择用户时，强制更新患者基础信息
+      updateUserSelectButton(true);
+      // 保存用户选择
+      saveUserSelection();
       // 切换到会话Tab
       document.querySelector('[data-tab="chat"]').click();
     }
@@ -475,9 +744,9 @@
         await loadUsers(userSearchInput.value.trim());
         if (userIdEl.value === userId) {
           userIdEl.value = '';
-          userSelect.value = '';
+          updateUserSelectButton();
         }
-        // 重新加载下拉框
+        // 重新加载用户列表
         await loadUsersForSelect();
       } catch (e) {
         alert('删除用户失败: ' + e.message);
@@ -529,7 +798,7 @@
         
         await loadUsers(userSearchInput.value.trim());
         resetForm();
-        // 重新加载下拉框
+        // 重新加载用户列表
         await loadUsersForSelect();
       } catch (e) {
         alert('保存用户失败: ' + e.message);
@@ -557,6 +826,20 @@
       if (e.target === exampleModal) {
         exampleModal.style.display = 'none';
       }
+      if (e.target === userSelectModal) {
+        closeUserSelectModal();
+      }
+    });
+    
+    // 用户选择弹框关闭按钮
+    closeUserSelectModalBtn.addEventListener('click', closeUserSelectModal);
+    
+    // 用户选择弹框搜索（防抖）
+    userSelectSearchInput.addEventListener('input', function() {
+      clearTimeout(userSelectSearchTimeout);
+      userSelectSearchTimeout = setTimeout(() => {
+        loadUsersForSelectModal(this.value.trim());
+      }, 300);
     });
     
     // 添加消息到日志
@@ -630,9 +913,8 @@
       }
       
       try {
-        // 获取用户信息
-        const selectedUser = getUserById(userId);
-        const userInfo = selectedUser?.user_info || '';
+        // 获取患者基础信息（优先使用输入框的值）
+        const userInfo = userInfoInput ? userInfoInput.value.trim() : '';
         
         // 获取日期时间输入框的值
         const dateTimeInput = document.getElementById('recordDateTime');
@@ -667,41 +949,104 @@
           throw new Error(err.detail || `请求失败，状态码 ${resp.status}`);
         }
         
-        const data = await resp.json();
-        
+        // 解析响应，增加错误处理
+        let data;
         let reply = '';
-        if (data && typeof data === 'object') {
-          if (data.response_content !== undefined && data.response_content !== null) {
-            reply = String(data.response_content);
-          } else if (data.response !== undefined && data.response !== null) {
-            const responseValue = data.response;
-            if (typeof responseValue === 'object' && responseValue !== null) {
-              if (responseValue.response_content !== undefined && responseValue.response_content !== null) {
-                reply = String(responseValue.response_content);
-              } else {
-                console.warn('response 是对象但未包含 response_content：', responseValue);
-                reply = JSON.stringify(responseValue, null, 2);
-              }
-            } else if (typeof responseValue === 'string') {
-              try {
-                const parsedResponse = JSON.parse(responseValue);
-                if (parsedResponse && typeof parsedResponse === 'object' && parsedResponse.response_content) {
-                  reply = String(parsedResponse.response_content);
+        try {
+          const responseText = await resp.text();
+          // 尝试解析JSON，如果失败则使用原始文本
+          try {
+            data = JSON.parse(responseText);
+          } catch (parseError) {
+            console.warn('响应不是有效的JSON，使用原始文本：', parseError);
+            // 如果不是JSON，尝试从文本中提取内容
+            reply = responseText;
+            data = { response: responseText };
+          }
+        } catch (textError) {
+          console.error('读取响应文本失败：', textError);
+          throw new Error('无法读取服务器响应');
+        }
+        
+        // 提取回复内容（如果还没有从非JSON响应中提取）
+        if (!reply) {
+          if (data && typeof data === 'object') {
+            // 优先检查 response_content 字段（兼容某些特殊响应格式）
+            if (data.response_content !== undefined && data.response_content !== null) {
+              reply = String(data.response_content);
+            } 
+            // 检查 response 字段（标准响应格式）
+            else if (data.response !== undefined && data.response !== null) {
+              const responseValue = data.response;
+              
+              // 如果 response 是对象，尝试提取 response_content
+              if (typeof responseValue === 'object' && responseValue !== null) {
+                if (responseValue.response_content !== undefined && responseValue.response_content !== null) {
+                  reply = String(responseValue.response_content);
                 } else {
+                  // 对象但没有 response_content，可能是其他格式，尝试序列化
+                  console.warn('response 是对象但未包含 response_content：', responseValue);
+                  reply = JSON.stringify(responseValue, null, 2);
+                }
+              } 
+              // 如果 response 是字符串，尝试解析JSON（可能包含结构化内容）
+              else if (typeof responseValue === 'string') {
+                // 先尝试解析为JSON（可能包含 response_content 字段）
+                try {
+                  const parsedResponse = JSON.parse(responseValue);
+                  if (parsedResponse && typeof parsedResponse === 'object') {
+                    // 如果解析成功且包含 response_content，使用它
+                    if (parsedResponse.response_content !== undefined && parsedResponse.response_content !== null) {
+                      reply = String(parsedResponse.response_content);
+                    } 
+                    // 如果解析成功但没有 response_content，检查是否是完整的JSON结构
+                    else if (parsedResponse.response !== undefined) {
+                      // 嵌套的 response 字段
+                      reply = String(parsedResponse.response);
+                    } else {
+                      // 解析成功但没有预期字段，使用原始字符串
+                      reply = responseValue;
+                    }
+                  } else {
+                    // 解析成功但不是对象，使用原始字符串
+                    reply = responseValue;
+                  }
+                } catch (parseError) {
+                  // JSON解析失败，说明是普通文本，直接使用
                   reply = responseValue;
                 }
-              } catch (e) {
-                reply = responseValue;
+              } 
+              // 其他类型，转换为字符串
+              else {
+                reply = String(responseValue);
               }
-            } else {
-              reply = String(responseValue);
+            } 
+            // 如果都没有，尝试查找其他可能的字段
+            else {
+              // 检查是否有其他可能的响应字段
+              const possibleFields = ['message', 'content', 'text', 'answer'];
+              let found = false;
+              for (const field of possibleFields) {
+                if (data[field] !== undefined && data[field] !== null) {
+                  reply = String(data[field]);
+                  found = true;
+                  break;
+                }
+              }
+              if (!found) {
+                console.warn('未找到 response_content 或 response 字段，完整响应：', data);
+                reply = '助手未返回有效内容';
+              }
             }
           } else {
-            console.warn('未找到 response_content 或 response 字段，完整响应：', data);
+            // 如果不是对象，直接转换为字符串
+            reply = String(data);
+          }
+          
+          // 如果回复为空，使用默认消息
+          if (!reply || reply.trim() === '') {
             reply = '助手未返回有效内容';
           }
-        } else {
-          reply = String(data);
         }
         
         history.push({ role: 'user', content: text });
@@ -760,12 +1105,36 @@
     initDateTimeInput();
     loadUsersForSelect().then(users => {
       if (users.length > 0) {
-        const firstUser = users[0];
-        userIdEl.value = firstUser.id;
-        userSelect.value = firstUser.id;
+        // 尝试恢复保存的用户选择
+        const savedUserId = localStorage.getItem('chat_selected_user_id');
+        if (savedUserId) {
+          // 检查保存的用户ID是否仍然存在于用户列表中
+          const savedUser = users.find(u => u.id === savedUserId);
+          if (savedUser) {
+            // 恢复保存的用户选择和患者基础信息
+            restoreUserSelection();
+          } else {
+            // 如果保存的用户不存在，选择第一个用户
+            const firstUser = users[0];
+            userIdEl.value = firstUser.id;
+            updateUserSelectButton(true);
+            saveUserSelection();
+          }
+        } else {
+          // 如果没有保存的用户，选择第一个用户
+          const firstUser = users[0];
+          userIdEl.value = firstUser.id;
+          updateUserSelectButton(true);
+          saveUserSelection();
+        }
       }
     });
     updateTraceIdControls();
+    
+    // 初始化患者基础信息输入框
+    if (userInfoInput) {
+      userInfoInput.dataset.autoFilled = 'false';
+    }
   </script>
 </body>
 </html>

@@ -14,14 +14,93 @@ from domain.router.node import route_node, clarify_intent_node
 from domain.agents.factory import AgentFactory
 from domain.agents.registry import AgentRegistry
 from infrastructure.prompts.manager import PromptManager
+from infrastructure.prompts.placeholder import PlaceholderManager
 from infrastructure.observability.llm_logger import LlmLogContext
 from infrastructure.observability.langfuse_handler import get_langfuse_client, normalize_langfuse_trace_id
 from app.core.config import settings
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 # 提示词管理器实例（单例）
 _prompt_manager = PromptManager()
+
+
+def _load_agent_template(agent_key: str) -> str:
+    """
+    加载 Agent 的原始提示词模板（包含占位符）
+    
+    Args:
+        agent_key: Agent键名
+        
+    Returns:
+        提示词模板内容（包含占位符）
+    """
+    # 获取 Agent 配置
+    if not AgentFactory._config:
+        AgentFactory.load_config()
+    
+    agent_config = AgentFactory._config.get(agent_key, {})
+    if not agent_config:
+        raise ValueError(f"Agent配置不存在: {agent_key}")
+    
+    prompt_source_mode = settings.PROMPT_SOURCE_MODE.lower()
+    template = None
+    
+    # 从Langfuse加载提示词（如果模式为langfuse或auto）
+    if prompt_source_mode in ("langfuse", "auto"):
+        langfuse_template = agent_config.get("langfuse_template")
+        if langfuse_template:
+            try:
+                from infrastructure.prompts.langfuse_adapter import LangfusePromptAdapter
+                adapter = LangfusePromptAdapter()
+                template_version = agent_config.get("langfuse_template_version")
+                
+                template = adapter.get_template(
+                    template_name=langfuse_template,
+                    version=template_version
+                )
+                
+                logger.debug(f"从Langfuse加载提示词模板: {agent_key}, 模版: {langfuse_template}")
+            except Exception as e:
+                logger.warning(f"从Langfuse加载提示词模板失败: {agent_key}, 错误: {str(e)}")
+                if prompt_source_mode == "langfuse":
+                    raise ValueError(f"无法从Langfuse加载提示词模板: {agent_key}, 错误: {str(e)}")
+                # 如果模式为auto，继续尝试从本地文件加载
+                logger.debug(f"尝试从本地文件加载提示词模板: {agent_key}")
+    
+    # 从本地文件加载提示词（如果模式为local，或auto模式下Langfuse失败）
+    if not template and prompt_source_mode in ("local", "auto"):
+        langfuse_template = agent_config.get("langfuse_template", "")
+        if langfuse_template:
+            local_filename = f"{langfuse_template}.txt"
+        else:
+            local_filename = f"{agent_key}_prompt.txt"
+        
+        local_file_path = Path("config/prompts/local") / local_filename
+        
+        # 尝试从项目根目录查找
+        if not local_file_path.exists():
+            local_file_path = Path.cwd() / local_file_path
+        
+        if local_file_path.exists():
+            try:
+                with open(local_file_path, "r", encoding="utf-8") as f:
+                    template = f.read()
+                
+                logger.debug(f"从本地文件加载提示词模板: {agent_key}, 文件: {local_file_path}")
+            except Exception as e:
+                logger.error(f"从本地文件加载提示词模板失败: {agent_key}, 错误: {str(e)}")
+                if prompt_source_mode == "local":
+                    raise ValueError(f"无法从本地文件加载提示词模板: {agent_key}, 错误: {str(e)}")
+        else:
+            if prompt_source_mode == "local":
+                raise FileNotFoundError(f"未找到本地提示词文件: {agent_key}, 路径: {local_file_path}")
+    
+    if not template:
+        raise ValueError(f"未找到提示词模板: {agent_key}")
+    
+    return template
 
 
 def create_router_graph(
@@ -52,53 +131,79 @@ def create_router_graph(
     # 注入用户上下文的包装器，向 LLM 显式提供 user_id
     def with_user_context(agent_node, agent_name: str):
         """
-        为智能体包装系统指令，向 LLM 显式提供 user_id。
+        为智能体包装系统指令，动态注入完整的上下文信息。
         
-        注意：不再进行硬编码的槽位提取和填充，完全依赖 LLM 根据提示词和对话历史自主处理。
-        LLM 可以通过 LangGraph 的 checkpointer 机制访问完整的对话历史，从而理解上下文。
+        方案三：运行时动态替换系统消息中的占位符
+        - 从 state 中获取所有占位符值
+        - 加载原始提示词模板
+        - 填充占位符，生成完整的系统消息
+        - 替换或添加系统消息到消息列表
         """
         async def _run(state: RouterState) -> RouterState:
             messages = state.get("messages", [])
             user_id = state.get("user_id")
-            
-            # 仅在存在 user_id 且未注入过时添加系统提示，避免重复插入
-            has_context = any(
-                isinstance(msg, SystemMessage) and "系统提供的用户ID" in msg.content
-                for msg in messages
-            )
-            if user_id and not has_context:
-                # 使用PromptManager构建用户信息提示
-                try:
-                    # 构建上下文数据（只提供 user_id，让 LLM 自己从对话历史中理解上下文）
-                    context = {"user_id": user_id}
-                    
-                    # 使用PromptManager渲染user_info模块
-                    user_info_prompt = _prompt_manager.render(
-                        agent_key=agent_name,
-                        context=context,
-                        include_modules=["user_info"]
-                    )
-                    
-                    if not user_info_prompt:
-                        raise ValueError(f"PromptManager返回空提示词: {agent_name}")
-                    
-                    system_hint = SystemMessage(content=user_info_prompt)
-                    messages = [system_hint, *messages]
-                    logger.info(f"[AGENT_HINT] 使用PromptManager注入系统提示: {agent_name}")
-                        
-                except (FileNotFoundError, ValueError) as e:
-                    # 如果模板不存在，直接抛出异常
-                    logger.error(f"提示词模板加载失败: {agent_name}, 错误: {str(e)}")
-                    raise ValueError(f"无法加载提示词模板: {agent_name}, 错误: {str(e)}")
-            
-            # 直接调用 Agent，由 LLM 决定如何回复和是否调用工具
-            # LLM 可以通过 LangGraph 的 checkpointer 机制访问完整的对话历史
-            # 提示词已经明确告诉 LLM 如何理解上下文、提取数据和判断完整性
             session_id = state.get("session_id")
+            
+            logger.info(
+                f"[AGENT_CONTEXT] 开始处理系统消息: {agent_name}, "
+                f"session_id={session_id}, user_id={user_id}"
+            )
+            
+            # 1. 从 state 中获取所有占位符值
+            placeholders = PlaceholderManager.get_placeholders(agent_name, state=state)
+            logger.debug(
+                f"[AGENT_CONTEXT] 获取占位符值: {agent_name}, "
+                f"占位符数量: {len(placeholders)}, "
+                f"包含: {list(placeholders.keys())}"
+            )
+            
+            # 2. 加载原始提示词模板（包含占位符）
+            try:
+                template = _load_agent_template(agent_name)
+                logger.debug(f"[AGENT_CONTEXT] 加载提示词模板成功: {agent_name}")
+            except Exception as e:
+                logger.error(f"[AGENT_CONTEXT] 加载提示词模板失败: {agent_name}, 错误: {str(e)}")
+                raise ValueError(f"无法加载提示词模板: {agent_name}, 错误: {str(e)}")
+            
+            # 3. 填充占位符，生成完整的系统提示词
+            filled_prompt = PlaceholderManager.fill_placeholders(template, placeholders)
+            
+            # 检查是否还有未填充的占位符
+            import re
+            remaining_placeholders = re.findall(r'\{\{(\w+)\}\}', filled_prompt)
+            if remaining_placeholders:
+                logger.warning(
+                    f"[AGENT_CONTEXT] 系统消息中仍有未填充的占位符: {agent_name}, "
+                    f"占位符: {remaining_placeholders}"
+                )
+            else:
+                logger.debug(f"[AGENT_CONTEXT] 所有占位符已成功填充: {agent_name}")
+            
+            # 4. 创建系统消息（包含完整的上下文信息）
+            system_message = SystemMessage(content=filled_prompt)
+            
+            # 5. 处理消息列表：移除旧的系统消息（如果存在），添加新的系统消息
+            # 移除包含占位符的系统消息（Agent 创建时注入的）
+            filtered_messages = [
+                msg for msg in messages
+                if not isinstance(msg, SystemMessage) or
+                not (hasattr(msg, 'content') and '{{' in str(msg.content))
+            ]
+            
+            # 在消息列表开头插入新的系统消息
+            messages_with_context = [system_message] + filtered_messages
+            
+            logger.info(
+                f"[AGENT_CONTEXT] 系统消息注入完成: {agent_name}, "
+                f"session_id={session_id}, user_id={user_id}, "
+                f"消息总数: {len(messages_with_context)}"
+            )
+            
+            # 6. 调用 Agent
             logger.info(
                 f"[AGENT_INVOKE] 调用智能体: {agent_name}, "
                 f"session_id={session_id}, user_id={user_id}, "
-                f"messages_count={len(messages)}"
+                f"messages_count={len(messages_with_context)}"
             )
             
             # 构建日志上下文，用于 LLM 调用日志
@@ -139,7 +244,7 @@ def create_router_graph(
                     "name": f"agent_{agent_name}",
                     "input": {
                         "agent_key": agent_name,
-                        "messages_count": len(messages),
+                        "messages_count": len(messages_with_context),
                         # 移除 user_id 和 session_id（已在 Trace 级别设置）
                     },
                     "metadata": {
@@ -154,7 +259,7 @@ def create_router_graph(
                     span_params["trace_context"] = {"trace_id": normalized_trace_id}
                     # 使用 Span 追踪 Agent 节点执行
                     with langfuse_client.start_as_current_span(**span_params):
-                        result = await agent_node.ainvoke({"messages": messages})
+                        result = await agent_node.ainvoke({"messages": messages_with_context})
                 except (TypeError, AttributeError, ValueError) as e:
                     # 如果 SDK 不支持 trace_context 参数或格式不正确，记录警告并使用默认方式
                     logger.warning(
@@ -165,20 +270,20 @@ def create_router_graph(
                     span_params.pop("trace_context", None)
                     try:
                         with langfuse_client.start_as_current_span(**span_params):
-                            result = await agent_node.ainvoke({"messages": messages})
+                            result = await agent_node.ainvoke({"messages": messages_with_context})
                     except Exception as span_error:
                         # 错误隔离：Span 创建失败不影响主流程
                         logger.warning(
                             f"创建 Langfuse Span 失败: {span_error}，继续执行主流程"
                         )
-                        result = await agent_node.ainvoke({"messages": messages})
+                        result = await agent_node.ainvoke({"messages": messages_with_context})
                 except Exception as e:
                     # 错误隔离：Span 创建失败不影响主流程
                     logger.warning(f"创建 Langfuse Span 失败: {e}，继续执行主流程")
-                    result = await agent_node.ainvoke({"messages": messages})
+                    result = await agent_node.ainvoke({"messages": messages_with_context})
             else:
                 # Langfuse 未启用、Span 追踪被禁用或 trace_id 不存在，直接执行
-                result = await agent_node.ainvoke({"messages": messages})
+                result = await agent_node.ainvoke({"messages": messages_with_context})
             
             # 保留路由状态中的关键字段，防止下游节点丢失上下文
             # 注意：不再保留 bp_form，让 LLM 从对话历史中自己理解

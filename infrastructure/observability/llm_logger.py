@@ -271,10 +271,9 @@ class LlmLogCallbackHandler(BaseCallbackHandler):
             f"max_tokens={self.max_tokens}, {context_str}"
         )
         
-        logger.info(f"[LLM请求提示词] call_id={call_id}\n{prompt_snapshot}")
-        # 打印提示词内容（截断过长内容以便阅读）
-        # prompt_preview = prompt_snapshot[:500] + "..." if len(prompt_snapshot) > 500 else prompt_snapshot
-        # logger.info(f"[LLM请求提示词] call_id={call_id}\n{prompt_preview}")
+        # 打印提示词内容（使用配置的最大长度限制）
+        prompt_preview = _truncate_text(prompt_snapshot) or ""
+        logger.info(f"[LLM请求提示词] call_id={call_id}\n{prompt_preview}")
         
         # 只在启用数据库日志时写入数据库
         if self.log_enabled:
@@ -469,16 +468,17 @@ class LlmLogCallbackHandler(BaseCallbackHandler):
             f"[LLM响应完成] call_id={call_id}, latency={latency_str}, {token_str}"
         )
         
-        # 打印思考过程（如果存在）
+        # 打印思考过程（如果存在，使用配置的最大长度限制）
         if reasoning_content:
-            reasoning_str = str(reasoning_content)
+            reasoning_str = _truncate_text(str(reasoning_content)) or ""
             logger.info(f"[LLM思考过程] call_id={call_id}\n{reasoning_str}")
         else:
             logger.debug(f"[LLM思考过程] call_id={call_id}, 未检测到思考过程")
         
-        # 打印最终响应内容
+        # 打印最终响应内容（使用配置的最大长度限制）
         if response_text:
-            logger.info(f"[LLM响应内容] call_id={call_id}\n{response_text}")
+            response_preview = _truncate_text(response_text) or ""
+            logger.info(f"[LLM响应内容] call_id={call_id}\n{response_preview}")
         else:
             logger.warning(f"[LLM响应内容] call_id={call_id}, 响应内容为空")
         
