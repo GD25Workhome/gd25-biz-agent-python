@@ -7,11 +7,12 @@ from langchain_core.tools import tool
 
 from infrastructure.database.repository.symptom_repository import SymptomRepository
 from infrastructure.database.connection import get_async_session_factory
+from domain.tools.utils.token_converter import convert_token_to_user_info
 
 
 @tool
 async def record_symptom(
-    user_id: str,
+    token_id: str,
     symptom_name: str,
     severity: Optional[str] = None,
     start_time: Optional[str] = None,
@@ -25,7 +26,7 @@ async def record_symptom(
     记录症状数据
     
     Args:
-        user_id: 用户ID
+        token_id: 令牌ID（自动注入）
         symptom_name: 症状名称（如：头痛、发热、咳嗽等）
         severity: 严重程度（可选，如：轻微、中等、严重）
         start_time: 开始时间（ISO格式字符串，可选）
@@ -38,6 +39,10 @@ async def record_symptom(
     Returns:
         成功消息字符串
     """
+    # 数据转换：将 tokenId 转换为用户信息
+    user_info = convert_token_to_user_info(token_id)
+    user_id = user_info.user_id
+    
     # 解析时间：未提供或格式错误时交由数据库默认时区时间处理
     start_datetime = None
     end_datetime = None

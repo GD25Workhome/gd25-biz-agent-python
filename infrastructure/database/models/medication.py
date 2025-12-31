@@ -1,10 +1,9 @@
 """
 用药记录模型
 """
-from uuid import uuid4
 from sqlalchemy import Column, String, DateTime, Text, func
 
-from infrastructure.database.base import Base
+from infrastructure.database.base import Base, generate_ulid
 
 
 class MedicationRecord(Base):
@@ -16,7 +15,7 @@ class MedicationRecord(Base):
         String(50),
         primary_key=True,
         index=True,
-        default=lambda: uuid4().hex,
+        default=generate_ulid,
         comment="记录ID"
     )
     user_id = Column(

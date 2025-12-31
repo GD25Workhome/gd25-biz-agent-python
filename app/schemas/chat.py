@@ -15,7 +15,7 @@ class ChatRequest(BaseModel):
     """聊天请求模型"""
     message: str = Field(..., description="用户消息")
     session_id: str = Field(..., description="会话ID")
-    user_id: str = Field(..., description="用户ID")
+    token_id: str = Field(..., description="令牌ID（当前阶段等于用户ID，未来可扩展为业务系统令牌）")
     conversation_history: Optional[List[ChatMessage]] = Field(
         default=None,
         description="对话历史（可选）"

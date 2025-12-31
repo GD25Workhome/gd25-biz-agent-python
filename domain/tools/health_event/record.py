@@ -7,11 +7,12 @@ from langchain_core.tools import tool
 
 from infrastructure.database.repository.health_event_repository import HealthEventRepository
 from infrastructure.database.connection import get_async_session_factory
+from domain.tools.utils.token_converter import convert_token_to_user_info
 
 
 @tool
 async def record_health_event(
-    user_id: str,
+    token_id: str,
     event_type: str,
     event_name: str,
     event_date: Optional[str] = None,
@@ -23,7 +24,7 @@ async def record_health_event(
     记录健康事件数据
     
     Args:
-        user_id: 用户ID
+        token_id: 令牌ID（自动注入）
         event_type: 事件类型（如：体检、检查、手术、疫苗接种等）
         event_name: 事件名称（如：年度体检、血常规检查等）
         event_date: 事件日期（ISO格式字符串，可选，默认为当前时间）
@@ -34,6 +35,10 @@ async def record_health_event(
     Returns:
         成功消息字符串
     """
+    # 数据转换：将 tokenId 转换为用户信息
+    user_info = convert_token_to_user_info(token_id)
+    user_id = user_info.user_id
+    
     # 解析事件日期：未提供或格式错误时交由数据库默认时区时间处理
     event_datetime = None
     if event_date:

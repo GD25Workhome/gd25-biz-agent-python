@@ -105,6 +105,78 @@ class Settings(BaseSettings):
     APP_HOST: str = "0.0.0.0"
     APP_PORT: int = 8000
     
+    # 数据库SQL日志配置
+    DB_SQL_LOG_ENABLED: bool = Field(
+        default=False,
+        description="是否启用SQL日志（默认关闭），可从 .env 文件中的 DB_SQL_LOG_ENABLED 配置"
+    )
+    DB_SQL_LOG_LEVEL: str = Field(
+        default="INFO",
+        description="SQL日志级别：DEBUG/INFO/WARNING/ERROR，可从 .env 文件中的 DB_SQL_LOG_LEVEL 配置"
+    )
+    DB_SQL_LOG_SLOW_QUERY_THRESHOLD: float = Field(
+        default=1.0,
+        description="慢查询阈值（秒），超过此时间的查询会被标记为慢查询，可从 .env 文件中的 DB_SQL_LOG_SLOW_QUERY_THRESHOLD 配置"
+    )
+    DB_SQL_LOG_INCLUDE_PARAMS: bool = Field(
+        default=True,
+        description="是否记录SQL参数（默认记录，生产环境建议关闭），可从 .env 文件中的 DB_SQL_LOG_INCLUDE_PARAMS 配置"
+    )
+    DB_SQL_LOG_MAX_SQL_LENGTH: int = Field(
+        default=1000,
+        description="SQL语句最大记录长度（字符），可从 .env 文件中的 DB_SQL_LOG_MAX_SQL_LENGTH 配置"
+    )
+    
+    @field_validator('DB_SQL_LOG_ENABLED', mode='before')
+    @classmethod
+    def _validate_db_sql_log_enabled(cls, v: Union[bool, str, None]) -> bool:
+        """验证 DB_SQL_LOG_ENABLED，空值时使用默认值"""
+        if v is None or (isinstance(v, str) and v.strip() == ''):
+            return False
+        if isinstance(v, str):
+            return v.lower() in ('true', '1', 'yes', 'on')
+        return bool(v)
+    
+    @field_validator('DB_SQL_LOG_LEVEL', mode='before')
+    @classmethod
+    def _validate_db_sql_log_level(cls, v: Union[str, None]) -> str:
+        """验证 DB_SQL_LOG_LEVEL，空值时使用默认值"""
+        if v is None or (isinstance(v, str) and v.strip() == ''):
+            return "INFO"
+        v = v.strip().upper()
+        if v not in ("DEBUG", "INFO", "WARNING", "ERROR"):
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"无效的DB_SQL_LOG_LEVEL值: {v}，使用默认值INFO")
+            return "INFO"
+        return v
+    
+    @field_validator('DB_SQL_LOG_SLOW_QUERY_THRESHOLD', mode='before')
+    @classmethod
+    def _validate_slow_query_threshold(cls, v: Union[float, str, None]) -> float:
+        """验证 DB_SQL_LOG_SLOW_QUERY_THRESHOLD，空值时使用默认值"""
+        if v is None or (isinstance(v, str) and v.strip() == ''):
+            return 1.0
+        return float(v)
+    
+    @field_validator('DB_SQL_LOG_INCLUDE_PARAMS', mode='before')
+    @classmethod
+    def _validate_db_sql_log_include_params(cls, v: Union[bool, str, None]) -> bool:
+        """验证 DB_SQL_LOG_INCLUDE_PARAMS，空值时使用默认值"""
+        if v is None or (isinstance(v, str) and v.strip() == ''):
+            return True
+        if isinstance(v, str):
+            return v.lower() in ('true', '1', 'yes', 'on')
+        return bool(v)
+    
+    @field_validator('DB_SQL_LOG_MAX_SQL_LENGTH', mode='before')
+    @classmethod
+    def _validate_db_sql_log_max_sql_length(cls, v: Union[int, str, None]) -> int:
+        """验证 DB_SQL_LOG_MAX_SQL_LENGTH，空值时使用默认值"""
+        if v is None or (isinstance(v, str) and v.strip() == ''):
+            return 1000
+        return int(v)
+    
     # Langfuse 配置（仅从 .env 文件读取，无默认值）
     LANGFUSE_ENABLED: bool = False
     LANGFUSE_PUBLIC_KEY: Optional[str] = None

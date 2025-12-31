@@ -35,7 +35,6 @@
 
 # 上下文信息
 
-用户ID: {{user_id}}
 会话ID: {{session_id}}
 当前日期: {{current_date}}
 患者基础信息: {{user_info}}

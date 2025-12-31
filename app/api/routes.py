@@ -45,7 +45,7 @@ async def chat(
     if settings.LANGFUSE_ENABLED:
         set_langfuse_trace_context(
             name="chat_request",
-            user_id=request.user_id,
+            user_id=request.token_id,  # 当前阶段 token_id = user_id
             session_id=request.session_id,
             trace_id=trace_id,
             metadata={
@@ -57,7 +57,7 @@ async def chat(
     # 记录请求开始
     logger.info(
         f"[Chat请求开始] session_id={request.session_id}, "
-        f"user_id={request.user_id}, "
+        f"token_id={request.token_id}, "
         f"message_length={len(request.message)}, "
         f"history_count={len(request.conversation_history) if request.conversation_history else 0}"
     )
@@ -107,7 +107,7 @@ async def chat(
         "current_agent": None,
         "need_reroute": True,
         "session_id": request.session_id,
-        "user_id": request.user_id,
+        "token_id": request.token_id,
         "trace_id": trace_id,
         "user_info": request.user_info or "暂无患者基础信息",
         "history_msg": history_msg,

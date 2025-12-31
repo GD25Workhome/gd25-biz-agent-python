@@ -937,7 +937,7 @@
           body: JSON.stringify({
             message: text,
             session_id: currentSessionId,
-            user_id: userId,
+            token_id: userId,  // 字段名改为 token_id，但传入的值仍然是 user_id（当前阶段）
             conversation_history: history,
             user_info: userInfo,
             current_date: currentDateTime

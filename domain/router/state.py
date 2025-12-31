@@ -14,7 +14,7 @@ class RouterState(TypedDict, total=False):
     current_agent: Optional[str]  # 当前活跃的智能体名称
     need_reroute: bool  # 是否需要重新路由
     session_id: str  # 会话ID
-    user_id: str  # 用户ID
+    token_id: str  # 令牌ID（当前阶段等于用户ID，未来可扩展为业务系统令牌）
     trace_id: Optional[str]  # Langfuse Trace ID（用于链路追踪）
     user_info: Optional[str]  # 患者基础信息（多行文本）
     history_msg: Optional[str]  # 历史对话信息（格式化文本，由API层从conversation_history生成）

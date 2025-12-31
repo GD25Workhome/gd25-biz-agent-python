@@ -6,11 +6,12 @@ from langchain_core.tools import tool
 
 from infrastructure.database.repository.health_event_repository import HealthEventRepository
 from infrastructure.database.connection import get_async_session_factory
+from domain.tools.utils.token_converter import convert_token_to_user_info
 
 
 @tool
 async def query_health_event(
-    user_id: str,
+    token_id: str,
     limit: int = 10,
     offset: int = 0
 ) -> str:
@@ -18,13 +19,17 @@ async def query_health_event(
     查询用户的健康事件记录
     
     Args:
-        user_id: 用户ID
+        token_id: 令牌ID（自动注入）
         limit: 返回记录数量限制（默认10）
         offset: 偏移量（默认0）
         
     Returns:
         健康事件记录列表的字符串表示
     """
+    # 数据转换：将 tokenId 转换为用户信息
+    user_info = convert_token_to_user_info(token_id)
+    user_id = user_info.user_id
+    
     # 获取数据库会话
     session_factory = get_async_session_factory()
     async with session_factory() as session:

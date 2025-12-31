@@ -6,7 +6,7 @@ from typing import Optional, Dict, Any
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.store.base import BaseStore
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import SystemMessage, ToolMessage, AIMessage
 from psycopg_pool import AsyncConnectionPool
 
 from domain.router.state import RouterState
@@ -18,6 +18,7 @@ from infrastructure.prompts.placeholder import PlaceholderManager
 from infrastructure.prompts.template_loader import AgentTemplateLoader
 from infrastructure.observability.llm_logger import LlmLogContext
 from infrastructure.observability.langfuse_handler import get_langfuse_client, normalize_langfuse_trace_id
+from domain.tools.context import TokenContext
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -75,7 +76,7 @@ def create_router_graph(
     # 添加澄清节点
     workflow.add_node("clarify_intent", clarify_intent_node)
     
-    # 注入用户上下文的包装器，向 LLM 显式提供 user_id
+    # 注入用户上下文的包装器，向 LLM 显式提供 token_id
     def with_user_context(agent_node, agent_name: str):
         """
         为智能体包装系统指令，动态注入完整的上下文信息。
@@ -85,15 +86,16 @@ def create_router_graph(
         - 加载原始提示词模板
         - 填充占位符，生成完整的系统消息
         - 替换或添加系统消息到消息列表
+        - 使用 TokenContext 设置 tokenId 上下文，供工具自动注入使用
         """
         async def _run(state: RouterState) -> RouterState:
             messages = state.get("messages", [])
-            user_id = state.get("user_id")
+            token_id = state.get("token_id")
             session_id = state.get("session_id")
             
             logger.info(
                 f"[AGENT_CONTEXT] 开始处理系统消息: {agent_name}, "
-                f"session_id={session_id}, user_id={user_id}"
+                f"session_id={session_id}, token_id={token_id}"
             )
             
             # 1. 从 state 中获取所有占位符值
@@ -142,21 +144,22 @@ def create_router_graph(
             
             logger.info(
                 f"[AGENT_CONTEXT] 系统消息注入完成: {agent_name}, "
-                f"session_id={session_id}, user_id={user_id}, "
+                f"session_id={session_id}, token_id={token_id}, "
                 f"消息总数: {len(messages_with_context)}"
             )
             
-            # 6. 调用 Agent
+            # 6. 调用 Agent（在 TokenContext 上下文中调用，以便工具自动注入 tokenId）
             logger.info(
                 f"[AGENT_INVOKE] 调用智能体: {agent_name}, "
-                f"session_id={session_id}, user_id={user_id}, "
+                f"session_id={session_id}, token_id={token_id}, "
                 f"messages_count={len(messages_with_context)}"
             )
             
             # 构建日志上下文，用于 LLM 调用日志
+            # 注意：当前阶段 token_id = user_id，所以日志中仍然使用 token_id
             log_context = LlmLogContext(
                 session_id=session_id,
-                user_id=user_id,
+                user_id=token_id,  # 当前阶段 token_id = user_id
                 agent_key=agent_name,
                 trace_id=state.get("trace_id"),
                 conversation_id=session_id  # 使用 session_id 作为 conversation_id
@@ -167,7 +170,7 @@ def create_router_graph(
             # 这里记录日志，说明即将调用 Agent（可能会触发 LLM 调用）
             logger.info(
                 f"[AGENT_LLM] 即将调用智能体，可能会触发LLM调用: {agent_name}, "
-                f"session_id={session_id}, user_id={user_id}"
+                f"session_id={session_id}, token_id={token_id}"
             )
             
             # 获取 trace_id
@@ -185,18 +188,18 @@ def create_router_graph(
                 
                 # 构建 span 参数，显式指定 trace_id
                 # 注意：
-                # 1. session_id 和 user_id 已在 Trace 级别设置，会自动继承，不需要在 Span 中重复传递
+                # 1. session_id 和 token_id 已在 Trace 级别设置，会自动继承，不需要在 Span 中重复传递
                 # 2. agent_key 在 input 中已有，不需要在 metadata 中重复
                 span_params = {
                     "name": f"agent_{agent_name}",
                     "input": {
                         "agent_key": agent_name,
                         "messages_count": len(messages_with_context),
-                        # 移除 user_id 和 session_id（已在 Trace 级别设置）
+                        # 移除 token_id 和 session_id（已在 Trace 级别设置）
                     },
                     "metadata": {
                         # 移除 agent_key（已在 input 中）
-                        # 移除 session_id 和 user_id（已在 Trace 级别设置）
+                        # 移除 session_id 和 token_id（已在 Trace 级别设置）
                         "intent_type": state.get("current_intent"),
                     },
                 }
@@ -204,9 +207,10 @@ def create_router_graph(
                 # 注意：Langfuse SDK 要求 trace_id 必须是 32 个小写十六进制字符
                 try:
                     span_params["trace_context"] = {"trace_id": normalized_trace_id}
-                    # 使用 Span 追踪 Agent 节点执行
+                    # 使用 Span 追踪 Agent 节点执行，并在 TokenContext 中调用
                     with langfuse_client.start_as_current_span(**span_params):
-                        result = await agent_node.ainvoke({"messages": messages_with_context})
+                        with TokenContext(token_id=token_id):
+                            result = await agent_node.ainvoke({"messages": messages_with_context})
                 except (TypeError, AttributeError, ValueError) as e:
                     # 如果 SDK 不支持 trace_context 参数或格式不正确，记录警告并使用默认方式
                     logger.warning(
@@ -217,24 +221,115 @@ def create_router_graph(
                     span_params.pop("trace_context", None)
                     try:
                         with langfuse_client.start_as_current_span(**span_params):
-                            result = await agent_node.ainvoke({"messages": messages_with_context})
+                            with TokenContext(token_id=token_id):
+                                result = await agent_node.ainvoke({"messages": messages_with_context})
                     except Exception as span_error:
                         # 错误隔离：Span 创建失败不影响主流程
                         logger.warning(
                             f"创建 Langfuse Span 失败: {span_error}，继续执行主流程"
                         )
-                        result = await agent_node.ainvoke({"messages": messages_with_context})
+                        with TokenContext(token_id=token_id):
+                            result = await agent_node.ainvoke({"messages": messages_with_context})
                 except Exception as e:
                     # 错误隔离：Span 创建失败不影响主流程
                     logger.warning(f"创建 Langfuse Span 失败: {e}，继续执行主流程")
-                    result = await agent_node.ainvoke({"messages": messages_with_context})
+                    with TokenContext(token_id=token_id):
+                        result = await agent_node.ainvoke({"messages": messages_with_context})
             else:
-                # Langfuse 未启用、Span 追踪被禁用或 trace_id 不存在，直接执行
-                result = await agent_node.ainvoke({"messages": messages_with_context})
+                # Langfuse 未启用、Span 追踪被禁用或 trace_id 不存在，在 TokenContext 中直接执行
+                with TokenContext(token_id=token_id):
+                    result = await agent_node.ainvoke({"messages": messages_with_context})
+            
+            # ========== 日志：Agent执行结果分析 ==========
+            # 检查返回结果中的消息，追踪工具调用情况
+            result_messages = result.get("messages", [])
+            logger.info(
+                f"[AGENT_RESULT] Agent执行完成: {agent_name}, "
+                f"session_id={session_id}, token_id={token_id}, "
+                f"返回消息数: {len(result_messages)}"
+            )
+            
+            # 分析消息类型，查找工具调用
+            tool_calls = []
+            ai_messages = []
+            for msg in result_messages:
+                if isinstance(msg, ToolMessage):
+                    tool_calls.append({
+                        "tool_call_id": getattr(msg, "tool_call_id", "N/A"),
+                        "name": getattr(msg, "name", "N/A"),
+                        "content_preview": str(msg.content)[:200] if hasattr(msg, "content") else "N/A"
+                    })
+                elif isinstance(msg, AIMessage):
+                    # 检查AI消息中是否包含工具调用
+                    if hasattr(msg, "tool_calls") and msg.tool_calls:
+                        for tool_call in msg.tool_calls:
+                            tool_calls.append({
+                                "tool_call_id": getattr(tool_call, "id", "N/A"),
+                                "name": getattr(tool_call, "name", "N/A"),
+                                "args_preview": str(getattr(tool_call, "args", {}))[:200]
+                            })
+            
+            if tool_calls:
+                logger.info(
+                    f"[AGENT_TOOLS] 检测到工具调用: {agent_name}, "
+                    f"工具调用数量: {len(tool_calls)}"
+                )
+                for i, tool_call in enumerate(tool_calls, 1):
+                    logger.info(
+                        f"[AGENT_TOOLS] 工具调用 #{i}: name={tool_call['name']}, "
+                        f"tool_call_id={tool_call['tool_call_id']}, "
+                        f"args_preview={tool_call.get('args_preview', tool_call.get('content_preview', 'N/A'))}"
+                    )
+            else:
+                logger.warning(
+                    f"[AGENT_TOOLS] 未检测到工具调用: {agent_name}, "
+                    f"session_id={session_id}, token_id={token_id}"
+                )
+                # 详细记录所有消息，帮助排查问题
+                logger.info(
+                    f"[AGENT_TOOLS] 返回消息详情: {agent_name}, "
+                    f"消息总数: {len(result_messages)}"
+                )
+                for i, msg in enumerate(result_messages, 1):
+                    msg_type = type(msg).__name__
+                    logger.info(
+                        f"[AGENT_TOOLS] 消息 #{i}: type={msg_type}"
+                    )
+                    if isinstance(msg, AIMessage):
+                        # 检查是否有tool_calls属性
+                        has_tool_calls = hasattr(msg, "tool_calls")
+                        tool_calls_count = len(msg.tool_calls) if has_tool_calls and msg.tool_calls else 0
+                        content_preview = str(msg.content)[:500] if hasattr(msg, "content") else "N/A"
+                        logger.info(
+                            f"[AGENT_TOOLS]   - 内容预览: {content_preview[:200]}..."
+                        )
+                        logger.info(
+                            f"[AGENT_TOOLS]   - 是否有tool_calls属性: {has_tool_calls}, "
+                            f"tool_calls数量: {tool_calls_count}"
+                        )
+                        if has_tool_calls and msg.tool_calls:
+                            for j, tc in enumerate(msg.tool_calls, 1):
+                                logger.info(
+                                    f"[AGENT_TOOLS]   - tool_call #{j}: "
+                                    f"name={getattr(tc, 'name', 'N/A')}, "
+                                    f"id={getattr(tc, 'id', 'N/A')}, "
+                                    f"args={getattr(tc, 'args', {})}"
+                                )
+                    elif isinstance(msg, ToolMessage):
+                        logger.info(
+                            f"[AGENT_TOOLS]   - ToolMessage: "
+                            f"name={getattr(msg, 'name', 'N/A')}, "
+                            f"content_preview={str(msg.content)[:200] if hasattr(msg, 'content') else 'N/A'}"
+                        )
+                    else:
+                        content_preview = str(getattr(msg, 'content', ''))[:200] if hasattr(msg, 'content') else "N/A"
+                        logger.info(
+                            f"[AGENT_TOOLS]   - 内容预览: {content_preview}"
+                        )
             
             # 保留路由状态中的关键字段，防止下游节点丢失上下文
             # 注意：不再保留 bp_form，让 LLM 从对话历史中自己理解
-            for key in ("session_id", "user_id", "current_intent", "current_agent", "need_reroute", "trace_id"):
+            for key in ("session_id", "token_id", "current_intent", "current_agent", "need_reroute", "trace_id"):
                 if key in state and key not in result:
                     result[key] = state[key]
             

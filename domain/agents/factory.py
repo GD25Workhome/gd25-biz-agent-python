@@ -19,6 +19,7 @@ else:
 
 from infrastructure.llm.client import get_llm
 from domain.tools.registry import TOOL_REGISTRY
+from domain.tools.wrapper import wrap_tools_with_token_context
 from app.core.config import settings
 from infrastructure.prompts.manager import PromptManager
 from infrastructure.prompts.placeholder import PlaceholderManager
@@ -187,6 +188,14 @@ class AgentFactory:
                 for name in tool_names
                 if name in TOOL_REGISTRY
             ]
+        
+        # 2.5. 包装工具，使其支持自动注入 tokenId
+        # 注意：这里只是包装工具，tokenId 将在运行时从上下文获取
+        tools = wrap_tools_with_token_context(
+            tools,
+            token_id_param_name="token_id",
+            require_token=True
+        )
         
         # 3. 加载Agent特定占位符配置（用于运行时占位符填充）
         # 注意：这里只加载配置，不加载提示词模板

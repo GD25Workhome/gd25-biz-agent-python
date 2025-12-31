@@ -2,7 +2,6 @@
 LLM 调用日志模型
 """
 from typing import Optional
-from uuid import uuid4
 from sqlalchemy import (
     Column,
     Integer,
@@ -14,7 +13,7 @@ from sqlalchemy import (
     func,
 )
 
-from infrastructure.database.base import Base
+from infrastructure.database.base import Base, generate_ulid
 
 
 class LlmCallLog(Base):
@@ -27,7 +26,7 @@ class LlmCallLog(Base):
         String(50),
         primary_key=True,
         index=True,
-        default=lambda: uuid4().hex,
+        default=generate_ulid,
         comment="主键ID"
     )
     call_id = Column(String(64), nullable=False, index=True, comment="调用唯一ID")
@@ -71,7 +70,7 @@ class LlmCallMessage(Base):
         String(50),
         primary_key=True,
         index=True,
-        default=lambda: uuid4().hex,
+        default=generate_ulid,
         comment="主键ID"
     )
     call_id = Column(

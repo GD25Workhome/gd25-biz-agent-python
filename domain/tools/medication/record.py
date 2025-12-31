@@ -7,11 +7,12 @@ from langchain_core.tools import tool
 
 from infrastructure.database.repository.medication_repository import MedicationRepository
 from infrastructure.database.connection import get_async_session_factory
+from domain.tools.utils.token_converter import convert_token_to_user_info
 
 
 @tool
 async def record_medication(
-    user_id: str,
+    token_id: str,
     medication_name: str,
     dosage: str,
     frequency: str,
@@ -25,7 +26,7 @@ async def record_medication(
     记录用药数据
     
     Args:
-        user_id: 用户ID
+        token_id: 令牌ID（自动注入）
         medication_name: 药物名称
         dosage: 剂量（如：10mg、1片等）
         frequency: 用药频率（如：每日一次、每日三次等）
@@ -38,6 +39,10 @@ async def record_medication(
     Returns:
         成功消息字符串
     """
+    # 数据转换：将 tokenId 转换为用户信息
+    user_info = convert_token_to_user_info(token_id)
+    user_id = user_info.user_id
+    
     # 解析日期：未提供或格式错误时交由数据库默认时区时间处理
     start_datetime = None
     end_datetime = None

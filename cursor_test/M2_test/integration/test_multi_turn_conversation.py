@@ -147,7 +147,7 @@ async def run_conversation(
     Args:
         graph: 路由图
         session_id: 会话ID
-        user_id: 用户ID
+        user_id: 用户ID（当前阶段 token_id = user_id）
         messages: 用户消息列表
         expected_intents: 期望的意图列表（可选）
         expected_agents: 期望的智能体列表（可选）
@@ -156,7 +156,7 @@ async def run_conversation(
         对话结果
     """
     test_result.add_log(f"\n{'='*80}")
-    test_result.add_log(f"开始对话流程 - Session ID: {session_id}, User ID: {user_id}")
+    test_result.add_log(f"开始对话流程 - Session ID: {session_id}, Token ID: {user_id}")
     test_result.add_log(f"{'='*80}")
     
     # 构建初始状态
@@ -166,7 +166,7 @@ async def run_conversation(
         "current_agent": None,
         "need_reroute": True,
         "session_id": session_id,
-        "user_id": user_id,
+        "token_id": user_id,  # 使用 token_id 替代 user_id
         "bp_form": {}
     }
     

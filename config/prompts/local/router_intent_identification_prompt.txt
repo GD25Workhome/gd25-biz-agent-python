@@ -1,6 +1,5 @@
 你是一个智能路由助手，负责识别用户的真实意图。
 
-用户ID: {{user_id}}
 会话ID: {{session_id}}
 当前日期: {{current_date}}
 

@@ -48,7 +48,7 @@ def route_node(state: RouterState) -> RouterState:
     current_intent = state.get("current_intent")
     current_agent = state.get("current_agent")
     session_id = state.get("session_id")
-    user_id = state.get("user_id")
+    token_id = state.get("token_id")
     trace_id = state.get("trace_id")  # 获取 trace_id
     
     # 创建 Langfuse Span 追踪（如果启用）
@@ -140,7 +140,7 @@ def route_node(state: RouterState) -> RouterState:
             normalized_trace_id = normalize_langfuse_trace_id(trace_id)
             
             # 构建 span 参数，显式指定 trace_id
-            # 注意：session_id 和 user_id 已在 Trace 级别设置，会自动继承，不需要在 Span 中重复传递
+            # 注意：session_id 和 token_id 已在 Trace 级别设置，会自动继承，不需要在 Span 中重复传递
             span_params = {
                 "name": "route_node",
                 "input": {
@@ -149,7 +149,7 @@ def route_node(state: RouterState) -> RouterState:
                     "current_agent": current_agent,
                 },
                 "metadata": {
-                    # 移除 session_id 和 user_id（已在 Trace 级别设置，会自动继承）
+                    # 移除 session_id 和 token_id（已在 Trace 级别设置，会自动继承）
                 },
             }
             # 尝试使用 trace_context 参数指定 trace_id（如果 SDK 支持）
@@ -219,7 +219,7 @@ def clarify_intent_node(state: RouterState) -> RouterState:
         user_query = str(last_message)
     
     session_id = state.get("session_id")
-    user_id = state.get("user_id")
+    token_id = state.get("token_id")
     trace_id = state.get("trace_id")  # 获取 trace_id
     
     # 创建 Langfuse Span 追踪（如果启用）
@@ -237,7 +237,7 @@ def clarify_intent_node(state: RouterState) -> RouterState:
             normalized_trace_id = normalize_langfuse_trace_id(trace_id)
             
             # 构建 span 参数，显式指定 trace_id
-            # 注意：session_id 和 user_id 已在 Trace 级别设置，会自动继承，不需要在 Span 中重复传递
+            # 注意：session_id 和 token_id 已在 Trace 级别设置，会自动继承，不需要在 Span 中重复传递
             span_params = {
                 "name": "clarify_intent_node",
                 "input": {
@@ -245,7 +245,7 @@ def clarify_intent_node(state: RouterState) -> RouterState:
                     "messages_count": len(messages),
                 },
                 "metadata": {
-                    # 移除 session_id 和 user_id（已在 Trace 级别设置，会自动继承）
+                    # 移除 session_id 和 token_id（已在 Trace 级别设置，会自动继承）
                 },
             }
             # 尝试使用 trace_context 参数指定 trace_id（如果 SDK 支持）

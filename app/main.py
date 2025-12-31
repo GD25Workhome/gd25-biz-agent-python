@@ -3,6 +3,7 @@ FastAPI 应用入口
 """
 import sys
 import logging
+import json
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -11,12 +12,108 @@ _project_root = Path(__file__).resolve().parent.parent
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
 
+
+class ExtraFormatter(logging.Formatter):
+    """
+    支持 extra 字段的自定义日志格式化器
+    
+    自动检测并格式化日志记录中的 extra 字段，将其追加到日志消息中
+    """
+    
+    # 标准日志字段，这些字段不应该作为 extra 显示
+    STANDARD_FIELDS = {
+        'name', 'msg', 'args', 'created', 'filename', 'funcName', 'levelname',
+        'levelno', 'lineno', 'module', 'msecs', 'message', 'pathname', 'process',
+        'processName', 'relativeCreated', 'thread', 'threadName', 'exc_info',
+        'exc_text', 'stack_info', 'asctime'
+    }
+    
+    def format(self, record: logging.LogRecord) -> str:
+        """
+        格式化日志记录，包含 extra 字段
+        
+        Args:
+            record: 日志记录对象
+            
+        Returns:
+            格式化后的日志字符串
+        """
+        # 先调用父类方法获取基础格式
+        base_message = super().format(record)
+        
+        # 提取 extra 字段（排除标准字段）
+        extra_fields = {}
+        for key, value in record.__dict__.items():
+            if key not in self.STANDARD_FIELDS:
+                extra_fields[key] = value
+        
+        # 如果有 extra 字段，将其追加到日志消息中
+        if extra_fields:
+            # 格式化 extra 字段为可读字符串
+            extra_str = self._format_extra(extra_fields)
+            return f"{base_message} - {extra_str}"
+        
+        return base_message
+    
+    def _format_extra(self, extra_fields: dict) -> str:
+        """
+        格式化 extra 字段为可读字符串
+        
+        Args:
+            extra_fields: extra 字段字典
+            
+        Returns:
+            格式化后的字符串
+        """
+        parts = []
+        # SQL相关字段不截断，其他字段保持原有逻辑
+        sql_fields = {'sql', 'sql_with_params', 'sql_full'}
+        
+        for key, value in sorted(extra_fields.items()):
+            # 处理不同类型的值
+            if isinstance(value, (dict, list)):
+                # 对于复杂类型，使用 JSON 格式（限制长度）
+                value_str = json.dumps(value, ensure_ascii=False)
+                if len(value_str) > 200:
+                    value_str = value_str[:200] + "..."
+                parts.append(f"{key}={value_str}")
+            elif isinstance(value, str):
+                # SQL相关字段不截断，其他长字符串截断
+                if key in sql_fields:
+                    # SQL字段：完整显示，不截断
+                    parts.append(f"{key}={value}")
+                elif len(value) > 200:
+                    # 其他长字符串：截断
+                    parts.append(f"{key}={value[:200]}...")
+                else:
+                    parts.append(f"{key}={value}")
+            else:
+                parts.append(f"{key}={value}")
+        
+        return ", ".join(parts)
+
+
 # 配置日志系统
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+# 创建自定义格式化器
+formatter = ExtraFormatter(
+    fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
+
+# 获取根日志记录器并配置
+root_logger = logging.getLogger()
+# 默认设置为 INFO，但允许子日志记录器设置更低的级别（如 DEBUG）
+root_logger.setLevel(logging.INFO)
+
+# 清除现有的处理器，避免重复
+for handler in root_logger.handlers[:]:
+    root_logger.removeHandler(handler)
+
+# 创建控制台处理器并应用自定义格式化器
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.DEBUG)  # 处理器级别设置为 DEBUG，允许所有级别的日志通过
+console_handler.setFormatter(formatter)
+root_logger.addHandler(console_handler)
 
 # 设置 uvicorn 日志级别
 logging.getLogger("uvicorn").setLevel(logging.INFO)

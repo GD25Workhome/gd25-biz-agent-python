@@ -10,7 +10,7 @@ import logging
 # 使用TypedDict定义简化版本
 class SimpleRouterState(TypedDict, total=False):
     """简化的路由状态（用于占位符提取）"""
-    user_id: str
+    token_id: str  # 令牌ID（当前阶段等于用户ID，未来可扩展为业务系统令牌）
     session_id: str
     current_agent: Optional[str]
     messages: list
@@ -22,8 +22,8 @@ class PlaceholderManager:
     """占位符管理器"""
     
     # 系统占位符（从state中提取）
+    # 注意：已移除 user_id 占位符，因为方案二不需要在提示词中注入 token_id
     SYSTEM_PLACEHOLDERS = {
-        "user_id": lambda state: state.get("user_id", ""),
         "session_id": lambda state: state.get("session_id", ""),
         "current_date": lambda state: PlaceholderManager._get_current_date(state),
         "current_time": lambda state: PlaceholderManager._get_current_time(state),

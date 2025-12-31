@@ -22,16 +22,16 @@ modules:
   # ========== 可选模块 ==========
   
   # 用户信息（动态加载）
+  # 注意：方案二不需要在提示词中注入 token_id，工具会自动注入
+  # 此模块已禁用，保留用于未来扩展
   user_info:
     type: optional
     loader: dynamic
     source: runtime
-    enabled: true
-    condition: "{user_id is not None}"
+    enabled: false  # 已禁用：方案二不需要在提示词中注入 token_id
+    condition: "{token_id is not None}"
     template: |
-      系统提供的用户ID：{user_id}。
-      调用工具时直接使用该 user_id，无需向用户索取。
-      请根据对话历史理解上下文，从用户消息中提取血压数据，判断数据完整性，并在数据齐全时调用 record_blood_pressure 工具。
+      # 此模板已禁用，工具会自动注入 token_id，无需在提示词中提及
   
   # 参考文章（预留，当前版本不实现）
   reference_articles:
