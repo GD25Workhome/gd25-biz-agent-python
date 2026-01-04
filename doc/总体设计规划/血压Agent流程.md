@@ -14,7 +14,7 @@ flowchart TD
     
     Route -->|意图不明确<br/>且需要重新路由| Clarify[clarify_intent节点<br/>澄清用户意图]
     Route -->|intent_type=blood_pressure| BP[blood_pressure_agent<br/>血压记录智能体]
-    Route -->|intent_type=health_event| HE[health_event_agent<br/>其它待实现]
+    Route -->|intent_type=health_event| HE[health_event_agent<br/>其它待实现]®
     Route -->|intent_type=safety_boundary<br/>或兜底场景| Safety[safety_boundary_agent<br/>安全边界问答智能体]
     Route -->|无新消息<br/>或不需要重新路由| End([结束])
     

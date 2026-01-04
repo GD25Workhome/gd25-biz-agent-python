@@ -1,0 +1,10 @@
+# 流程加载配置
+# 指定哪些流程需要预加载，哪些按需加载
+
+flows:
+  preload:  # 需要预加载的流程（启动时编译）
+    - medical_agent
+  
+  lazy_load:  # 按需加载的流程（首次使用时编译）
+    - work_plan_agent
+

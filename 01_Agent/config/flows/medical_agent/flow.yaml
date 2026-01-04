@@ -1,0 +1,48 @@
+name: medical_agent
+version: "1.0"
+description: "医疗分身Agent流程"
+
+nodes:
+  - name: intent_recognition
+    type: agent
+    config:
+      prompt: prompts/intent_recognition.txt
+      model:
+        provider: doubao
+        name: doubao-seed-1-6-251015
+        temperature: 0.7
+
+  - name: blood_pressure_agent
+    type: agent
+    config:
+      prompt: prompts/blood_pressure_agent.txt
+      model:
+        provider: doubao
+        name: doubao-seed-1-6-251015
+        temperature: 0.7
+      tools:
+        - record_blood_pressure
+
+  - name: clarify_intent
+    type: agent
+    config:
+      prompt: prompts/clarify_intent.txt
+      model:
+        provider: doubao
+        name: doubao-seed-1-6-251015
+        temperature: 0.7
+
+edges:
+  - from: intent_recognition
+    to: blood_pressure_agent
+    condition: intent == "blood_pressure"
+  
+  - from: intent_recognition
+    to: clarify_intent
+    condition: intent == "unclear"
+  
+  # 已删除多余的 always 边，Agent 节点执行完成后流程自动结束
+  # 多轮对话通过新的 HTTP 请求来处理
+
+entry_node: intent_recognition
+
