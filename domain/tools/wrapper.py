@@ -7,6 +7,8 @@ from langchain_core.callbacks import CallbackManagerForToolRun, AsyncCallbackMan
 from langchain_core.messages import ToolMessage
 
 from domain.tools.context import get_token_id
+from infrastructure.observability.langfuse_handler import get_langfuse_client
+from app.core.config import settings
 import logging
 
 logger = logging.getLogger(__name__)
@@ -187,9 +189,9 @@ class TokenInjectedTool(BaseTool):
         **kwargs: Any
     ) -> Any:
         """
-        异步调用工具（自动注入 tokenId）
+        异步调用工具（自动注入 tokenId，并记录到 Langfuse）
         
-        重写 ainvoke 方法，在调用原始工具之前注入 tokenId
+        重写 ainvoke 方法，在调用原始工具之前注入 tokenId，并创建 Langfuse Span 记录工具执行
         """
         # 从 __dict__ 直接获取 _original_tool，避免触发 __getattr__
         original_tool = self.__dict__.get('_original_tool')
@@ -201,89 +203,149 @@ class TokenInjectedTool(BaseTool):
             f"tool_input_type={type(tool_input).__name__}, tool_input={tool_input}"
         )
         
-        try:
-            # 如果 tool_input 是字典，需要处理不同的格式
-            if isinstance(tool_input, dict):
-                # 检查是否是 LangChain 工具调用格式（包含 'args' 字段）
-                if 'args' in tool_input and isinstance(tool_input.get('args'), dict):
-                    # LangChain 工具调用格式：{'name': '...', 'args': {...}, 'id': '...', 'type': '...'}
-                    # 需要从 args 中提取参数，注入 tokenId
-                    # 注意：LangChain 的工具期望直接接收参数字典，而不是包含 'args' 的字典
-                    args_dict = tool_input['args'].copy()
-                    logger.debug(
-                        f"[TokenInjectedTool] 检测到工具调用格式 - tool_name={tool_name}, "
-                        f"原始args={args_dict}"
-                    )
-                    injected_args = self._inject_token_id(args_dict)
-                    
-                    # 直接传递注入后的参数字典给原始工具
-                    # LangChain 的工具会正确处理参数字典，并返回字符串
-                    # LangGraph 的 tool_node 会自动将字符串包装成 ToolMessage
-                    injected_input = injected_args
-                    
-                    logger.info(
-                        f"[TokenInjectedTool] tokenId 注入完成（工具调用格式） - tool_name={tool_name}, "
-                        f"原始args={tool_input['args']}, 注入后args={injected_args}"
-                    )
-                else:
-                    # 直接参数字典格式：{'systolic': 120, 'diastolic': 75, ...}
-                    injected_input = self._inject_token_id(tool_input.copy())
-                    logger.debug(
-                        f"[TokenInjectedTool] tokenId 注入完成（参数字典格式） - tool_name={tool_name}, "
-                        f"injected_input={injected_input}"
-                    )
-                
-                result = await original_tool.ainvoke(injected_input, run_manager=run_manager, **kwargs)
-                logger.info(
-                    f"[TokenInjectedTool] 工具调用成功 - tool_name={tool_name}, "
-                    f"result_type={type(result).__name__}, result_length={len(str(result)) if isinstance(result, str) else 'N/A'}"
-                )
-                
-                # 如果结果是字符串，且 tool_input 包含 'id' 字段（LangGraph 的 tool_node 调用格式）
-                # 需要返回 ToolMessage 而不是字符串
-                # 注意：LangGraph 的 tool_node 在某些情况下可能不会自动包装字符串
-                if isinstance(result, str) and isinstance(tool_input, dict) and 'id' in tool_input:
-                    # LangGraph 的 tool_node 调用格式，需要返回 ToolMessage
-                    tool_call_id = tool_input.get('id', '')
-                    tool_message = ToolMessage(
-                        content=result,
-                        tool_call_id=tool_call_id,
-                        name=tool_name
-                    )
-                    logger.debug(
-                        f"[TokenInjectedTool] 将字符串结果包装成 ToolMessage - tool_name={tool_name}, "
-                        f"tool_call_id={tool_call_id}"
-                    )
-                    return tool_message
-                
-                return result
+        # 准备工具输入参数（用于记录）
+        tool_input_for_log = tool_input
+        if isinstance(tool_input, dict):
+            if 'args' in tool_input and isinstance(tool_input.get('args'), dict):
+                # LangChain 工具调用格式：提取 args
+                tool_input_for_log = tool_input.get('args', {}).copy()
             else:
-                # 对于其他类型的输入，直接调用原始工具
+                # 直接参数字典格式
+                tool_input_for_log = tool_input.copy()
+        
+        # ========== Langfuse Span 创建和执行 ==========
+        langfuse_client = get_langfuse_client()
+        
+        # 检查是否启用 Langfuse Span
+        if (settings.LANGFUSE_ENABLED and 
+            settings.LANGFUSE_ENABLE_SPANS and 
+            langfuse_client):
+            try:
+                # 准备 Span 参数
+                span_params = {
+                    "name": f"tool_{tool_name}",
+                    "input": {
+                        "tool_name": tool_name,
+                        "tool_input": tool_input_for_log,
+                    },
+                    "metadata": {
+                        "tool_call_id": tool_input.get('id', 'N/A') if isinstance(tool_input, dict) else 'N/A',
+                        "tool_input_type": type(tool_input).__name__,
+                    },
+                }
+                
+                # 使用上下文管理器创建 Span
+                # 如果当前在 LLM Generation 的上下文中，会自动成为子 Span
+                with langfuse_client.start_as_current_span(**span_params):
+                    return await self._execute_tool_with_span(
+                        original_tool,
+                        tool_name,
+                        tool_input,
+                        run_manager,
+                        **kwargs
+                    )
+            except Exception as e:
+                # 错误隔离：Span 创建失败不影响工具执行
                 logger.warning(
-                    f"[TokenInjectedTool] tool_input 不是字典类型，可能无法注入 tokenId - "
-                    f"tool_name={tool_name}, tool_input_type={type(tool_input).__name__}"
+                    f"[TokenInjectedTool] 创建 Langfuse Span 失败: {e}，继续执行工具（不记录到 Langfuse）"
                 )
-                result = await original_tool.ainvoke(tool_input, run_manager=run_manager, **kwargs)
-                logger.info(
-                    f"[TokenInjectedTool] 工具调用成功 - tool_name={tool_name}, "
-                    f"result_type={type(result).__name__}"
+                # 不使用 Span，直接执行工具
+                return await self._execute_tool_without_span(
+                    original_tool,
+                    tool_name,
+                    tool_input,
+                    run_manager,
+                    **kwargs
                 )
-                
-                # 如果结果是字符串，且 tool_input 包含 'id' 字段（LangGraph 的 tool_node 调用格式）
-                if isinstance(result, str) and isinstance(tool_input, dict) and 'id' in tool_input:
-                    tool_call_id = tool_input.get('id', '')
-                    tool_message = ToolMessage(
-                        content=result,
-                        tool_call_id=tool_call_id,
-                        name=tool_name
-                    )
-                    logger.debug(
-                        f"[TokenInjectedTool] 将字符串结果包装成 ToolMessage - tool_name={tool_name}, "
-                        f"tool_call_id={tool_call_id}"
-                    )
-                    return tool_message
-                
-                return result
+        else:
+            # Langfuse 未启用，直接执行工具
+            logger.debug(
+                f"[TokenInjectedTool] Langfuse 未启用或不可用，跳过 Span 创建"
+            )
+            return await self._execute_tool_without_span(
+                original_tool,
+                tool_name,
+                tool_input,
+                run_manager,
+                **kwargs
+            )
+    
+    async def _execute_tool_with_span(
+        self,
+        original_tool: BaseTool,
+        tool_name: str,
+        tool_input: Any,
+        run_manager: Optional[AsyncCallbackManagerForToolRun],
+        **kwargs: Any
+    ) -> Any:
+        """
+        在 Langfuse Span 上下文中执行工具
+        
+        注意：此方法在 Span 上下文管理器中执行，Span 会自动记录执行时间和结果
+        """
+        try:
+            # 处理工具输入并注入 tokenId
+            injected_input = self._process_tool_input(tool_input, tool_name)
+            
+            # 执行工具
+            result = await original_tool.ainvoke(injected_input, run_manager=run_manager, **kwargs)
+            
+            # 记录成功日志
+            logger.info(
+                f"[TokenInjectedTool] 工具调用成功 - tool_name={tool_name}, "
+                f"result_type={type(result).__name__}"
+            )
+            
+            # 尝试更新 Span 输出（如果 Langfuse SDK 支持）
+            try:
+                # 提取输出（截断过长内容，避免 Langfuse 记录过多数据）
+                output_preview = str(result)[:1000] if len(str(result)) > 1000 else str(result)
+                logger.debug(
+                    f"[TokenInjectedTool] 工具执行成功，输出长度: {len(str(result))}, "
+                    f"已记录到 Span（预览长度: {len(output_preview)}）"
+                )
+            except Exception as e:
+                logger.debug(f"[TokenInjectedTool] 更新 Span 输出失败: {e}")
+            
+            # 处理返回值（可能需要包装成 ToolMessage）
+            return self._process_tool_result(result, tool_input, tool_name)
+            
+        except Exception as e:
+            # 记录错误（Span 会自动记录异常）
+            logger.error(
+                f"[TokenInjectedTool] 工具调用失败 - tool_name={tool_name}, "
+                f"error_type={type(e).__name__}, error={str(e)}",
+                exc_info=True
+            )
+            raise
+    
+    async def _execute_tool_without_span(
+        self,
+        original_tool: BaseTool,
+        tool_name: str,
+        tool_input: Any,
+        run_manager: Optional[AsyncCallbackManagerForToolRun],
+        **kwargs: Any
+    ) -> Any:
+        """
+        不使用 Langfuse Span 执行工具（向后兼容）
+        """
+        try:
+            # 处理工具输入并注入 tokenId
+            injected_input = self._process_tool_input(tool_input, tool_name)
+            
+            # 执行工具
+            result = await original_tool.ainvoke(injected_input, run_manager=run_manager, **kwargs)
+            
+            # 记录成功日志
+            logger.info(
+                f"[TokenInjectedTool] 工具调用成功 - tool_name={tool_name}, "
+                f"result_type={type(result).__name__}"
+            )
+            
+            # 处理返回值
+            return self._process_tool_result(result, tool_input, tool_name)
+            
         except Exception as e:
             logger.error(
                 f"[TokenInjectedTool] 工具调用失败 - tool_name={tool_name}, "
@@ -291,6 +353,68 @@ class TokenInjectedTool(BaseTool):
                 exc_info=True
             )
             raise
+    
+    def _process_tool_input(self, tool_input: Any, tool_name: str) -> Any:
+        """
+        处理工具输入，注入 tokenId
+        
+        Args:
+            tool_input: 工具输入（可能是字典或其他类型）
+            tool_name: 工具名称（用于日志）
+            
+        Returns:
+            处理后的工具输入（已注入 tokenId）
+        """
+        if isinstance(tool_input, dict):
+            if 'args' in tool_input and isinstance(tool_input.get('args'), dict):
+                # LangChain 工具调用格式
+                args_dict = tool_input['args'].copy()
+                injected_args = self._inject_token_id(args_dict)
+                logger.info(
+                    f"[TokenInjectedTool] tokenId 注入完成（工具调用格式） - tool_name={tool_name}, "
+                    f"原始args={tool_input['args']}, 注入后args={injected_args}"
+                )
+                return injected_args
+            else:
+                # 直接参数字典格式
+                injected_input = self._inject_token_id(tool_input.copy())
+                logger.debug(
+                    f"[TokenInjectedTool] tokenId 注入完成（参数字典格式） - tool_name={tool_name}"
+                )
+                return injected_input
+        else:
+            logger.warning(
+                f"[TokenInjectedTool] tool_input 不是字典类型，可能无法注入 tokenId - "
+                f"tool_name={tool_name}, tool_input_type={type(tool_input).__name__}"
+            )
+            return tool_input
+    
+    def _process_tool_result(self, result: Any, tool_input: Any, tool_name: str) -> Any:
+        """
+        处理工具返回值，必要时包装成 ToolMessage
+        
+        Args:
+            result: 工具执行结果
+            tool_input: 工具输入（用于检查是否需要包装）
+            tool_name: 工具名称（用于日志）
+            
+        Returns:
+            处理后的返回值（可能是 ToolMessage 或原始结果）
+        """
+        if isinstance(result, str) and isinstance(tool_input, dict) and 'id' in tool_input:
+            tool_call_id = tool_input.get('id', '')
+            tool_message = ToolMessage(
+                content=result,
+                tool_call_id=tool_call_id,
+                name=tool_name
+            )
+            logger.debug(
+                f"[TokenInjectedTool] 将字符串结果包装成 ToolMessage - tool_name={tool_name}, "
+                f"tool_call_id={tool_call_id}"
+            )
+            return tool_message
+        
+        return result
     
     async def _ainvoke(
         self,
