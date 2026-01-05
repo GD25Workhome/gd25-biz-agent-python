@@ -15,7 +15,8 @@ def record_blood_pressure(
     systolic: int,
     diastolic: int,
     heart_rate: int = None,
-    notes: str = None
+    notes: str = None,
+    token_id: str = ""  # 由TokenInjectedTool自动注入
 ) -> str:
     """
     记录血压数据
@@ -25,6 +26,7 @@ def record_blood_pressure(
         diastolic: 舒张压（mmHg）
         heart_rate: 心率（次/分钟，可选）
         notes: 备注（可选）
+        token_id: 用户ID（由系统自动注入，无需手动传递）
         
     Returns:
         记录结果的文本描述
@@ -39,6 +41,7 @@ def record_blood_pressure(
         
         # 构建记录数据
         record = {
+            "user_id": token_id,  # 使用自动注入的token_id
             "systolic": systolic,
             "diastolic": diastolic,
             "heart_rate": heart_rate,
@@ -46,7 +49,7 @@ def record_blood_pressure(
         }
         
         # 本版本仅记录日志，不持久化
-        logger.info(f"记录血压数据: {json.dumps(record, ensure_ascii=False)}")
+        logger.info(f"记录血压数据 (user_id={token_id}): {json.dumps(record, ensure_ascii=False)}")
         
         # 生成回复
         result = f"已记录血压数据：收缩压 {systolic} mmHg，舒张压 {diastolic} mmHg"

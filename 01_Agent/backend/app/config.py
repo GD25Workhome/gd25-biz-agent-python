@@ -5,7 +5,7 @@
 import os
 from pathlib import Path
 from typing import Optional
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -45,6 +45,20 @@ class Settings(BaseSettings):
         extra="ignore"
     )
     
+    # 数据库配置
+    DATABASE_URL: str  # 数据库连接URL，格式：postgresql+psycopg://user:password@host:port/dbname
+    DB_TIMEZONE: str = "Asia/Shanghai"  # 时区配置
+    
+    @property
+    def DB_URI(self) -> str:
+        """同步数据库连接 URI"""
+        return self.DATABASE_URL
+    
+    @property
+    def ASYNC_DB_URI(self) -> str:
+        """异步数据库连接 URI"""
+        return self.DATABASE_URL
+    
     # 模型供应商API密钥配置（从环境变量读取）
     OPENAI_API_KEY: Optional[str] = None
     DOUBAO_API_KEY: Optional[str] = None
@@ -58,6 +72,24 @@ class Settings(BaseSettings):
     MODEL_PROVIDERS_CONFIG: str = Field(
         default="config/model_providers.yaml",
         description="模型供应商配置文件路径（相对于项目根目录）"
+    )
+    
+    # Langfuse可观测性配置
+    LANGFUSE_ENABLED: bool = Field(
+        default=False,
+        description="是否启用Langfuse可观测性"
+    )
+    LANGFUSE_PUBLIC_KEY: Optional[str] = Field(
+        default=None,
+        description="Langfuse公钥（从.env文件读取）"
+    )
+    LANGFUSE_SECRET_KEY: Optional[str] = Field(
+        default=None,
+        description="Langfuse密钥（从.env文件读取）"
+    )
+    LANGFUSE_HOST: Optional[str] = Field(
+        default=None,
+        description="Langfuse服务器地址（可选，默认使用cloud.langfuse.com）"
     )
 
 

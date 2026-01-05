@@ -1,0 +1,329 @@
+@startuml 动态流程系统整体类图
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam packageStyle rectangle
+
+' ========================================
+' 流程管理模块 (domain/flows/)
+' ========================================
+package "domain.flows" {
+    class FlowDefinition {
+        +name: str
+        +version: str
+        +description: str
+        +nodes: List[NodeDefinition]
+        +edges: List[EdgeDefinition]
+        +metadata: Dict[str, Any]
+    }
+    
+    class NodeDefinition {
+        +name: str
+        +type: str
+        +config: Dict[str, Any]
+    }
+    
+    class EdgeDefinition {
+        +source: str
+        +target: str
+        +condition: Optional[str]
+        +type: str
+    }
+    
+    class FlowParser {
+        +parse(flow_file: str): FlowDefinition
+        -_parse_yaml(yaml_content: str): Dict
+        -_parse_nodes(nodes: List[Dict]): List[NodeDefinition]
+        -_parse_edges(edges: List[Dict]): List[EdgeDefinition]
+    }
+    
+    class NodeFactory {
+        +create_node(node_def: NodeDefinition): Callable
+        -_create_agent_node(node_def: NodeDefinition): Callable
+        -_create_tool_node(node_def: NodeDefinition): Callable
+        -_create_router_node(node_def: NodeDefinition): Callable
+    }
+    
+    class GraphBuilder {
+        +build_graph(flow_def: FlowDefinition): CompiledGraph
+        -_add_nodes(graph: StateGraph, nodes: List[NodeDefinition])
+        -_add_edges(graph: StateGraph, edges: List[EdgeDefinition])
+        -_compile_graph(graph: StateGraph): CompiledGraph
+    }
+    
+    class FlowManager {
+        -_flow_definitions: Dict[str, FlowDefinition]
+        -_compiled_graphs: Dict[str, CompiledGraph]
+        +scan_flows(flows_dir: str): None
+        +preload_flows(flow_names: List[str]): None
+        +get_flow(flow_name: str): CompiledGraph
+        -_compile_flow(flow_name: str): None
+    }
+    
+    FlowDefinition *-- NodeDefinition
+    FlowDefinition *-- EdgeDefinition
+    FlowParser --> FlowDefinition : creates
+    NodeFactory --> NodeDefinition : uses
+    GraphBuilder --> FlowDefinition : uses
+    GraphBuilder --> NodeFactory : uses
+    FlowManager --> FlowDefinition : manages
+    FlowManager --> GraphBuilder : uses
+}
+
+' ========================================
+' 提示词管理模块 (infrastructure/prompts/)
+' ========================================
+package "infrastructure.prompts" {
+    class PromptManager {
+        -_prompt_cache: Dict[str, str]
+        +get_prompt(prompt_key: str): str
+        +load_prompt(prompt_key: str, prompt_path: str): None
+        +clear_cache(): None
+    }
+    
+    class PromptRenderer {
+        +render(template: str, context: FlowContext): str
+        -_replace_placeholders(template: str, context: FlowContext): str
+        -_get_context_value(key: str, context: FlowContext): Any
+    }
+    
+    class PromptLoader {
+        +load(prompt_path: str): str
+        +load_from_local(path: str): str
+        +load_from_langfuse(prompt_key: str): str
+        +load_from_nacos(config_key: str): str
+    }
+    
+    PromptManager --> PromptLoader : uses
+    PromptRenderer --> PromptManager : uses
+}
+
+' ========================================
+' 上下文管理模块 (domain/context/)
+' ========================================
+package "domain.context" {
+    class FlowContext {
+        +user_info: Optional[str]
+        +conversation_history: Optional[str]
+        +extracted_data: Dict[str, Any]
+        +metadata: Dict[str, Any]
+        +get(key: str): Any
+        +set(key: str, value: Any): None
+    }
+    
+    class UserContext {
+        +user_id: str
+        +preferences: Dict[str, Any]
+        +history: List[Dict]
+        +metadata: Dict[str, Any]
+    }
+    
+    class ContextManager {
+        -_flow_contexts: Dict[str, FlowContext]
+        -_user_contexts: Dict[str, UserContext]
+        +get_flow_context(flow_id: str): FlowContext
+        +get_user_context(user_id: str): UserContext
+        +create_flow_context(flow_id: str): FlowContext
+        +clear_context(flow_id: str): None
+    }
+    
+    class TokenContext {
+        +token_id: str
+        +__enter__(): TokenContext
+        +__exit__(exc_type, exc_val, exc_tb): None
+    }
+    
+    ContextManager --> FlowContext : manages
+    ContextManager --> UserContext : manages
+}
+
+' ========================================
+' 模型供应商管理模块 (infrastructure/llm/providers/)
+' ========================================
+package "infrastructure.llm.providers" {
+    class ProviderConfig {
+        +provider: str
+        +api_key: str
+        +base_url: str
+        +metadata: Dict[str, Any]
+    }
+    
+    class ProviderRegistry {
+        -_providers: Dict[str, ProviderConfig]
+        +register(provider: ProviderConfig): None
+        +get(provider_name: str): ProviderConfig
+        +get_all(): Dict[str, ProviderConfig]
+    }
+    
+    class ProviderManager {
+        -_registry: ProviderRegistry
+        +load_config(config_path: str): None
+        +get_provider(provider_name: str): ProviderConfig
+        -_resolve_env_variables(value: str): str
+    }
+    
+    ProviderManager --> ProviderRegistry : uses
+    ProviderRegistry --> ProviderConfig : manages
+}
+
+' ========================================
+' Agent系统 (domain/agents/)
+' ========================================
+package "domain.agents" {
+    class AgentFactory {
+        -_config: Dict[str, Any]
+        -_agent_cache: Dict[str, CompiledGraph]
+        +load_config(config_path: str): None
+        +create_agent(agent_key: str, model_config: Dict): CompiledGraph
+        -_create_llm(model_config: Dict): BaseChatModel
+    }
+    
+    class AgentRegistry {
+        -_agents: Dict[str, CompiledGraph]
+        +register(agent_key: str, agent: CompiledGraph): None
+        +get(agent_key: str): CompiledGraph
+    }
+    
+    AgentFactory --> AgentRegistry : uses
+}
+
+' ========================================
+' 工具系统 (domain/tools/)
+' ========================================
+package "domain.tools" {
+    class ToolRegistry {
+        -_tools: Dict[str, BaseTool]
+        +register(name: str, tool: BaseTool): None
+        +get(name: str): BaseTool
+        +get_all(): Dict[str, BaseTool]
+    }
+    
+    class ToolWrapper {
+        +wrap_tools_with_token_context(tools: List[BaseTool]): List[BaseTool]
+    }
+    
+    class BaseTool {
+        <<LangChain>>
+        +name: str
+        +description: str
+        +invoke(input: Dict): Any
+    }
+    
+    ToolRegistry --> BaseTool : manages
+    ToolWrapper --> BaseTool : wraps
+    ToolWrapper --> TokenContext : uses
+}
+
+' ========================================
+' LLM客户端 (infrastructure/llm/)
+' ========================================
+package "infrastructure.llm" {
+    class LLMClient {
+        +get_llm(model: str, temperature: float, provider_config: ProviderConfig): BaseChatModel
+    }
+    
+    class BaseChatModel {
+        <<LangChain>>
+        +model: str
+        +temperature: float
+        +invoke(messages: List[BaseMessage]): BaseMessage
+    }
+    
+    LLMClient --> BaseChatModel : creates
+    LLMClient --> ProviderConfig : uses
+}
+
+' ========================================
+' 状态管理 (domain/router/)
+' ========================================
+package "domain.router" {
+    class RouterState {
+        <<TypedDict>>
+        +messages: List[BaseMessage]
+        +current_intent: Optional[str]
+        +current_agent: Optional[str]
+        +need_reroute: bool
+        +session_id: str
+        +token_id: str
+        +trace_id: Optional[str]
+        +user_info: Optional[str]
+        +history_msg: Optional[str]
+        +current_date: Optional[str]
+    }
+}
+
+' ========================================
+' 可观测性 (infrastructure/observability/)
+' ========================================
+package "infrastructure.observability" {
+    class LangfuseHandler {
+        +get_langfuse_client(): LangfuseClient
+        +set_langfuse_trace_context(name: str, user_id: str, session_id: str): None
+        +normalize_langfuse_trace_id(trace_id: str): str
+    }
+}
+
+' ========================================
+' 数据库层 (infrastructure/database/)
+' ========================================
+package "infrastructure.database" {
+    class BaseRepository {
+        <<abstract>>
+        +session: AsyncSession
+        +model: Type[ModelType]
+        +get_by_id(id: str): Optional[ModelType]
+        +get_all(limit: int, offset: int): List[ModelType]
+        +create(**kwargs): ModelType
+        +update(id: str, **kwargs): Optional[ModelType]
+        +delete(id: str): bool
+    }
+    
+    class UserRepository {
+        +get_by_username(username: str): Optional[User]
+        +get_by_phone(phone: str): Optional[User]
+        +search_by_username(username: str): List[User]
+    }
+    
+    BaseRepository <|-- UserRepository
+}
+
+' ========================================
+' 关系定义
+' ========================================
+' 流程管理与其他模块的关系
+FlowManager --> PromptManager : 加载提示词
+FlowManager --> ProviderManager : 获取供应商配置
+NodeFactory --> AgentFactory : 创建Agent节点
+NodeFactory --> PromptManager : 获取提示词
+NodeFactory --> ToolRegistry : 获取工具
+GraphBuilder --> NodeFactory : 使用节点工厂
+
+' Agent系统与其他模块的关系
+AgentFactory --> ProviderManager : 获取供应商配置
+AgentFactory --> LLMClient : 创建LLM客户端
+AgentFactory --> PromptManager : 获取提示词
+AgentFactory --> ToolRegistry : 获取工具
+
+' 提示词系统与其他模块的关系
+PromptRenderer --> FlowContext : 获取上下文数据
+PromptRenderer --> UserContext : 获取用户数据
+
+' 上下文管理与其他模块的关系
+ContextManager --> RouterState : 管理流程状态
+
+' LLM客户端与其他模块的关系
+LLMClient --> ProviderManager : 获取供应商配置
+LLMClient --> LangfuseHandler : 记录调用日志
+
+' Agent执行时的关系
+AgentFactory --> FlowContext : 使用流程上下文
+AgentFactory --> UserContext : 使用用户上下文
+AgentFactory --> TokenContext : 使用Token上下文
+
+' 工具系统与数据库层的关系
+BaseTool --> BaseRepository : 工具可访问数据库
+
+' 提示词管理与其他模块的关系
+PromptRenderer --> RouterState : 获取状态数据
+
+@enduml
+

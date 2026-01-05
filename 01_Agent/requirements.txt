@@ -20,3 +20,6 @@ typing-extensions>=4.8.0
 # 工具库
 httpx>=0.25.0
 
+# 可观测性
+langfuse>=2.0.0
+

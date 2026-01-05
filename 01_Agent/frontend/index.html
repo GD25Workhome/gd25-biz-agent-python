@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>动态流程系统 MVP</title>
+    <!-- Element Plus CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
     <style>
         * {
             margin: 0;
@@ -13,283 +15,282 @@
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        #app {
             height: 100vh;
             display: flex;
-            justify-content: center;
-            align-items: center;
         }
         
-        .container {
-            width: 90%;
-            max-width: 800px;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        /* 左侧菜单栏 */
+        .sidebar {
+            width: 240px;
+            background: #304156;
+            color: #fff;
             display: flex;
             flex-direction: column;
-            height: 90vh;
+            box-shadow: 2px 0 6px rgba(0, 0, 0, 0.1);
+            z-index: 100;
         }
         
-        .header {
+        .sidebar-header {
             padding: 20px;
-            border-bottom: 1px solid #e0e0e0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 16px 16px 0 0;
+            background: #2b3a4a;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
         
-        .header h1 {
-            font-size: 24px;
-            margin-bottom: 8px;
+        .sidebar-header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
         }
         
-        .header select {
-            padding: 8px 12px;
-            border-radius: 8px;
-            border: none;
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            font-size: 14px;
-            cursor: pointer;
-        }
-        
-        .header select option {
-            background: white;
-            color: #333;
-        }
-        
-        .messages {
+        .sidebar-menu {
             flex: 1;
             overflow-y: auto;
-            padding: 20px;
+            padding: 10px 0;
+        }
+        
+        /* 主内容区 */
+        .main-container {
+            flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            overflow: hidden;
+            background: #f0f2f5;
         }
         
-        .message {
-            display: flex;
-            gap: 12px;
-            animation: fadeIn 0.3s ease-in;
-        }
-        
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .message.user {
-            flex-direction: row-reverse;
-        }
-        
-        .message-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
+        /* Tab页标签栏 */
+        .tabs-container {
+            background: #fff;
+            border-bottom: 1px solid #e4e7ed;
             display: flex;
             align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            flex-shrink: 0;
+            padding: 0 8px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
         
-        .message.user .message-avatar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+        .tabs-container::-webkit-scrollbar {
+            height: 4px;
         }
         
-        .message.assistant .message-avatar {
-            background: #f0f0f0;
-            color: #666;
+        .tabs-container::-webkit-scrollbar-thumb {
+            background: #c0c4cc;
+            border-radius: 2px;
         }
         
-        .message-content {
-            max-width: 70%;
-            padding: 12px 16px;
-            border-radius: 12px;
-            line-height: 1.5;
-            word-wrap: break-word;
-        }
-        
-        .message.user .message-content {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        
-        .message.assistant .message-content {
-            background: #f0f0f0;
-            color: #333;
-        }
-        
-        .input-area {
-            padding: 20px;
-            border-top: 1px solid #e0e0e0;
+        .tab-item {
             display: flex;
-            gap: 12px;
-        }
-        
-        .input-area input {
-            flex: 1;
-            padding: 12px 16px;
-            border: 1px solid #e0e0e0;
-            border-radius: 24px;
-            font-size: 14px;
-            outline: none;
-            transition: border-color 0.3s;
-        }
-        
-        .input-area input:focus {
-            border-color: #667eea;
-        }
-        
-        .input-area button {
-            padding: 12px 24px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 24px;
-            font-size: 14px;
-            font-weight: 500;
+            align-items: center;
+            padding: 8px 16px;
+            margin: 4px 2px;
+            background: #f5f7fa;
+            border: 1px solid #e4e7ed;
+            border-bottom: none;
+            border-radius: 4px 4px 0 0;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            user-select: none;
+            white-space: nowrap;
+            position: relative;
+            transition: all 0.2s;
+            min-width: 120px;
+            max-width: 200px;
         }
         
-        .input-area button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        .tab-item:hover {
+            background: #ecf5ff;
         }
         
-        .input-area button:active {
-            transform: translateY(0);
+        .tab-item.active {
+            background: #fff;
+            border-color: #409eff;
+            border-bottom-color: #fff;
+            color: #409eff;
+            z-index: 1;
+            margin-bottom: -1px;
         }
         
-        .input-area button:disabled {
+        .tab-item-title {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 13px;
+        }
+        
+        .tab-item-close {
+            margin-left: 8px;
+            padding: 2px 4px;
+            border-radius: 2px;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+        
+        .tab-item-close:hover {
+            opacity: 1;
+            background: rgba(64, 158, 255, 0.1);
+        }
+        
+        .tab-content-area {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .tab-pane {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: none;
+            overflow: hidden;
+        }
+        
+        .tab-pane.active {
+            display: block;
+        }
+        
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #909399;
+        }
+        
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
             opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
         }
         
-        .loading {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .empty-state-text {
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>动态流程系统 MVP</h1>
-            <select id="flowSelect">
-                <option value="medical_agent">医疗分身Agent</option>
-                <option value="work_plan_agent">工作计划Agent</option>
-            </select>
-        </div>
-        
-        <div class="messages" id="messages">
-            <div class="message assistant">
-                <div class="message-avatar">AI</div>
-                <div class="message-content">您好！我是您的AI助手，有什么可以帮您的吗？</div>
+    <div id="app">
+        <!-- 左侧菜单栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h1>动态流程系统</h1>
+            </div>
+            <div class="sidebar-menu">
+                <el-menu
+                    :default-active="activeMenu"
+                    @select="handleMenuSelect"
+                    background-color="#304156"
+                    text-color="#bfcbd9"
+                    active-text-color="#409EFF"
+                >
+                    <el-menu-item index="chat">
+                        <el-icon><ChatDotRound /></el-icon>
+                        <span>聊天对话</span>
+                    </el-menu-item>
+                    <el-menu-item index="blood-pressure">
+                        <el-icon><DataLine /></el-icon>
+                        <span>血压记录</span>
+                    </el-menu-item>
+                    <el-menu-item index="users">
+                        <el-icon><User /></el-icon>
+                        <span>用户管理</span>
+                    </el-menu-item>
+                </el-menu>
             </div>
         </div>
         
-        <div class="input-area">
-            <input type="text" id="messageInput" placeholder="输入您的消息..." />
-            <button id="sendButton">发送</button>
+        <!-- 主内容区 -->
+        <div class="main-container">
+            <!-- Tab页标签栏 -->
+            <div class="tabs-container" v-if="tabs.length > 0">
+                <div
+                    v-for="tab in tabs"
+                    :key="tab.id"
+                    :class="['tab-item', { active: tab.id === activeTabId }]"
+                    @click="switchTab(tab.id)"
+                >
+                    <span class="tab-item-title">{{ tab.title }}</span>
+                    <span 
+                        class="tab-item-close"
+                        @click.stop="closeTab(tab.id)"
+                        v-if="tabs.length > 1"
+                    >
+                        <el-icon><Close /></el-icon>
+                    </span>
+                </div>
+            </div>
+            
+            <!-- Tab内容区 -->
+            <div class="tab-content-area">
+                <!-- 空状态 -->
+                <div v-if="tabs.length === 0" class="empty-state">
+                    <div class="empty-state-icon">📋</div>
+                    <div class="empty-state-text">点击左侧菜单打开功能页面</div>
+                </div>
+                
+                <!-- 动态Tab内容 -->
+                <component
+                    v-for="tab in tabs"
+                    :key="tab.id"
+                    :is="tab.component"
+                    :tab-id="tab.id"
+                    :class="['tab-pane', { active: tab.id === activeTabId }]"
+                    v-show="tab.id === activeTabId"
+                ></component>
+            </div>
         </div>
     </div>
     
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Element Plus -->
+    <script src="https://unpkg.com/element-plus/dist/index.full.js"></script>
+    <!-- Element Plus Icons -->
+    <script src="https://unpkg.com/@element-plus/icons-vue/dist/index.iife.js"></script>
+    <!-- Axios for HTTP requests -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    
+    <!-- 模块化组件 -->
+    <script src="js/framework.js"></script>
+    <script src="js/chat.js"></script>
+    <script src="js/blood-pressure.js"></script>
+    <script src="js/users.js"></script>
+    
     <script>
-        const messagesContainer = document.getElementById('messages');
-        const messageInput = document.getElementById('messageInput');
-        const sendButton = document.getElementById('sendButton');
-        const flowSelect = document.getElementById('flowSelect');
+        const { createApp } = Vue;
+        const icons = ElementPlusIconsVue;
         
-        let sessionId = 'session_' + Date.now();
-        
-        function addMessage(content, isUser) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
-            
-            const avatarDiv = document.createElement('div');
-            avatarDiv.className = 'message-avatar';
-            avatarDiv.textContent = isUser ? '你' : 'AI';
-            
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'message-content';
-            contentDiv.textContent = content;
-            
-            messageDiv.appendChild(avatarDiv);
-            messageDiv.appendChild(contentDiv);
-            messagesContainer.appendChild(messageDiv);
-            
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
-        
-        async function sendMessage() {
-            const message = messageInput.value.trim();
-            if (!message) return;
-            
-            // 添加用户消息
-            addMessage(message, true);
-            messageInput.value = '';
-            
-            // 禁用输入
-            sendButton.disabled = true;
-            sendButton.innerHTML = '<div class="loading"></div>';
-            
-            try {
-                const flowName = flowSelect.value;
-                const response = await fetch('http://localhost:8000/api/chat', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        message: message,
-                        session_id: sessionId,
-                        flow_name: flowName
-                    })
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                addMessage(data.response, false);
-            } catch (error) {
-                console.error('Error:', error);
-                addMessage('抱歉，发生了错误：' + error.message, false);
-            } finally {
-                sendButton.disabled = false;
-                sendButton.textContent = '发送';
-            }
-        }
-        
-        sendButton.addEventListener('click', sendMessage);
-        messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                sendMessage();
+        // 注册所有组件
+        const app = createApp({
+            components: {
+                ChatComponent,
+                BloodPressureComponent,
+                UsersComponent
+            },
+            setup() {
+                return useFramework();
             }
         });
+        
+        app.use(ElementPlus);
+        // 注册全局图标组件
+        app.component('ChatDotRound', icons.ChatDotRound);
+        app.component('DataLine', icons.DataLine);
+        app.component('User', icons.User);
+        app.component('Close', icons.Close);
+        app.component('Promotion', icons.Promotion);
+        app.component('Search', icons.Search);
+        app.component('Refresh', icons.Refresh);
+        app.component('Plus', icons.Plus);
+        app.component('Edit', icons.Edit);
+        app.component('Delete', icons.Delete);
+        app.mount('#app');
     </script>
 </body>
 </html>
-

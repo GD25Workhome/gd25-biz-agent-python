@@ -12,6 +12,7 @@ from backend.infrastructure.llm.client import get_llm
 from backend.infrastructure.prompts.manager import prompt_manager
 from backend.domain.flows.definition import AgentNodeConfig, ModelConfig
 from backend.domain.tools.registry import tool_registry
+from backend.domain.tools.wrapper import wrap_tools_with_token_context
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +106,9 @@ class AgentFactory:
         
         if tools:
             agent_tools.extend(tools)
+        
+        # 使用TokenInjectedTool包装所有工具（自动注入token_id）
+        agent_tools = wrap_tools_with_token_context(agent_tools)
         
         # 创建LLM客户端
         llm = get_llm(

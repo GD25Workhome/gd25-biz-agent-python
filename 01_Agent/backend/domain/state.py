@@ -15,5 +15,9 @@ class FlowState(TypedDict, total=False):
     messages: List[BaseMessage]  # 消息列表
     session_id: str  # 会话ID
     intent: Optional[str]  # 当前意图（用于路由条件判断）
+    token_id: Optional[str]  # 令牌ID（用于工具参数注入）
+    trace_id: Optional[str]  # Trace ID（用于可观测性追踪）
+    user_info: Optional[str]  # 患者基础信息（多行文本）
+    current_date: Optional[str]  # 当前日期时间（格式：YYYY-MM-DD HH:mm）
     # 可以根据需要扩展其他字段
 
