@@ -1,9 +1,9 @@
 """
 Alembic 环境配置
+适配 backend 模块
 """
 from logging.config import fileConfig
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import engine_from_config, pool
 from alembic import context
 import asyncio
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
@@ -12,21 +12,15 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 import sys
 import os
 
-# 添加项目根目录到路径
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+# 添加项目根目录到路径（01_Agent目录）
+project_root = os.path.dirname(os.path.dirname(__file__))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
-from app.core.config import settings
-from infrastructure.database.base import Base
-from infrastructure.database import models  # noqa: F401
-from infrastructure.database.models import (
-    User,
-    BloodPressureRecord,
-    LlmCallLog,
-    LlmCallMessage,
-    HealthEventRecord,
-    MedicationRecord,
-    SymptomRecord,
-)
+# 导入backend模块的配置和模型
+from backend.app.config import settings
+from backend.infrastructure.database.base import Base
+from backend.infrastructure.database import models  # noqa: F401 导入所有模型
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -35,7 +29,6 @@ config = context.config
 # 设置数据库 URL
 # 注意：保持 postgresql+psycopg:// 格式以使用 psycopg3 驱动
 # 对于 Alembic 的同步操作，psycopg3 也支持同步模式
-# 将异步 URL 转换为同步 URL（移除 async 相关参数，但保留驱动前缀）
 sync_db_url = settings.ASYNC_DB_URI
 # 确保使用 psycopg3 驱动（postgresql+psycopg://）
 if sync_db_url.startswith("postgresql+psycopg://"):
@@ -117,4 +110,3 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     asyncio.run(run_migrations_online())
-
