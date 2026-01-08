@@ -6,6 +6,8 @@ import logging
 from typing import Optional, Dict, Any
 from contextvars import ContextVar
 
+from opentelemetry.trace import span
+
 from core.config import settings
 
 # 直接导入，如果模块不存在会直接报错，便于及时发现配置问题
@@ -61,31 +63,29 @@ def set_langfuse_trace_context(
         # 规范化 trace_id
         normalized_trace_id = normalize_langfuse_trace_id(trace_id)
         
-        # 构建 trace 参数（最外层的 span 就是 trace）
-        # 关键：name 必须在创建 span 时设置，这样 trace 的 name 才会正确
+        # 构建 trace 参数（参考 backend 的实现方式）
         trace_params = {
-            "name": name,  # 这是关键：在创建 span 时设置 name，确保 trace 的 name 正确
+            "name": name,
             "metadata": metadata or {},
         }
         
         # 如果提供了 trace_id，通过 trace_context 参数传入
         trace_params["trace_context"] = {"trace_id": normalized_trace_id}
         
-        # 使用 start_as_current_span() 创建 Trace（最外层的 span 就是 trace）
+        # 使用 start_as_current_span() 创建 Trace
         # 这会创建一个活动的 span 上下文，后续的所有 span 都会自动关联到这个 trace
         # 注意：start_as_current_span 使用 contextvars 管理上下文，即使不在 with 语句中也能保持活动状态
         langfuse_client.start_as_current_span(**trace_params).__enter__()
         
-        # 在 Trace 上下文中，更新 trace 元数据（确保 name、user_id、session_id 等都被正确设置）
+        # 在 Trace 上下文中，更新 trace 元数据
         langfuse_client.update_current_trace(
-            name=name,  # 再次确保 name 被正确设置
+            name=name,
             user_id=user_id,
             session_id=session_id,
             metadata=metadata or {},
         )
-        langfuse_client.flush()
         
-        # 将Trace ID存储到上下文变量中
+        # 将Trace ID存储到上下文变量中（保持向后兼容）
         _trace_context.set(normalized_trace_id)
         
         logger.info(

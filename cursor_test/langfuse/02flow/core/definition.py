@@ -3,7 +3,7 @@
 定义流程的结构和配置
 """
 from typing import List, Dict, Any, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class ModelConfig(BaseModel):
@@ -29,6 +29,8 @@ class NodeDefinition(BaseModel):
 
 class EdgeDefinition(BaseModel):
     """边定义"""
+    model_config = ConfigDict(populate_by_name=True)  # 允许同时使用字段名和别名
+    
     from_node: str = Field(alias="from", description="起始节点名称")
     to_node: str = Field(alias="to", description="目标节点名称")
     condition: str = Field(description="路由条件")

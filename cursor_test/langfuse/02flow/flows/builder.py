@@ -132,11 +132,15 @@ class GraphBuilder:
                 # 关键：在节点执行时从ContextVar获取trace_id，创建Handler
                 # 此时ContextVar应该有值（在API层已设置）
                 from langfuse_local.handler import (
-                    get_current_trace_id, create_langfuse_handler
+                    get_current_trace_id, create_langfuse_handler, get_langfuse_client
                 )
                 
                 trace_id = get_current_trace_id()
                 callbacks = []
+                
+                # 创建子 span 并设置节点名称（关键！）
+                langfuse_client = get_langfuse_client()
+                
                 if trace_id:
                     # 创建Langfuse Handler（会从ContextVar获取trace_id）
                     langfuse_handler = create_langfuse_handler()
@@ -156,11 +160,36 @@ class GraphBuilder:
                         f"将使用编译时创建的Handler（可能创建新的Trace）"
                     )
                 
-                # 执行Agent，传递运行时callbacks（关键！）
-                result = agent_executor.invoke(
-                    {"input": input_text},
-                    callbacks=callbacks if callbacks else None
-                )
+                # 创建子 span，使用节点名称作为 span name（关键！）
+                # 这样在 Langfuse UI 中可以看到每个节点的名称
+                result = None
+                if langfuse_client and trace_id:
+                    try:
+                        # 使用 with 语句创建子 span，确保在节点执行期间 span 处于活动状态
+                        with langfuse_client.start_as_current_span(
+                            name=node_name,
+                            metadata={"node_type": "agent", "node_name": node_name}
+                        ):
+                            logger.debug(f"[Agent节点] 创建子 span: name={node_name}, trace_id={trace_id}")
+                            
+                            # 执行Agent，传递运行时callbacks（关键！）
+                            result = agent_executor.invoke(
+                                {"input": input_text},
+                                callbacks=callbacks if callbacks else None
+                            )
+                    except Exception as e:
+                        logger.warning(f"[Agent节点] 创建子 span 失败，直接执行: {e}", exc_info=True)
+                        # 如果创建 span 失败，仍然执行 Agent
+                        result = agent_executor.invoke(
+                            {"input": input_text},
+                            callbacks=callbacks if callbacks else None
+                        )
+                else:
+                    # 如果没有 langfuse_client 或 trace_id，直接执行
+                    result = agent_executor.invoke(
+                        {"input": input_text},
+                        callbacks=callbacks if callbacks else None
+                    )
                 
                 # 更新状态
                 new_state = state.copy()

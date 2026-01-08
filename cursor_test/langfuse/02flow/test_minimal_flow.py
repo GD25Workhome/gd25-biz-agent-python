@@ -4,8 +4,8 @@
 
 测试场景：
 1. 设置Trace上下文
-2. 创建单节点流程
-3. 执行流程
+2. 创建双节点连续流程
+3. 执行流程（两个节点依次执行）
 4. 验证Langfuse日志记录
 
 运行方式：
@@ -46,18 +46,31 @@ def create_minimal_flow_definition() -> FlowDefinition:
     """
     创建最小化流程定义
     
-    单节点流程，只有一个Agent节点
+    双节点连续流程，包含两个连续的Agent节点
     """
     return FlowDefinition(
         name="test_minimal_flow",
         version="1.0.0",
-        description="最小化流程测试",
+        description="最小化流程测试 - 连续两个节点",
         nodes=[
             NodeDefinition(
-                name="agent_node",
+                name="agent_node_1",
                 type="agent",
                 config={
-                    "prompt": "你是一个友好的AI助手。请简洁地回答用户的问题。",  # 简化版：直接是字符串
+                    "prompt": "你是一个友好的AI助手。请简洁地回答用户的问题，并在回答后提示用户将继续处理。",  # 简化版：直接是字符串
+                    "model": {
+                        "provider": "doubao",  # 从环境变量读取
+                        "name": "doubao-seed-1-6-251015",
+                        "temperature": 0.7
+                    },
+                    "tools": []  # 简化版：不使用工具
+                }
+            ),
+            NodeDefinition(
+                name="agent_node_2",
+                type="agent",
+                config={
+                    "prompt": "你是一个专业的AI助手。请基于前一轮对话的内容，提供更详细的补充说明或建议。",  # 简化版：直接是字符串
                     "model": {
                         "provider": "doubao",  # 从环境变量读取
                         "name": "doubao-seed-1-6-251015",
@@ -68,9 +81,13 @@ def create_minimal_flow_definition() -> FlowDefinition:
             )
         ],
         edges=[
-            # 注意：不需要边，因为只有一个节点，执行完自动结束
+            EdgeDefinition(
+                from_node="agent_node_1",
+                to_node="agent_node_2",
+                condition="always"  # 无条件连接，第一个节点执行完后自动进入第二个节点
+            )
         ],
-        entry_node="agent_node"
+        entry_node="agent_node_1"
     )
 
 
@@ -122,7 +139,12 @@ def test_minimal_flow():
     # 2. 创建流程定义
     logger.info("[步骤2] 创建流程定义...")
     flow_def = create_minimal_flow_definition()
-    logger.info(f"[步骤2] 流程定义创建成功: {flow_def.name}, 节点数: {len(flow_def.nodes)}")
+    logger.info(f"[步骤2] 流程定义创建成功: {flow_def.name}, 节点数: {len(flow_def.nodes)}, 边数: {len(flow_def.edges)}")
+    logger.info(f"[步骤2] 入口节点: {flow_def.entry_node}")
+    for i, node in enumerate(flow_def.nodes, 1):
+        logger.info(f"[步骤2]   节点{i}: {node.name} (类型: {node.type})")
+    for i, edge in enumerate(flow_def.edges, 1):
+        logger.info(f"[步骤2]   边{i}: {edge.from_node} -> {edge.to_node} (条件: {edge.condition})")
     
     # 3. 构建图
     logger.info("[步骤3] 构建图...")
@@ -159,9 +181,18 @@ def test_minimal_flow():
         logger.info(f"[步骤7] 结果消息数: {len(messages)}")
         
         if messages:
-            last_message = messages[-1]
-            response_text = last_message.content if hasattr(last_message, "content") else str(last_message)
-            logger.info(f"[步骤7] 最后一条消息: {response_text[:100]}...")
+            # 显示所有AI消息（两个节点应该各产生一条）
+            ai_messages = [msg for msg in messages if hasattr(msg, "type") and msg.type == "ai"]
+            logger.info(f"[步骤7] AI消息数: {len(ai_messages)}")
+            
+            for i, msg in enumerate(ai_messages, 1):
+                response_text = msg.content if hasattr(msg, "content") else str(msg)
+                logger.info(f"[步骤7] 节点{i}响应: {response_text[:150]}...")
+            
+            if ai_messages:
+                last_message = ai_messages[-1]
+                response_text = last_message.content if hasattr(last_message, "content") else str(last_message)
+                logger.info(f"[步骤7] 最终响应: {response_text[:200]}...")
         
         logger.info("=" * 80)
         logger.info("测试完成")
