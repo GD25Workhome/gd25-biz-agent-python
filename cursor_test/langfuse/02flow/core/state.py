@@ -15,6 +15,7 @@ class FlowState(TypedDict, total=False):
     messages: List[BaseMessage]  # 消息列表
     session_id: str  # 会话ID
     intent: Optional[str]  # 当前意图（用于路由条件判断）
+    next: Optional[str]  # 下一个节点名称（用于supervisor节点路由决策）
     token_id: Optional[str]  # 令牌ID（用于工具参数注入）
     trace_id: Optional[str]  # Trace ID（用于可观测性追踪）
     user_info: Optional[str]  # 患者基础信息（多行文本）
