@@ -32,12 +32,12 @@ class GraphBuilder:
         graph = StateGraph(FlowState)
         
         # 创建节点函数字典
-        node_functions: Dict[str, Callable] = {}
+        # node_functions: Dict[str, Callable] = {}
         
         # 为每个节点创建节点函数
         for node_def in flow_def.nodes:
             node_func = GraphBuilder._create_node_function(node_def, flow_def)
-            node_functions[node_def.name] = node_func
+            # node_functions[node_def.name] = node_func
             graph.add_node(node_def.name, node_func)
         
         # 按源节点分组边
@@ -120,7 +120,7 @@ class GraphBuilder:
             # 捕获节点名称，用于意图识别节点的特殊处理
             node_name = node_def.name
             
-            def agent_node(state: FlowState) -> FlowState:
+            def agent_node_action(state: FlowState) -> FlowState:
                 """Agent节点函数"""
                 # 获取最后一条用户消息
                 if not state.get("messages"):
@@ -129,40 +129,13 @@ class GraphBuilder:
                 last_message = state["messages"][-1]
                 input_text = last_message.content if hasattr(last_message, "content") else str(last_message)
                 
-                # 方案4补丁：在节点执行时从ContextVar获取trace_id，创建Handler
-                # 此时ContextVar应该有值（在路由层已设置）
-                from backend.infrastructure.observability.langfuse_handler import (
-                    get_current_trace_id, create_langfuse_handler
-                )
-                
-                trace_id = get_current_trace_id()
-                callbacks = []
-                if trace_id:
-                    # 创建Langfuse Handler（会从ContextVar获取trace_id）
-                    langfuse_handler = create_langfuse_handler()
-                    if langfuse_handler:
-                        callbacks.append(langfuse_handler)
-                        logger.debug(
-                            f"[Agent节点] 从ContextVar获取trace_id={trace_id}, "
-                            f"创建Langfuse Handler并传递给Agent调用"
-                        )
-                    else:
-                        logger.warning(
-                            f"[Agent节点] trace_id={trace_id} 存在，但创建Langfuse Handler失败"
-                        )
-                else:
-                    logger.warning(
-                        f"[Agent节点] 无法从ContextVar获取trace_id，"
-                        f"将使用编译时创建的Handler（可能创建新的Trace）"
-                    )
-                
-                # 执行Agent，传递运行时callbacks
+                # 执行Agent
                 result = agent_executor.invoke(
                     {"input": input_text},
-                    callbacks=callbacks if callbacks else None
+                    None
                 )
                 
-                # 更新状态
+                # 更新状态（？？是不是解析模型的回复结果，如果是，这里需要将其抽取成为一个独立的方法）
                 new_state = state.copy()
                 if "output" in result:
                     # AgentExecutor返回output字段
@@ -190,7 +163,7 @@ class GraphBuilder:
                 
                 return new_state
             
-            return agent_node
+            return agent_node_action
         
         else:
             # 其他类型的节点（本版本不支持）

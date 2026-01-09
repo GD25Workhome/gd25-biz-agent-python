@@ -54,29 +54,6 @@ def get_llm(
     if temperature is None:
         temperature = settings.LLM_TEMPERATURE
     
-    # 准备回调处理器列表
-    callback_list = list(callbacks) if callbacks else []
-    
-    # 自动添加Langfuse回调处理器（如果可用且未手动提供）
-    if not callbacks:
-        langfuse_handler = create_langfuse_handler(
-            context={
-                "provider": provider,
-                "model": model,
-                "temperature": temperature,
-            }
-        )
-        if langfuse_handler:
-            callback_list.append(langfuse_handler)
-            logger.info(
-                f"[Langfuse] 自动添加CallbackHandler: provider={provider}, "
-                f"model={model}, callbacks_count={len(callback_list)}"
-            )
-        else:
-            logger.debug(
-                f"[Langfuse] CallbackHandler不可用，跳过: provider={provider}, model={model}"
-            )
-    
     # 创建 LLM 客户端
     # 注意：所有供应商都使用 ChatOpenAI，因为它们都兼容 OpenAI API 格式
     llm = ChatOpenAI(
@@ -84,14 +61,14 @@ def get_llm(
         temperature=temperature,
         openai_api_key=api_key,
         openai_api_base=base_url,
-        callbacks=callback_list if callback_list else None,
+        callbacks=callbacks if callbacks else None,
         **{k: v for k, v in kwargs.items() if k not in ["api_key", "base_url"]}
     )
     
     logger.debug(
         f"创建 LLM 客户端: provider={provider}, model={model}, "
         f"temperature={temperature}, base_url={base_url}, "
-        f"callbacks_count={len(callback_list)}"
+        f"callbacks_count={len(callbacks)}"
     )
     
     return llm

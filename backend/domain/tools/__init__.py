@@ -22,10 +22,6 @@ def init_tools():
     # tool_registry.register(xxx_tool)
 
 
-# 自动初始化
-init_tools()
-
-
 __all__ = [
     "ToolRegistry",
     "tool_registry",
