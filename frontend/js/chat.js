@@ -38,11 +38,28 @@
         const userInfo = ref('');
         const conversationHistory = ref([]);
         
-        // 用户选择弹框
-        const userSelectDialogVisible = ref(false);
+        // 聊天上下文区域（默认折叠）
+        const contextExpanded = ref([]); // el-collapse 需要数组格式，空数组表示默认折叠
+        
+        // 登录信息
+        const tokenId = ref('');
+        const loginInfo = ref({
+            user_id: '',
+            user_name: '',
+            flow_name: '',
+            flow_display: '',
+            session_id: '',
+            // 完整的用户信息
+            user_full_info: null
+        });
+        
+        // 登录弹框
+        const loginDialogVisible = ref(false);
         const allUsers = ref([]);
         const userSearchKeyword = ref('');
         const filteredUsers = ref([]);
+        const loginSelectedUserId = ref('');
+        const loginSelectedFlow = ref('medical_agent');
         
         // 生成 Trace ID
         const generateTraceId = () => {
@@ -105,6 +122,25 @@
             }
         };
         
+        // 初始化流程选择
+        const initFlowSelection = () => {
+            // 从 localStorage 读取保存的流程选择
+            const savedFlow = localStorage.getItem('chat_selected_flow');
+            if (savedFlow && (savedFlow === 'medical_agent' || savedFlow === 'work_plan_agent')) {
+                selectedFlow.value = savedFlow;
+                loginSelectedFlow.value = savedFlow;
+            }
+        };
+        
+        // 保存流程选择到 localStorage
+        const saveFlowSelection = () => {
+            if (selectedFlow.value) {
+                localStorage.setItem('chat_selected_flow', selectedFlow.value);
+            } else {
+                localStorage.removeItem('chat_selected_flow');
+            }
+        };
+        
         // 加载用户列表
         const loadUsers = async () => {
             try {
@@ -121,37 +157,102 @@
             }
         };
         
-        // 打开用户选择弹框
-        const openUserSelectDialog = async () => {
-            userSelectDialogVisible.value = true;
+        // 打开登录弹框
+        const openLoginDialog = async () => {
+            loginDialogVisible.value = true;
             userSearchKeyword.value = '';
+            loginSelectedUserId.value = '';
+            loginSelectedFlow.value = selectedFlow.value || 'medical_agent';
             await loadUsers();
         };
         
-        // 关闭用户选择弹框
-        const closeUserSelectDialog = () => {
-            userSelectDialogVisible.value = false;
+        // 关闭登录弹框
+        const closeLoginDialog = () => {
+            loginDialogVisible.value = false;
         };
         
-        // 选择用户
-        const selectUser = (user) => {
-            selectedUserId.value = user.id;
-            selectedUserName.value = user.username || user.user_name || '-- 请选择用户 --';
-            // 自动填充患者基础信息
-            if (!userInfo.value.trim() || userInfo.value === '') {
-                // 如果 user_info 是对象，转换为 JSON 字符串；如果是字符串，直接使用
-                if (user.user_info) {
-                    if (typeof user.user_info === 'object') {
-                        userInfo.value = JSON.stringify(user.user_info, null, 2);
+        // 登录：创建token和session
+        const handleLogin = async () => {
+            if (!loginSelectedUserId.value) {
+                ElMessage.warning('请选择用户');
+                return;
+            }
+            
+            if (!loginSelectedFlow.value) {
+                ElMessage.warning('请选择流程');
+                return;
+            }
+            
+            try {
+                // 1. 创建Token
+                const tokenResponse = await axios.post(`${API_BASE}/api/v1/login/token`, {
+                    user_id: loginSelectedUserId.value
+                });
+                
+                const tokenIdValue = tokenResponse.data.token_id;
+                
+                // 2. 创建Session
+                const sessionResponse = await axios.post(`${API_BASE}/api/v1/login/session`, {
+                    user_id: loginSelectedUserId.value,
+                    flow_name: loginSelectedFlow.value
+                });
+                
+                const sessionIdValue = sessionResponse.data.session_id;
+                
+                // 3. 获取Token信息
+                const tokenInfoResponse = await axios.get(`${API_BASE}/api/v1/login/token/${tokenIdValue}`);
+                const tokenInfo = tokenInfoResponse.data;
+                
+                // 4. 获取Session信息
+                const sessionInfoResponse = await axios.get(`${API_BASE}/api/v1/login/session/${sessionIdValue}`);
+                const sessionInfo = sessionInfoResponse.data;
+                
+                // 5. 更新登录信息
+                const selectedUser = allUsers.value.find(u => u.id === loginSelectedUserId.value);
+                loginInfo.value = {
+                    user_id: tokenInfo.user_id,
+                    user_name: selectedUser ? (selectedUser.username || selectedUser.user_name || '') : '',
+                    flow_name: sessionInfo.flow_info.flow_key,
+                    flow_display: sessionInfo.flow_info.flow_name,
+                    session_id: sessionIdValue,
+                    // 保存完整的用户信息
+                    user_full_info: selectedUser || null
+                };
+                
+                // 更新相关状态
+                tokenId.value = tokenIdValue;
+                sessionId.value = sessionIdValue;
+                selectedFlow.value = loginSelectedFlow.value;
+                selectedUserId.value = loginSelectedUserId.value;
+                selectedUserName.value = loginInfo.value.user_name;
+                
+                // 更新用户信息
+                if (tokenInfo.user_info) {
+                    if (typeof tokenInfo.user_info === 'object') {
+                        userInfo.value = JSON.stringify(tokenInfo.user_info, null, 2);
                     } else {
-                        userInfo.value = user.user_info;
+                        userInfo.value = tokenInfo.user_info;
                     }
                 } else {
                     userInfo.value = '';
                 }
+                
+                // 保存到localStorage
+                saveFlowSelection();
+                saveUserSelection();
+                
+                ElMessage.success('登录成功');
+                closeLoginDialog();
+            } catch (error) {
+                console.error('登录失败:', error);
+                const errorMsg = error.response?.data?.detail || error.message || '登录失败';
+                ElMessage.error('登录失败: ' + errorMsg);
             }
-            closeUserSelectDialog();
-            saveUserSelection();
+        };
+        
+        // 选择登录用户（在登录弹框中）
+        const selectLoginUser = (user) => {
+            loginSelectedUserId.value = user.id;
         };
         
         // 保存用户选择到 localStorage
@@ -230,6 +331,72 @@
             saveDateTime();
         });
         
+        // 监听流程选择变化
+        watch(selectedFlow, () => {
+            saveFlowSelection();
+        });
+        
+        // 格式化登录信息显示（多行格式）
+        const formatLoginInfo = () => {
+            if (!loginInfo.value.user_id) {
+                return '-- 未登录 --';
+            }
+            
+            let result = '';
+            
+            // 第一行：流程信息
+            result += `流程: ${loginInfo.value.flow_display || loginInfo.value.flow_name}`;
+            
+            // 第二行开始：用户信息
+            if (loginInfo.value.user_full_info) {
+                const user = loginInfo.value.user_full_info;
+                const userDetails = [];
+                
+                // 用户名
+                if (user.username || user.user_name) {
+                    userDetails.push(`用户名: ${user.username || user.user_name}`);
+                }
+                
+                // 用户ID
+                if (user.id) {
+                    userDetails.push(`ID: ${user.id}`);
+                }
+                
+                // 手机号
+                if (user.phone) {
+                    userDetails.push(`手机: ${user.phone}`);
+                }
+                
+                // 邮箱
+                if (user.email) {
+                    userDetails.push(`邮箱: ${user.email}`);
+                }
+                
+                // 第二行：基本用户信息
+                if (userDetails.length > 0) {
+                    result += '\n用户: ' + userDetails.join(' | ');
+                }
+                
+                // 第三行及以后：用户详细信息（user_info）
+                if (user.user_info) {
+                    let userInfoStr = '';
+                    if (typeof user.user_info === 'object') {
+                        userInfoStr = JSON.stringify(user.user_info, null, 2);
+                    } else {
+                        userInfoStr = user.user_info;
+                    }
+                    if (userInfoStr) {
+                        result += '\n详细信息:\n' + userInfoStr;
+                    }
+                }
+            } else {
+                // 如果没有完整用户信息，至少显示用户名和ID
+                result += `\n用户: ${loginInfo.value.user_name || loginInfo.value.user_id}`;
+            }
+            
+            return result;
+        };
+        
         // 监听患者基础信息变化
         watch(userInfo, () => {
             saveUserSelection();
@@ -240,9 +407,9 @@
             const message = inputMessage.value.trim();
             if (!message || isLoading.value) return;
             
-            // 验证用户选择
-            if (!selectedUserId.value) {
-                ElMessage.warning('请先选择用户');
+            // 验证登录状态
+            if (!tokenId.value && !selectedUserId.value) {
+                ElMessage.warning('请先登录');
                 return;
             }
             
@@ -293,10 +460,8 @@
                 const requestBody = {
                     message: message,
                     session_id: sessionId.value,
-                    token_id: selectedUserId.value,
-                    flow_name: selectedFlow.value,
+                    token_id: tokenId.value || selectedUserId.value,
                     conversation_history: history.length > 0 ? history : null,
-                    user_info: userInfo.value.trim() || null,
                     current_date: currentDateTime,
                     trace_id: currentTraceId || undefined  // 将 traceId 放在请求体中，如果为空则不传（后端会自动生成）
                 };
@@ -341,9 +506,8 @@
             }
         };
         
-        // 重置会话
+        // 重置会话（只清空聊天框中的内容，历史会话重置）
         const resetSession = () => {
-            sessionId.value = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
             messages.value = [];
             conversationHistory.value = [];
             messages.value.push({
@@ -362,6 +526,20 @@
             }
         };
         
+        // 处理键盘事件（Enter 发送，Shift+Enter 换行）
+        const handleKeyDown = (event) => {
+            // 如果按下的是 Enter 键
+            if (event.key === 'Enter' || event.keyCode === 13) {
+                // 如果同时按下了 Shift，允许默认行为（换行）
+                if (event.shiftKey) {
+                    return;
+                }
+                // 否则阻止默认行为（不换行）并发送消息
+                event.preventDefault();
+                sendMessage();
+            }
+        };
+        
         // 格式化时间
         const formatTime = (date) => {
             if (!date) return '';
@@ -371,8 +549,9 @@
         
         // 初始化
         onMounted(async () => {
+            initFlowSelection();
             initDateTimeInput();
-            await restoreUserSelection();
+            // 不再自动恢复用户选择，用户需要通过登录弹框登录
             messages.value.push({
                 role: 'assistant',
                 content: '您好！我是您的AI助手，有什么可以帮您的吗？',
@@ -389,6 +568,7 @@
             sendMessage,
             formatTime,
             resetSession,
+            handleKeyDown,
             // 新增字段
             traceId,
             autoTraceId,
@@ -397,94 +577,93 @@
             selectedUserName,
             userInfo,
             generateTraceId,
-            // 用户选择
-            userSelectDialogVisible,
+            // 聊天上下文
+            contextExpanded,
+            // 登录信息
+            tokenId,
+            loginInfo,
+            formatLoginInfo,
+            // 登录弹框
+            loginDialogVisible,
+            allUsers,
             filteredUsers,
             userSearchKeyword,
-            openUserSelectDialog,
-            closeUserSelectDialog,
-            selectUser
+            loginSelectedUserId,
+            loginSelectedFlow,
+            openLoginDialog,
+            closeLoginDialog,
+            handleLogin,
+            selectLoginUser
         };
     },
     template: `
         <div style="height: 100%; display: flex; flex-direction: column; background: #f5f7fa;">
             <!-- 聊天头部 -->
             <div style="padding: 16px 20px; background: #fff; border-bottom: 1px solid #e4e7ed;">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-                    <el-text type="info">
-                        当前流程：{{ selectedFlow === 'medical_agent' ? '医疗分身Agent' : '工作计划Agent' }}
-                    </el-text>
-                    <el-select 
-                        v-model="selectedFlow" 
-                        style="width: 200px;"
-                        placeholder="选择流程"
-                    >
-                        <el-option label="医疗分身Agent" value="medical_agent"></el-option>
-                        <el-option label="工作计划Agent" value="work_plan_agent"></el-option>
-                    </el-select>
-                </div>
-                
-                <!-- 配置区域 -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-                    <!-- Trace ID -->
-                    <div>
-                        <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #606266;">Trace ID</label>
-                        <div style="display: flex; gap: 8px;">
-                            <el-input
-                                v-model="traceId"
-                                placeholder="留空则自动生成"
-                                :disabled="autoTraceId"
-                                size="small"
-                                style="flex: 1;"
-                            ></el-input>
-                            <el-button size="small" @click="traceId = generateTraceId()" :disabled="autoTraceId">生成ID</el-button>
+                <!-- 聊天上下文区域 -->
+                <el-collapse v-model="contextExpanded" style="border: none;">
+                    <el-collapse-item name="context" :title="'聊天上下文'">
+                        <template #title>
+                            <span style="font-weight: 500; color: #303133;">聊天上下文</span>
+                        </template>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <!-- 第一列：Trace ID 和 登录信息 -->
+                            <div style="display: flex; flex-direction: column; gap: 12px;">
+                                <!-- Trace ID -->
+                                <div>
+                                    <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #606266;">Trace ID</label>
+                                    <div style="display: flex; gap: 8px;">
+                                        <el-input
+                                            v-model="traceId"
+                                            placeholder="留空则自动生成"
+                                            :disabled="autoTraceId"
+                                            size="small"
+                                            style="flex: 1;"
+                                        ></el-input>
+                                        <el-button size="small" @click="traceId = generateTraceId()" :disabled="autoTraceId">生成ID</el-button>
+                                    </div>
+                                    <el-checkbox v-model="autoTraceId" size="small" style="margin-top: 4px;">
+                                        每次发送重新生成traceId
+                                    </el-checkbox>
+                                </div>
+                                
+                                <!-- 登录信息 -->
+                                <div style="position: relative;">
+                                    <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #606266;">登录信息</label>
+                                    <el-input
+                                        :value="formatLoginInfo()"
+                                        type="textarea"
+                                        :rows="4"
+                                        readonly
+                                        @click="openLoginDialog"
+                                        style="cursor: pointer;"
+                                        size="small"
+                                    ></el-input>
+                                    <el-icon 
+                                        style="cursor: pointer; position: absolute; right: 8px; top: 28px; z-index: 10; color: #909399;"
+                                        @click.stop="openLoginDialog"
+                                    >
+                                        <Edit />
+                                    </el-icon>
+                                </div>
+                            </div>
+                            
+                            <!-- 第二列：记录日期时间 -->
+                            <div>
+                                <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #606266;">记录日期时间</label>
+                                <el-date-picker
+                                    v-model="recordDateTime"
+                                    type="datetime"
+                                    placeholder="选择日期时间"
+                                    format="YYYY-MM-DD HH:mm"
+                                    value-format="YYYY-MM-DD HH:mm"
+                                    size="small"
+                                    style="width: 100%;"
+                                ></el-date-picker>
+                            </div>
                         </div>
-                        <el-checkbox v-model="autoTraceId" size="small" style="margin-top: 4px;">
-                            每次发送重新生成traceId
-                        </el-checkbox>
-                    </div>
-                    
-                    <!-- 记录日期时间 -->
-                    <div>
-                        <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #606266;">记录日期时间</label>
-                        <el-date-picker
-                            v-model="recordDateTime"
-                            type="datetime"
-                            placeholder="选择日期时间"
-                            format="YYYY-MM-DD HH:mm"
-                            value-format="YYYY-MM-DD HH:mm"
-                            size="small"
-                            style="width: 100%;"
-                        ></el-date-picker>
-                    </div>
-                </div>
-                
-                <!-- 用户选择和患者基础信息 -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <!-- 用户选择 -->
-                    <div>
-                        <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #606266;">用户选择</label>
-                        <el-button 
-                            @click="openUserSelectDialog" 
-                            size="small" 
-                            style="width: 100%; text-align: left;"
-                        >
-                            {{ selectedUserName }}
-                        </el-button>
-                    </div>
-                    
-                    <!-- 患者基础信息 -->
-                    <div>
-                        <label style="display: block; margin-bottom: 4px; font-size: 12px; color: #606266;">患者基础信息</label>
-                        <el-input
-                            v-model="userInfo"
-                            type="textarea"
-                            :rows="2"
-                            placeholder="患者基础信息（可编辑，仅用于本次请求参数）"
-                            size="small"
-                        ></el-input>
-                    </div>
-                </div>
+                    </el-collapse-item>
+                </el-collapse>
             </div>
             
             <!-- 消息列表 -->
@@ -531,9 +710,8 @@
                         v-model="inputMessage"
                         type="textarea"
                         :rows="3"
-                        placeholder="输入您的消息... (Ctrl+Enter 或 Cmd+Enter 发送)"
-                        @keydown.ctrl.enter="sendMessage"
-                        @keydown.meta.enter="sendMessage"
+                        placeholder="输入您的消息... (Enter 发送，Shift+Enter 换行)"
+                        @keydown="handleKeyDown"
                         :disabled="isLoading"
                         style="flex: 1;"
                     ></el-input>
@@ -542,7 +720,7 @@
                             type="primary" 
                             @click="sendMessage"
                             :loading="isLoading"
-                            :disabled="!inputMessage.trim() || !selectedUserId"
+                            :disabled="!inputMessage.trim() || (!tokenId && !selectedUserId)"
                             style="min-width: 100px; height: 74px; font-size: 14px;"
                         >
                             <el-icon v-if="!isLoading" style="margin-right: 4px;"><Promotion /></el-icon>
@@ -559,49 +737,76 @@
                 </div>
             </div>
             
-            <!-- 用户选择弹框 -->
+            <!-- 登录弹框 -->
             <el-dialog
-                v-model="userSelectDialogVisible"
-                title="选择用户"
+                v-model="loginDialogVisible"
+                title="登录"
                 width="600px"
             >
-                <el-input
-                    v-model="userSearchKeyword"
-                    placeholder="搜索用户名（支持模糊匹配）"
-                    style="margin-bottom: 16px;"
-                >
-                    <template #prefix>
-                        <el-icon><Search /></el-icon>
-                    </template>
-                </el-input>
-                <div style="max-height: 400px; overflow-y: auto;">
-                    <div 
-                        v-for="user in filteredUsers" 
-                        :key="user.id"
-                        @click="selectUser(user)"
-                        style="padding: 12px; border: 1px solid #e4e7ed; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s;"
-                        :style="selectedUserId === user.id ? 'background: #e0f2fe; border-color: #409eff;' : ''"
-                        @mouseenter="$event.currentTarget.style.background = '#f3f4f6'"
-                        @mouseleave="$event.currentTarget.style.background = selectedUserId === user.id ? '#e0f2fe' : '#fff'"
-                    >
-                        <div style="font-weight: bold; margin-bottom: 4px;">{{ user.username || user.user_name }}</div>
-                        <div style="font-size: 12px; color: #909399;">
-                            ID: {{ user.id }} | 手机: {{ user.phone || '未设置' }} | 邮箱: {{ user.email || '未设置' }}
-                        </div>
-                        <div v-if="user.user_info" style="font-size: 12px; color: #606266; margin-top: 4px; white-space: pre-wrap; font-family: 'Courier New', monospace;">
-                            {{ typeof user.user_info === 'object' ? JSON.stringify(user.user_info, null, 2) : user.user_info }}
-                        </div>
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                    <!-- 流程选择 -->
+                    <div>
+                        <label style="display: block; margin-bottom: 8px; font-size: 14px; color: #606266; font-weight: 500;">选择流程</label>
+                        <el-select 
+                            v-model="loginSelectedFlow" 
+                            style="width: 100%;"
+                            placeholder="请选择流程"
+                        >
+                            <el-option label="医疗分身Agent" value="medical_agent"></el-option>
+                            <el-option label="工作计划Agent" value="work_plan_agent"></el-option>
+                        </el-select>
                     </div>
-                    <div v-if="filteredUsers.length === 0" style="padding: 20px; text-align: center; color: #909399;">
-                        暂无用户
+                    
+                    <!-- 用户选择 -->
+                    <div>
+                        <label style="display: block; margin-bottom: 8px; font-size: 14px; color: #606266; font-weight: 500;">选择用户</label>
+                        <el-input
+                            v-model="userSearchKeyword"
+                            placeholder="搜索用户名（支持模糊匹配）"
+                            style="margin-bottom: 12px;"
+                        >
+                            <template #prefix>
+                                <el-icon><Search /></el-icon>
+                            </template>
+                        </el-input>
+                        <div style="max-height: 300px; overflow-y: auto; border: 1px solid #e4e7ed; border-radius: 4px; padding: 8px;">
+                            <div 
+                                v-for="user in filteredUsers" 
+                                :key="user.id"
+                                @click="selectLoginUser(user)"
+                                style="padding: 12px; border: 1px solid #e4e7ed; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s;"
+                                :style="loginSelectedUserId === user.id ? 'background: #e0f2fe; border-color: #409eff;' : ''"
+                                @mouseenter="$event.currentTarget.style.background = loginSelectedUserId === user.id ? '#e0f2fe' : '#f3f4f6'"
+                                @mouseleave="$event.currentTarget.style.background = loginSelectedUserId === user.id ? '#e0f2fe' : '#fff'"
+                            >
+                                <div style="font-weight: bold; margin-bottom: 4px;">{{ user.username || user.user_name }}</div>
+                                <div style="font-size: 12px; color: #909399;">
+                                    ID: {{ user.id }} | 手机: {{ user.phone || '未设置' }} | 邮箱: {{ user.email || '未设置' }}
+                                </div>
+                                <div v-if="user.user_info" style="font-size: 12px; color: #606266; margin-top: 4px; white-space: pre-wrap; font-family: 'Courier New', monospace;">
+                                    {{ typeof user.user_info === 'object' ? JSON.stringify(user.user_info, null, 2) : user.user_info }}
+                                </div>
+                            </div>
+                            <div v-if="filteredUsers.length === 0" style="padding: 20px; text-align: center; color: #909399;">
+                                暂无用户
+                            </div>
+                        </div>
                     </div>
                 </div>
+                
+                <template #footer>
+                    <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                        <el-button @click="closeLoginDialog">取消</el-button>
+                        <el-button type="primary" @click="handleLogin" :disabled="!loginSelectedUserId || !loginSelectedFlow">确定</el-button>
+                    </div>
+                </template>
             </el-dialog>
         </div>
     `,
         components: {
             Promotion: icons.Promotion,
-            Search: icons.Search
+            Search: icons.Search,
+            Edit: icons.Edit
         }
     });
 })();

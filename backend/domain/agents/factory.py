@@ -6,7 +6,8 @@ import logging
 from typing import List, Optional, Any
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
-from langgraph.prebuilt import create_react_agent
+# from langgraph.prebuilt import create_react_agent
+from langchain.agents import create_agent
 
 from backend.infrastructure.llm.client import get_llm
 from backend.infrastructure.prompts.manager import prompt_manager
@@ -20,34 +21,46 @@ logger = logging.getLogger(__name__)
 class AgentExecutor:
     """Agent执行器包装类（兼容接口）"""
     
-    def __init__(self, graph: Any, tools: List[BaseTool], verbose: bool = False):
+    def __init__(self, graph: Any, tools: List[BaseTool], prompt_cache_key: str, verbose: bool = False):
         """
         初始化Agent执行器
         
         Args:
             graph: LangGraph编译后的图
             tools: 工具列表
+            prompt_cache_key: 提示词缓存键
             verbose: 是否输出详细信息
         """
         self.graph = graph
         self.tools = tools
+        self.prompt_cache_key = prompt_cache_key
         self.verbose = verbose
     
-    def invoke(self, input_data: dict, callbacks: Optional[List] = None) -> dict:
+    def invoke(self, input_data: dict, callbacks: Optional[List] = None, system_prompt: Optional[str] = None) -> dict:
         """
         调用Agent
         
         Args:
             input_data: 输入数据，包含 "input" 字段
             callbacks: 回调处理器列表（可选，用于运行时传递callbacks）
+            system_prompt: 系统提示词（可选，用于运行时动态设置）
             
         Returns:
             包含 "output" 和 "messages" 的字典
         """
-        from langchain_core.messages import HumanMessage
+        from langchain_core.messages import HumanMessage, SystemMessage
         
         input_text = input_data.get("input", "")
-        messages = [HumanMessage(content=input_text)]
+        messages = []
+        
+        # 如果提供了系统提示词，添加到消息列表开头
+        if system_prompt:
+            messages.append(SystemMessage(content=system_prompt))
+            logger.debug(f"[AgentExecutor] 添加系统提示词，长度: {len(system_prompt)}")
+        
+        # 添加用户消息
+        messages.append(HumanMessage(content=input_text))
+        
         config = {"configurable": {"thread_id": "default"}}
         
         # 如果提供了callbacks，添加到config中（用于运行时传递callbacks）
@@ -94,8 +107,8 @@ class AgentFactory:
         Returns:
             AgentExecutor: Agent执行器
         """
-        # 加载提示词
-        prompt_content = prompt_manager.get_prompt(
+        # 加载提示词并缓存
+        prompt_cache_key = prompt_manager.cached_prompt(
             prompt_path=config.prompt,
             flow_dir=flow_dir
         )
@@ -124,11 +137,10 @@ class AgentFactory:
         )
         
         # 使用LangGraph的create_react_agent创建图
-        graph = create_react_agent(
+        graph = create_agent(
             model=llm,
-            tools=agent_tools,
-            prompt=prompt_content  # 直接传入提示词字符串
+            tools=agent_tools
         )
         
         logger.debug(f"创建Agent: {config.prompt}, 工具数量: {len(agent_tools)}")
-        return AgentExecutor(graph, agent_tools, verbose=True)
+        return AgentExecutor(graph, agent_tools, prompt_cache_key, verbose=True)

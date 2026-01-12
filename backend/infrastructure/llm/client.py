@@ -21,7 +21,7 @@ def get_llm(
     provider: str,
     model: str,
     temperature: Optional[float] = None,
-    callbacks: Optional[List[BaseCallbackHandler]] = None,
+    # callbacks: Optional[List[BaseCallbackHandler]] = None,
     **kwargs
 ) -> BaseChatModel:
     """
@@ -61,14 +61,14 @@ def get_llm(
         temperature=temperature,
         openai_api_key=api_key,
         openai_api_base=base_url,
-        callbacks=callbacks if callbacks else None,
+        # callbacks=callbacks if callbacks else None,
         **{k: v for k, v in kwargs.items() if k not in ["api_key", "base_url"]}
     )
     
     logger.debug(
         f"创建 LLM 客户端: provider={provider}, model={model}, "
         f"temperature={temperature}, base_url={base_url}, "
-        f"callbacks_count={len(callbacks)}"
+        # f"callbacks_count={len(callbacks)}"
     )
     
     return llm

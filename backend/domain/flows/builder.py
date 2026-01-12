@@ -3,6 +3,7 @@
 负责构建LangGraph图
 """
 import logging
+import re
 from typing import Dict, Callable, List
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
@@ -11,6 +12,7 @@ from backend.domain.state import FlowState
 from backend.domain.flows.definition import FlowDefinition, NodeDefinition
 from backend.domain.agents.factory import AgentFactory
 from backend.domain.tools.registry import tool_registry
+from backend.infrastructure.prompts.manager import prompt_manager
 
 logger = logging.getLogger(__name__)
 
@@ -31,13 +33,9 @@ class GraphBuilder:
         """
         graph = StateGraph(FlowState)
         
-        # 创建节点函数字典
-        # node_functions: Dict[str, Callable] = {}
-        
         # 为每个节点创建节点函数
         for node_def in flow_def.nodes:
             node_func = GraphBuilder._create_node_function(node_def, flow_def)
-            # node_functions[node_def.name] = node_func
             graph.add_node(node_def.name, node_func)
         
         # 按源节点分组边
@@ -122,20 +120,32 @@ class GraphBuilder:
             
             def agent_node_action(state: FlowState) -> FlowState:
                 """Agent节点函数"""
-                # 获取最后一条用户消息
-                if not state.get("messages"):
+                # 获取系统提示词，然后替换占位符
+                system_prompt = prompt_manager.get_prompt_by_key(agent_executor.prompt_cache_key)
+                # 用FlowState user_info 属性替换提示词中的 {{user_info}} 占位符
+                user_info = state.get("user_info")
+                if user_info:
+                    # 替换 {{user_info}} 占位符（使用正则表达式支持灵活格式）
+                    system_prompt = re.sub(r'\{\{user_info\}\}', user_info, system_prompt)
+                else:
+                    # 如果 user_info 为空，替换为空字符串
+                    system_prompt = re.sub(r'\{\{user_info\}\}', "", system_prompt)
+
+                # 获取当前用户消息
+                current_message = state.get("current_message")
+                if not current_message:
                     return state
                 
-                last_message = state["messages"][-1]
-                input_text = last_message.content if hasattr(last_message, "content") else str(last_message)
+                input_text = current_message.content if hasattr(current_message, "content") else str(current_message)
                 
-                # 执行Agent
+                # 执行Agent，传入替换后的系统提示词
                 result = agent_executor.invoke(
                     {"input": input_text},
-                    None
+                    callbacks=None,
+                    system_prompt=system_prompt
                 )
                 
-                # 更新状态（？？是不是解析模型的回复结果，如果是，这里需要将其抽取成为一个独立的方法）
+                # 更新状态（？？是不是解析模型的回复结果，如果是，这里需要将其抽取成为一个独立的方法）（？？为何要用新的state）
                 new_state = state.copy()
                 if "output" in result:
                     # AgentExecutor返回output字段
@@ -157,9 +167,21 @@ class GraphBuilder:
                             logger.warning(f"解析意图识别结果失败: {e}")
                             new_state["intent"] = "unclear"
                     
-                    # 将输出添加到消息列表
+                    # 将输出添加到历史消息列表
+                    # 将当前消息和AI回复都添加到历史消息中
                     from langchain_core.messages import AIMessage
-                    new_state["messages"] = state["messages"] + [AIMessage(content=output)]
+                    history_messages = state.get("history_messages", [])
+                    ai_message = AIMessage(content=output)
+                    
+                    # 更新历史消息：添加当前消息和AI回复
+                    new_history = history_messages.copy()
+                    if current_message:
+                        new_history.append(current_message)
+                    new_history.append(ai_message)
+                    
+                    new_state["history_messages"] = new_history
+                    # 清空当前消息（已处理，因为 total=False，可以设置为 None）
+                    new_state["current_message"] = None
                 
                 return new_state
             

@@ -1,5 +1,5 @@
 """
-用户上下文：用户相关信息
+用户信息：用户相关信息
 用于存储用户信息、偏好和设置
 """
 import logging
@@ -8,9 +8,9 @@ from typing import Any, Dict, Optional
 logger = logging.getLogger(__name__)
 
 
-class UserContext:
+class UserInfo:
     """
-    用户上下文：用户相关信息
+    用户信息：用户相关信息
     
     用于存储用户基本信息、偏好设置等，
     支持提示词个性化和用户信息访问。
@@ -18,7 +18,7 @@ class UserContext:
     
     def __init__(self, user_id: str):
         """
-        初始化用户上下文
+        初始化用户信息
         
         Args:
             user_id: 用户ID
@@ -30,7 +30,7 @@ class UserContext:
             "settings": {},
             "user_info": None,  # 用户基本信息（JSON格式）
         }
-        logger.debug(f"创建UserContext实例: user_id={user_id}")
+        logger.debug(f"创建UserInfo实例: user_id={user_id}")
     
     def set_preference(self, key: str, value: Any) -> None:
         """
@@ -41,7 +41,7 @@ class UserContext:
             value: 偏好值
         """
         self._data["preferences"][key] = value
-        logger.debug(f"UserContext设置偏好: user_id={self.user_id}, key={key}")
+        logger.debug(f"UserInfo设置偏好: user_id={self.user_id}, key={key}")
     
     def get_preference(self, key: str, default: Any = None) -> Any:
         """
@@ -65,7 +65,7 @@ class UserContext:
             value: 设置值
         """
         self._data["settings"][key] = value
-        logger.debug(f"UserContext设置设置: user_id={self.user_id}, key={key}")
+        logger.debug(f"UserInfo设置设置: user_id={self.user_id}, key={key}")
     
     def get_setting(self, key: str, default: Any = None) -> Any:
         """
@@ -88,7 +88,7 @@ class UserContext:
             user_info: 用户基本信息字典（JSON格式）
         """
         self._data["user_info"] = user_info
-        logger.debug(f"UserContext设置用户信息: user_id={self.user_id}")
+        logger.debug(f"UserInfo设置用户信息: user_id={self.user_id}")
     
     def get_user_info(self) -> Optional[Dict[str, Any]]:
         """
@@ -98,30 +98,6 @@ class UserContext:
             用户基本信息字典，如果未设置则返回None
         """
         return self._data.get("user_info")
-    
-    def set(self, key: str, value: Any) -> None:
-        """
-        设置通用数据
-        
-        Args:
-            key: 数据键
-            value: 数据值
-        """
-        self._data[key] = value
-        logger.debug(f"UserContext设置数据: user_id={self.user_id}, key={key}")
-    
-    def get(self, key: str, default: Any = None) -> Any:
-        """
-        获取通用数据
-        
-        Args:
-            key: 数据键
-            default: 默认值（如果键不存在）
-            
-        Returns:
-            数据值，如果键不存在则返回默认值
-        """
-        return self._data.get(key, default)
     
     def update(self, data: Dict[str, Any]) -> None:
         """
@@ -141,7 +117,7 @@ class UserContext:
         
         # 更新其他数据
         self._data.update(data)
-        logger.debug(f"UserContext批量更新数据: user_id={self.user_id}, keys={list(data.keys())}")
+        logger.debug(f"UserInfo批量更新数据: user_id={self.user_id}, keys={list(data.keys())}")
     
     @property
     def data(self) -> Dict[str, Any]:
@@ -175,5 +151,5 @@ class UserContext:
     
     def __repr__(self) -> str:
         """返回对象的字符串表示"""
-        return f"UserContext(user_id={self.user_id}, preferences={len(self._data['preferences'])}, settings={len(self._data['settings'])})"
+        return f"UserInfo(user_id={self.user_id}, preferences={len(self._data['preferences'])}, settings={len(self._data['settings'])})"
 
