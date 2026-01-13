@@ -6,7 +6,7 @@ nodes:
   - name: intent_recognition
     type: agent
     config:
-      prompt: prompts/intent_recognition.txt
+      prompt: prompts/00-intent_recognition_agent.md
       model:
         provider: doubao
         name: doubao-seed-1-6-251015
@@ -15,7 +15,7 @@ nodes:
   - name: blood_pressure_agent
     type: agent
     config:
-      prompt: prompts/blood_pressure_agent.txt
+      prompt: prompts/10-blood_pressure_agent.md
       model:
         provider: doubao
         name: doubao-seed-1-6-251015
@@ -23,10 +23,19 @@ nodes:
       tools:
         - record_blood_pressure
 
-  - name: clarify_intent
+  - name: qa_agent
     type: agent
     config:
-      prompt: prompts/clarify_intent.txt
+      prompt: prompts/50-QA_agent.md
+      model:
+        provider: doubao
+        name: doubao-seed-1-6-251015
+        temperature: 0.7
+
+  - name: unclear_agent
+    type: agent
+    config:
+      prompt: prompts/90-unclear-agent.md
       model:
         provider: doubao
         name: doubao-seed-1-6-251015
@@ -35,11 +44,15 @@ nodes:
 edges:
   - from: intent_recognition
     to: blood_pressure_agent
-    condition: intent == "blood_pressure"
+    condition: intent == "blood_pressure" && confidence >= 0.8
   
   - from: intent_recognition
-    to: clarify_intent
-    condition: intent == "unclear"
+    to: qa_agent
+    condition: intent == "qa" && confidence >= 0.8
+  
+  - from: intent_recognition
+    to: unclear_agent
+    condition: intent == "greeting" || need_clarification == true
   
   # 已删除多余的 always 边，Agent 节点执行完成后流程自动结束
   # 多轮对话通过新的 HTTP 请求来处理

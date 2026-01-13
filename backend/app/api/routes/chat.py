@@ -84,7 +84,22 @@ async def chat(
         ai_messages = [msg for msg in flow_msgs if isinstance(msg, AIMessage)]
         if ai_messages:
             last_message = ai_messages[-1]
-            response_text = last_message.content if hasattr(last_message, "content") else str(last_message)
+            raw_content = last_message.content if hasattr(last_message, "content") else str(last_message)
+            
+            # 尝试解析为 JSON 对象，提取 response_content
+            response_text = raw_content
+            try:
+                # 尝试解析为 JSON
+                parsed_content = json.loads(raw_content)
+                # 如果是字典类型，尝试读取 response_content
+                if isinstance(parsed_content, dict) and "response_content" in parsed_content:
+                    response_content_value = parsed_content.get("response_content")
+                    # 如果 response_content 存在且不为空，则使用它
+                    if response_content_value is not None and str(response_content_value).strip():
+                        response_text = str(response_content_value)
+            except (json.JSONDecodeError, TypeError, AttributeError):
+                # 解析失败或不是 JSON 格式，使用原始字符串
+                pass
         else:
             response_text = "抱歉，我没有收到回复。"
         

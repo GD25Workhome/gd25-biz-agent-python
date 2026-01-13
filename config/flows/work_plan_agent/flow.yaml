@@ -6,7 +6,7 @@ nodes:
   - name: intent_recognition
     type: agent
     config:
-      prompt: prompts/intent_recognition.txt
+      prompt: prompts/intent_recognition.md
       model:
         provider: doubao
         name: doubao-seed-1-6-251015
@@ -15,7 +15,7 @@ nodes:
   - name: record_work_plan
     type: agent
     config:
-      prompt: prompts/work_plan_agent.txt
+      prompt: prompts/work_plan_agent.md
       model:
         provider: doubao
         name: doubao-seed-1-6-251015
@@ -24,7 +24,7 @@ nodes:
   - name: clarify_intent
     type: agent
     config:
-      prompt: prompts/clarify_intent.txt
+      prompt: prompts/clarify_intent.md
       model:
         provider: doubao
         name: doubao-seed-1-6-251015

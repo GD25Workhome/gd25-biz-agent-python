@@ -10,6 +10,7 @@ from langgraph.checkpoint.memory import MemorySaver
 
 from backend.domain.state import FlowState
 from backend.domain.flows.definition import FlowDefinition, NodeDefinition
+from backend.domain.flows.condition_evaluator import ConditionEvaluator
 from backend.domain.agents.factory import AgentFactory
 from backend.domain.tools.registry import tool_registry
 from backend.infrastructure.prompts.manager import prompt_manager
@@ -162,7 +163,7 @@ class GraphBuilder:
                 if "output" in result:
                     # AgentExecutor返回output字段
                     output = result["output"]
-                    # 如果是意图识别节点，解析JSON并更新intent
+                    # 如果是意图识别节点，解析JSON并更新intent、confidence、need_clarification
                     if node_name == "intent_recognition":
                         import json
                         try:
@@ -174,10 +175,38 @@ class GraphBuilder:
                                 if json_start >= 0 and json_end > json_start:
                                     json_str = output[json_start:json_end]
                                     intent_data = json.loads(json_str)
+                                    
+                                    # 提取意图
                                     new_state["intent"] = intent_data.get("intent", "unclear")
+                                    
+                                    # 提取置信度
+                                    confidence = intent_data.get("confidence")
+                                    if confidence is not None:
+                                        try:
+                                            new_state["confidence"] = float(confidence)
+                                        except (ValueError, TypeError):
+                                            logger.warning(f"置信度格式错误: {confidence}，使用默认值 0.0")
+                                            new_state["confidence"] = 0.0
+                                    else:
+                                        new_state["confidence"] = 0.0
+                                    
+                                    # 提取是否需要澄清
+                                    need_clarification = intent_data.get("need_clarification")
+                                    if need_clarification is not None:
+                                        new_state["need_clarification"] = bool(need_clarification)
+                                    else:
+                                        new_state["need_clarification"] = False
+                                    
+                                    logger.debug(
+                                        f"意图识别结果: intent={new_state['intent']}, "
+                                        f"confidence={new_state['confidence']}, "
+                                        f"need_clarification={new_state['need_clarification']}"
+                                    )
                         except Exception as e:
                             logger.warning(f"解析意图识别结果失败: {e}")
                             new_state["intent"] = "unclear"
+                            new_state["confidence"] = 0.0
+                            new_state["need_clarification"] = False
                     
                     # 将AI回复存放到 flow_msgs（流程中间消息），不存放到 history_messages
                     ai_message = AIMessage(content=output)
@@ -198,25 +227,19 @@ class GraphBuilder:
     @staticmethod
     def _evaluate_condition(condition: str, state: FlowState) -> bool:
         """
-        评估条件表达式（简化版，仅支持简单的条件判断）
+        评估条件表达式
+        
+        使用 ConditionEvaluator 来评估复杂的条件表达式，支持：
+        - 逻辑运算符：&& (and), || (or)
+        - 比较运算符：==, !=, <, <=, >, >=
+        - 状态变量：intent, confidence, need_clarification
         
         Args:
-            condition: 条件表达式（如 "intent == 'blood_pressure'"）
+            condition: 条件表达式（如 "intent == 'blood_pressure' && confidence >= 0.8"）
             state: 流程状态
             
         Returns:
             bool: 条件是否为真
         """
-        # 简化处理：仅支持 intent == "xxx" 的条件
-        if "==" in condition:
-            parts = condition.split("==")
-            if len(parts) == 2:
-                key = parts[0].strip()
-                value = parts[1].strip().strip('"\'')
-                
-                if key == "intent":
-                    return state.get("intent") == value
-        
-        # 默认返回False
-        return False
+        return ConditionEvaluator.evaluate(condition, state)
 

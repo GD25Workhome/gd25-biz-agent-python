@@ -18,6 +18,7 @@ class PromptManager:
     
     _instance: 'PromptManager' = None
     _cache: Dict[str, str] = {}  # 缓存：key为提示词路径，value为提示词内容
+    _cache_flow_rule: Dict[str, str] = {}  # 缓存：key为flow_rule文件名（不含扩展名），value为文件内容
     
     def __new__(cls):
         """单例模式实现"""
@@ -55,6 +56,9 @@ class PromptManager:
         else:
             logger.info(f"加载并缓存提示词: {cache_key}")
         
+        # 替换占位符（如 {route_llm_resopnse}）
+        prompt_content = self._replace_flow_rule_placeholders(prompt_content)
+        
         self._cache[cache_key] = prompt_content
         
         return cache_key
@@ -82,88 +86,10 @@ class PromptManager:
         # 如果 key 不存在，抛出异常
         raise KeyError(f"提示词未在缓存中找到: {cache_key}")
 
-    # 待升级-这里的提示词替换统一入口可以保留，但是内部的逻辑需要和当前的设计统一一下
-    # def _replace_placeholders(
-    #     self,
-    #     template: str,
-    #     session_context: Optional[SessionContext] = None,
-    #     user_info: Optional[UserInfo] = None
-    # ) -> str:
-        """
-        替换提示词模板中的占位符
-        
-        支持的占位符格式：
-        - {{key}}: 从session_context或user_info获取数据
-        - {{session_context.key}}: 明确指定从session_context获取
-        - {{user_info.key}}: 明确指定从user_info获取
-        
-        Args:
-            template: 提示词模板
-            session_context: 聊天上下文
-            user_info: 用户信息
-            
-        Returns:
-            str: 替换后的提示词内容
-        """
-        # 匹配占位符：{{key}} 或 {{context.key}}
-        pattern = r'\{\{([^}]+)\}\}'
-        
-        def replace_match(match):
-            placeholder = match.group(1).strip()
-            
-            # 检查是否有上下文前缀
-            if placeholder.startswith("session_context."):
-                key = placeholder[len("session_context."):]
-                if session_context:
-                    value = session_context.get(key)
-                    if value is not None:
-                        return str(value)
-            elif placeholder.startswith("flow_context."):
-                # 兼容旧的 flow_context. 前缀
-                key = placeholder[len("flow_context."):]
-                if session_context:
-                    value = session_context.get(key)
-                    if value is not None:
-                        return str(value)
-            elif placeholder.startswith("user_info."):
-                key = placeholder[len("user_info."):]
-                if user_info:
-                    # 支持特殊键：preferences.key, settings.key, user_info
-                    if key.startswith("preferences."):
-                        pref_key = key[len("preferences."):]
-                        value = user_info.get_preference(pref_key)
-                        if value is not None:
-                            return str(value)
-                    elif key.startswith("settings."):
-                        setting_key = key[len("settings."):]
-                        value = user_info.get_setting(setting_key)
-                        if value is not None:
-                            return str(value)
-                    elif key == "user_info":
-                        user_info_dict = user_info.get_user_info()
-                        if user_info_dict:
-                            import json
-                            return json.dumps(user_info_dict, ensure_ascii=False)
-                    else:
-                        # UserInfo 没有通用的 get 方法，跳过
-                        pass
-            else:
-                # 默认先从session_context查找
-                if session_context:
-                    value = session_context.get(placeholder)
-                    if value is not None:
-                        return str(value)
-            
-            # 如果找不到，保留原占位符（或返回空字符串）
-            logger.warning(f"占位符未找到值: {placeholder}")
-            return match.group(0)  # 保留原占位符
-        
-        result = re.sub(pattern, replace_match, template)
-        return result
-    
     def clear_cache(self) -> None:
         """清空缓存"""
         self._cache.clear()
+        self._cache_flow_rule.clear()
         logger.info("提示词缓存已清空")
     
     def get_cache_size(self) -> int:
@@ -174,6 +100,96 @@ class PromptManager:
             int: 缓存中提示词的数量
         """
         return len(self._cache)
+    
+    @property
+    def cached_flow_rule(self) -> Dict[str, str]:
+        """
+        获取缓存的 flow_rule 文件内容
+        
+        如果缓存为空，会自动触发缓存逻辑
+        
+        Returns:
+            Dict[str, str]: key为文件名（不含扩展名），value为文件内容
+        """
+        if not self._cache_flow_rule:
+            self._load_flow_rule_cache()
+        return self._cache_flow_rule
+    
+    def _load_flow_rule_cache(self) -> None:
+        """
+        加载并缓存 config/flows/flow_rule 目录下的所有文件
+        
+        该方法会：
+        1. 扫描 config/flows/flow_rule 目录下的所有 .md 文件
+        2. 读取文件内容并缓存
+        3. key 为文件名（不含扩展名），value 为文件内容
+        """
+        # 获取项目根目录（假设 manager.py 在 backend/infrastructure/prompts/ 下）
+        # 项目根目录应该是 backend 的父目录
+        current_file = Path(__file__)
+        # backend/infrastructure/prompts/manager.py -> 项目根目录
+        project_root = current_file.parent.parent.parent.parent
+        flow_rule_dir = project_root / "config" / "flows" / "flow_rule"
+        
+        if not flow_rule_dir.exists():
+            logger.warning(f"flow_rule 目录不存在: {flow_rule_dir}")
+            return
+        
+        # 扫描目录下的所有 .md 文件
+        for file_path in flow_rule_dir.glob("*.md"):
+            # 获取文件名（不含扩展名）作为 key
+            file_name = file_path.stem
+            
+            try:
+                # 读取文件内容
+                content = PromptLoader.load_from_file(file_path)
+                self._cache_flow_rule[file_name] = content
+                logger.debug(f"已缓存 flow_rule 文件: {file_name}")
+            except Exception as e:
+                logger.error(f"加载 flow_rule 文件失败: {file_path}, 错误: {e}")
+    
+    def _replace_flow_rule_placeholders(self, template: str) -> str:
+        """
+        替换提示词模板中的 flow_rule 占位符
+        
+        支持的占位符格式：
+        - {route_llm_resopnse}: 替换为 route_llm_resopnse.md 的内容
+        - {end_llm_resopnse}: 替换为 end_llm_resopnse.md 的内容
+        - {llm_rule_part}: 替换为 llm_rule_part.md 的内容
+        
+        只替换在 flow_rule 目录中实际存在的文件对应的占位符，其他占位符不处理。
+        
+        Args:
+            template: 提示词模板
+            
+        Returns:
+            str: 替换后的提示词内容
+        """
+        # 获取缓存的 flow_rule 文件
+        flow_rule_cache = self.cached_flow_rule
+        
+        if not flow_rule_cache:
+            logger.warning("flow_rule 缓存为空，无法替换占位符")
+            return template
+        
+        # 匹配占位符：{key}
+        pattern = r'\{([^}]+)\}'
+        
+        def replace_match(match):
+            placeholder_key = match.group(1).strip()
+            
+            # 检查缓存中是否存在对应的文件
+            if placeholder_key in flow_rule_cache:
+                content = flow_rule_cache[placeholder_key]
+                logger.debug(f"替换占位符: {{{placeholder_key}}}")
+                return content
+            else:
+                # 如果不存在，保留原占位符
+                logger.debug(f"占位符未找到对应的 flow_rule 文件: {{{placeholder_key}}}，保留原占位符")
+                return match.group(0)  # 保留原占位符
+        
+        result = re.sub(pattern, replace_match, template)
+        return result
 
 
 # 创建全局提示词管理器实例
