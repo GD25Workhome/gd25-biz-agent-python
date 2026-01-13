@@ -84,7 +84,7 @@ class TokenInjectedTool(BaseTool):
                 )
                 raise ValueError(
                     f"工具 {self.name} 需要 tokenId，但上下文中未设置。"
-                    f"请确保在调用工具前使用 TokenContext 设置 tokenId。"
+                    f"请确保在调用工具前使用 RuntimeContext 设置 tokenId。"
                 )
             else:
                 # 如果不需要 tokenId，直接返回原参数
@@ -167,14 +167,29 @@ class TokenInjectedTool(BaseTool):
         同步调用工具（自动注入 tokenId）
         
         重写 invoke 方法，在调用原始工具之前注入 tokenId
+        
+        注意：如果原始工具是异步的，此方法会抛出错误，应该使用 ainvoke 方法
         """
-        # 如果 tool_input 是字典，直接注入 tokenId
-        if isinstance(tool_input, dict):
-            injected_input = self._inject_token_id(tool_input)
-            return self._original_tool.invoke(injected_input, run_manager=run_manager, **kwargs)
-        else:
-            # 对于其他类型的输入，直接调用原始工具
-            return self._original_tool.invoke(tool_input, run_manager=run_manager, **kwargs)
+        try:
+            # 如果 tool_input 是字典，直接注入 tokenId
+            if isinstance(tool_input, dict):
+                injected_input = self._inject_token_id(tool_input)
+                return self._original_tool.invoke(injected_input, run_manager=run_manager, **kwargs)
+            else:
+                # 对于其他类型的输入，直接调用原始工具
+                return self._original_tool.invoke(tool_input, run_manager=run_manager, **kwargs)
+        except NotImplementedError as e:
+            # 如果工具是异步的，会抛出 NotImplementedError
+            # 检查错误信息是否包含 "sync invocation"
+            error_msg = str(e)
+            if "sync invocation" in error_msg.lower() or "does not support sync" in error_msg.lower():
+                raise NotImplementedError(
+                    f"工具 {self.name} 是异步工具，不支持同步调用（invoke）。"
+                    f"LangGraph 应该使用 ainvoke 方法进行异步调用。"
+                    f"原始错误: {error_msg}"
+                ) from e
+            # 其他 NotImplementedError 直接抛出
+            raise
     
     async def ainvoke(
         self,

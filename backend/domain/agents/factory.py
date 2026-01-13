@@ -14,7 +14,6 @@ from backend.infrastructure.llm.client import get_llm
 from backend.infrastructure.prompts.manager import prompt_manager
 from backend.domain.flows.definition import AgentNodeConfig, ModelConfig
 from backend.domain.tools.registry import tool_registry
-from backend.domain.tools.wrapper import wrap_tools_with_token_context
 
 logger = logging.getLogger(__name__)
 
@@ -37,9 +36,9 @@ class AgentExecutor:
         self.prompt_cache_key = prompt_cache_key
         self.verbose = verbose
     
-    def invoke(self, msgs: List[BaseMessage], callbacks: Optional[List] = None, sys_msg: Optional[SystemMessage] = None) -> dict:
+    async def ainvoke(self, msgs: List[BaseMessage], callbacks: Optional[List] = None, sys_msg: Optional[SystemMessage] = None) -> dict:
         """
-        调用Agent
+        异步调用Agent
         
         Args:
             msgs: 消息列表（BaseMessage类型）
@@ -67,8 +66,8 @@ class AgentExecutor:
             config["callbacks"] = callbacks
             logger.debug(f"[AgentExecutor] 传递运行时callbacks: count={len(callbacks)}")
         
-        # 调用LangGraph图
-        result = self.graph.invoke({"messages": messages}, config)
+        # 调用LangGraph图（异步）
+        result = await self.graph.ainvoke({"messages": messages}, config)
         
         # 提取最后一条AI消息作为输出
         output = ""
@@ -84,6 +83,36 @@ class AgentExecutor:
                 output = last_msg.content if hasattr(last_msg, "content") else str(last_msg)
         
         return {"output": output, "messages": result.get("messages", [])}
+    
+    def invoke(self, msgs: List[BaseMessage], callbacks: Optional[List] = None, sys_msg: Optional[SystemMessage] = None) -> dict:
+        """
+        调用Agent（同步方法，向后兼容，内部调用异步方法）
+        
+        注意：在异步上下文中（如 FastAPI 路由），请使用 ainvoke() 方法。
+        
+        Args:
+            msgs: 消息列表（BaseMessage类型）
+            callbacks: 回调处理器列表（可选，用于运行时传递callbacks）
+            sys_msg: 系统消息（可选，用于运行时动态设置）
+            
+        Returns:
+            包含 "output" 和 "messages" 的字典
+            
+        Raises:
+            RuntimeError: 如果在异步上下文中调用此方法
+        """
+        import asyncio
+        # 检查是否在异步上下文中
+        try:
+            loop = asyncio.get_running_loop()
+            # 如果事件循环正在运行，无法使用同步方法
+            raise RuntimeError(
+                "在异步上下文中，请使用 ainvoke() 方法而不是 invoke()。"
+                "当前代码路径应该已经使用异步调用链。"
+            )
+        except RuntimeError:
+            # 没有运行中的事件循环，可以使用 asyncio.run()
+            return asyncio.run(self.ainvoke(msgs, callbacks, sys_msg))
 
 
 class AgentFactory:
@@ -125,9 +154,7 @@ class AgentFactory:
         if tools:
             agent_tools.extend(tools)
         
-        # 使用TokenInjectedTool包装所有工具（自动注入token_id）
-        agent_tools = wrap_tools_with_token_context(agent_tools)
-        
+        # 注意：工具内部已使用 get_token_id() 获取 token_id，不再需要包装器
         # 创建LLM客户端
         llm = get_llm(
             provider=config.model.provider,

@@ -22,6 +22,8 @@ nodes:
         temperature: 0.7
       tools:
         - record_blood_pressure
+        - query_blood_pressure
+        - update_blood_pressure
 
   - name: qa_agent
     type: agent

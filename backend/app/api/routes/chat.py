@@ -14,7 +14,7 @@ from backend.app.api.helpers import (
     build_initial_state,
     get_flow_graph
 )
-from backend.domain.tools.context import TokenContext
+from backend.domain.tools.context import RuntimeContext
 from backend.infrastructure.observability.langfuse_handler import (
     set_langfuse_trace_context,
     create_langfuse_handler
@@ -66,15 +66,19 @@ async def chat(
         # 创建Langfuse CallbackHandler（用于在LLM调用时自动记录到Langfuse）
         langfuse_handler = create_langfuse_handler(context={"trace_id": request.trace_id})
         
-        # 在TokenContext中执行流程图（确保工具可以获取token_id）
-        with TokenContext(token_id=request.token_id):
+        # 在RuntimeContext中执行流程图（确保工具可以获取运行时信息）
+        with RuntimeContext(
+            token_id=request.token_id,
+            session_id=request.session_id,
+            trace_id=request.trace_id
+        ):
             # 构建配置（包含callbacks）
             config = {"configurable": {"thread_id": request.session_id}}
             if langfuse_handler:
                 config["callbacks"] = [langfuse_handler]
             
             # 执行流程图
-            result = graph.invoke(initial_state, config)
+            result = await graph.ainvoke(initial_state, config)
         
         # 提取最后一条AI消息作为回复
         # 从 flow_msgs 中提取最后一条 AI 消息（流程中间消息）

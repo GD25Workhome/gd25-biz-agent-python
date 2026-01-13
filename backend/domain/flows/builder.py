@@ -119,7 +119,7 @@ class GraphBuilder:
             # 捕获节点名称，用于意图识别节点的特殊处理
             node_name = node_def.name
             
-            def agent_node_action(state: FlowState) -> FlowState:
+            async def agent_node_action(state: FlowState) -> FlowState:
                 """Agent节点函数"""
                 from langchain_core.messages import SystemMessage, AIMessage
                 
@@ -152,7 +152,7 @@ class GraphBuilder:
                     return state
                 
                 # 执行Agent，传入消息列表和系统消息
-                result = agent_executor.invoke(
+                result = await agent_executor.ainvoke(
                     msgs=msgs,
                     callbacks=None,
                     sys_msg=sys_msg
