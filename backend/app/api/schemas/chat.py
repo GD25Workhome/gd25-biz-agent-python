@@ -16,7 +16,6 @@ class ChatRequest(BaseModel):
     message: str = Field(..., description="用户消息")
     session_id: str = Field(..., description="会话ID")
     token_id: str = Field(..., description="令牌ID（当前阶段等于用户ID，未来可扩展为业务系统令牌）")
-    flow_name: Optional[str] = Field(default="medical_agent", description="流程名称（可选，默认为medical_agent）")
     conversation_history: Optional[List[ChatMessage]] = Field(
         default=None,
         description="对话历史（可选）"

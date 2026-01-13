@@ -6,6 +6,7 @@ import logging
 from typing import List, Optional, Any
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
+from langchain_core.messages import BaseMessage, SystemMessage
 # from langgraph.prebuilt import create_react_agent
 from langchain.agents import create_agent
 
@@ -36,30 +37,28 @@ class AgentExecutor:
         self.prompt_cache_key = prompt_cache_key
         self.verbose = verbose
     
-    def invoke(self, input_data: dict, callbacks: Optional[List] = None, system_prompt: Optional[str] = None) -> dict:
+    def invoke(self, msgs: List[BaseMessage], callbacks: Optional[List] = None, sys_msg: Optional[SystemMessage] = None) -> dict:
         """
         调用Agent
         
         Args:
-            input_data: 输入数据，包含 "input" 字段
+            msgs: 消息列表（BaseMessage类型）
             callbacks: 回调处理器列表（可选，用于运行时传递callbacks）
-            system_prompt: 系统提示词（可选，用于运行时动态设置）
+            sys_msg: 系统消息（可选，用于运行时动态设置）
             
         Returns:
             包含 "output" 和 "messages" 的字典
         """
-        from langchain_core.messages import HumanMessage, SystemMessage
-        
-        input_text = input_data.get("input", "")
+        # 组装消息列表：sys_msg + msgs
         messages = []
         
-        # 如果提供了系统提示词，添加到消息列表开头
-        if system_prompt:
-            messages.append(SystemMessage(content=system_prompt))
-            logger.debug(f"[AgentExecutor] 添加系统提示词，长度: {len(system_prompt)}")
+        # 如果提供了系统消息，添加到消息列表开头
+        if sys_msg:
+            messages.append(sys_msg)
+            logger.debug(f"[AgentExecutor] 添加系统消息，长度: {len(sys_msg.content) if hasattr(sys_msg, 'content') else 0}")
         
-        # 添加用户消息
-        messages.append(HumanMessage(content=input_text))
+        # 添加传入的消息列表
+        messages.extend(msgs)
         
         config = {"configurable": {"thread_id": "default"}}
         

@@ -14,6 +14,7 @@ class FlowState(TypedDict, total=False):
     """
     current_message: HumanMessage  # 当前用户消息
     history_messages: List[BaseMessage]  # 历史消息列表
+    flow_msgs: List[BaseMessage]  # 流程运行中的中间消息（暂存，不参与模型调用）
     session_id: str  # 会话ID
     intent: Optional[str]  # 当前意图（用于路由条件判断）
     token_id: Optional[str]  # 令牌ID（用于工具参数注入）

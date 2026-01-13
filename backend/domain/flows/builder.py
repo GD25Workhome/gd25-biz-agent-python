@@ -120,6 +120,8 @@ class GraphBuilder:
             
             def agent_node_action(state: FlowState) -> FlowState:
                 """Agent节点函数"""
+                from langchain_core.messages import SystemMessage, AIMessage
+                
                 # 获取系统提示词，然后替换占位符
                 system_prompt = prompt_manager.get_prompt_by_key(agent_executor.prompt_cache_key)
                 # 用FlowState user_info 属性替换提示词中的 {{user_info}} 占位符
@@ -130,22 +132,32 @@ class GraphBuilder:
                 else:
                     # 如果 user_info 为空，替换为空字符串
                     system_prompt = re.sub(r'\{\{user_info\}\}', "", system_prompt)
-
-                # 获取当前用户消息
+                
+                # 将系统提示词封装为 SystemMessage
+                sys_msg = SystemMessage(content=system_prompt)
+                
+                # 拼装消息列表：history_messages + current_message
+                history_messages = state.get("history_messages", [])
                 current_message = state.get("current_message")
-                if not current_message:
+                
+                # 构建消息列表
+                msgs = history_messages.copy()
+                if current_message:
+                    msgs.append(current_message)
+                
+                # 如果消息列表为空，直接返回
+                if not msgs:
+                    logger.warning(f"[节点 {node_name}] 消息列表为空，跳过执行")
                     return state
                 
-                input_text = current_message.content if hasattr(current_message, "content") else str(current_message)
-                
-                # 执行Agent，传入替换后的系统提示词
+                # 执行Agent，传入消息列表和系统消息
                 result = agent_executor.invoke(
-                    {"input": input_text},
+                    msgs=msgs,
                     callbacks=None,
-                    system_prompt=system_prompt
+                    sys_msg=sys_msg
                 )
                 
-                # 更新状态（？？是不是解析模型的回复结果，如果是，这里需要将其抽取成为一个独立的方法）（？？为何要用新的state）
+                # 更新状态
                 new_state = state.copy()
                 if "output" in result:
                     # AgentExecutor返回output字段
@@ -167,21 +179,13 @@ class GraphBuilder:
                             logger.warning(f"解析意图识别结果失败: {e}")
                             new_state["intent"] = "unclear"
                     
-                    # 将输出添加到历史消息列表
-                    # 将当前消息和AI回复都添加到历史消息中
-                    from langchain_core.messages import AIMessage
-                    history_messages = state.get("history_messages", [])
+                    # 将AI回复存放到 flow_msgs（流程中间消息），不存放到 history_messages
                     ai_message = AIMessage(content=output)
-                    
-                    # 更新历史消息：添加当前消息和AI回复
-                    new_history = history_messages.copy()
-                    if current_message:
-                        new_history.append(current_message)
-                    new_history.append(ai_message)
-                    
-                    new_state["history_messages"] = new_history
-                    # 清空当前消息（已处理，因为 total=False，可以设置为 None）
-                    new_state["current_message"] = None
+                    flow_msgs = state.get("flow_msgs", [])
+                    new_flow_msgs = flow_msgs.copy()
+                    new_flow_msgs.append(ai_message)
+                    new_state["flow_msgs"] = new_flow_msgs
+                    # history_messages 保持不变，不添加中间节点的输出
                 
                 return new_state
             
