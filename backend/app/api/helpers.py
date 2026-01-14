@@ -4,6 +4,8 @@ API层辅助工具方法
 """
 import logging
 from typing import List, Optional, Dict, Any
+from datetime import datetime
+from dateutil import parser as date_parser
 from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
 from fastapi import HTTPException
 
@@ -14,6 +16,35 @@ from backend.domain.context.context_manager import get_context_manager
 from backend.domain.context.user_info import UserInfo
 
 logger = logging.getLogger(__name__)
+
+
+def parse_datetime(date_str: str) -> Optional[datetime]:
+    """
+    解析日期时间字符串，支持多种格式
+    
+    Args:
+        date_str: 日期时间字符串
+        
+    Returns:
+        datetime对象，如果解析失败则返回None
+        
+    支持的格式：
+    - YYYY-MM-DD
+    - YYYY-MM-DD HH:MM
+    - YYYY-MM-DD HH:MM:SS
+    - YYYY/MM/DD
+    - YYYY/MM/DD HH:MM
+    - 其他常见日期格式
+    """
+    if not date_str:
+        return None
+    
+    try:
+        # 使用dateutil.parser解析，支持多种格式
+        return date_parser.parse(date_str)
+    except (ValueError, TypeError) as e:
+        logger.warning(f"日期解析失败: {date_str}, 错误: {e}")
+        return None
 
 
 def build_history_messages(conversation_history: Optional[List[ChatMessage]]) -> List[BaseMessage]:

@@ -6,46 +6,18 @@ import logging
 import json
 from typing import Optional
 from datetime import datetime, timedelta
-from dateutil import parser as date_parser
 from langchain_core.tools import tool
 
 from backend.infrastructure.database.connection import get_session_factory
 from backend.infrastructure.database.repository.blood_pressure_repository import BloodPressureRepository
 from backend.domain.tools.context import get_token_id
+from backend.domain.tools.decorator import register_tool
+from backend.app.api.helpers import parse_datetime
 
 logger = logging.getLogger(__name__)
 
 
-def parse_datetime(date_str: str) -> Optional[datetime]:
-    """
-    解析日期时间字符串，支持多种格式
-    
-    Args:
-        date_str: 日期时间字符串
-        
-    Returns:
-        datetime对象，如果解析失败则返回None
-        
-    支持的格式：
-    - YYYY-MM-DD
-    - YYYY-MM-DD HH:MM
-    - YYYY-MM-DD HH:MM:SS
-    - YYYY/MM/DD
-    - YYYY/MM/DD HH:MM
-    - 其他常见日期格式
-    """
-    if not date_str:
-        return None
-    
-    try:
-        # 使用dateutil.parser解析，支持多种格式
-        return date_parser.parse(date_str)
-    except (ValueError, TypeError) as e:
-        logger.warning(f"日期解析失败: {date_str}, 错误: {e}")
-        return None
-
-
-@tool
+@register_tool
 async def record_blood_pressure(
     systolic: int,
     diastolic: int,
@@ -125,7 +97,7 @@ async def record_blood_pressure(
             return f"错误：记录血压数据失败 - {str(e)}"
 
 
-@tool
+@register_tool
 async def query_blood_pressure(
     days: Optional[int] = None,
     start_date: Optional[str] = None,
@@ -214,7 +186,7 @@ async def query_blood_pressure(
             return f"错误：查询血压记录失败 - {str(e)}"
 
 
-@tool
+@register_tool
 async def update_blood_pressure(
     systolic: Optional[int] = None,
     diastolic: Optional[int] = None,
@@ -287,7 +259,7 @@ async def update_blood_pressure(
             if not updated_record:
                 return "错误：更新血压记录失败"
             
-            logger.info(f"更新血压记录成功 (user_id={token_id}, record_id={updated_record.id}): {json.dumps(update_data, ensure_ascii=False)}")
+            logger.info(f"更新血压记录成功 (user_id={token_id}, record_id={updated_record.id}): {json.dumps(update_data, ensure_ascii=False, default=str)}")
             
             # 生成回复
             result = "已更新血压记录："
