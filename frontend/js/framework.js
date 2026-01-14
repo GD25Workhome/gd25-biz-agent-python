@@ -31,6 +31,11 @@
                 title: '用户管理',
                 component: 'UsersComponent',
                 icon: 'User'
+            },
+            'flow-preview': {
+                title: '流程预览',
+                component: 'FlowPreviewComponent',
+                icon: 'Document'
             }
         };
         

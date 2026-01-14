@@ -8,6 +8,7 @@ from backend.app.api.routes.chat import router as chat_router
 from backend.app.api.routes.blood_pressure import router as blood_pressure_router
 from backend.app.api.routes.users import router as users_router
 from backend.app.api.routes.login import router as login_router
+from backend.app.api.routes.flows import router as flows_router
 
 # 创建主路由
 router = APIRouter()
@@ -17,6 +18,7 @@ router.include_router(chat_router, prefix="/api/v1", tags=["聊天"])
 router.include_router(blood_pressure_router, prefix="/api/v1", tags=["血压记录"])
 router.include_router(users_router, prefix="/api/v1", tags=["用户管理"])
 router.include_router(login_router, prefix="/api/v1", tags=["登录"])
+router.include_router(flows_router, prefix="/api/v1", tags=["流程管理"])
 
 __all__ = ["router"]
 

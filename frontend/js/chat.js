@@ -20,6 +20,7 @@
         setup(props) {
         const API_BASE = 'http://localhost:8000';
         const USERS_API_URL = `${API_BASE}/api/v1/users`;
+        const FLOWS_API_URL = `${API_BASE}/api/v1/flows`;
         
         // 聊天数据
         const messages = ref([]);
@@ -60,6 +61,10 @@
         const filteredUsers = ref([]);
         const loginSelectedUserId = ref('');
         const loginSelectedFlow = ref('medical_agent');
+        
+        // 流程列表
+        const flowList = ref([]);
+        const loadingFlows = ref(false);
         
         // 生成 Trace ID
         const generateTraceId = () => {
@@ -154,6 +159,27 @@
                 console.error('加载用户列表失败:', e);
                 ElMessage.error('加载用户列表失败: ' + e.message);
                 return [];
+            }
+        };
+        
+        // 加载流程列表
+        const loadFlowList = async () => {
+            loadingFlows.value = true;
+            try {
+                const resp = await fetch(FLOWS_API_URL);
+                if (!resp.ok) throw new Error('加载流程列表失败');
+                const data = await resp.json();
+                flowList.value = data || [];
+            } catch (e) {
+                console.error('加载流程列表失败:', e);
+                ElMessage.error('加载流程列表失败: ' + e.message);
+                // 失败时使用默认流程列表
+                flowList.value = [
+                    { name: 'medical_agent', description: '医疗分身Agent' },
+                    { name: 'work_plan_agent', description: '工作计划Agent' }
+                ];
+            } finally {
+                loadingFlows.value = false;
             }
         };
         
@@ -551,6 +577,7 @@
         onMounted(async () => {
             initFlowSelection();
             initDateTimeInput();
+            await loadFlowList(); // 加载流程列表
             // 不再自动恢复用户选择，用户需要通过登录弹框登录
             messages.value.push({
                 role: 'assistant',
@@ -593,7 +620,11 @@
             openLoginDialog,
             closeLoginDialog,
             handleLogin,
-            selectLoginUser
+            selectLoginUser,
+            // 流程列表
+            flowList,
+            loadingFlows,
+            loadFlowList
         };
     },
     template: `
@@ -751,9 +782,14 @@
                             v-model="loginSelectedFlow" 
                             style="width: 100%;"
                             placeholder="请选择流程"
+                            :loading="loadingFlows"
                         >
-                            <el-option label="医疗分身Agent" value="medical_agent"></el-option>
-                            <el-option label="工作计划Agent" value="work_plan_agent"></el-option>
+                            <el-option 
+                                v-for="flow in flowList" 
+                                :key="flow.name"
+                                :label="flow.description || flow.name" 
+                                :value="flow.name"
+                            ></el-option>
                         </el-select>
                     </div>
                     

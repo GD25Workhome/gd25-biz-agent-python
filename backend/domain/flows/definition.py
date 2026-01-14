@@ -44,3 +44,9 @@ class FlowDefinition(BaseModel):
     entry_node: str = Field(description="入口节点名称")
     flow_dir: Optional[str] = Field(default=None, description="流程目录路径（用于解析相对路径）")
 
+
+class FlowPreviewInfo(FlowDefinition):
+    """流程预览信息（继承FlowDefinition，增加预览相关属性）"""
+    is_compiled: bool = Field(default=False, description="是否已编译")
+    preview_image_path: Optional[str] = Field(default=None, description="流程图预览图片路径（相对于static目录）")
+
