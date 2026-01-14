@@ -4,6 +4,7 @@
 flows:
   preload:  # 需要预加载的流程（启动时编译）
     - medical_agent
+    - medical_agent_v2
   
   lazy_load:  # 按需加载的流程（首次使用时编译）
     - work_plan_agent

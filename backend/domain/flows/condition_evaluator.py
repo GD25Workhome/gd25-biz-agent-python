@@ -26,9 +26,9 @@ class ConditionEvaluator:
         - 括号：用于改变运算优先级
         
         支持的变量：
-        - intent: 当前意图（字符串）
-        - confidence: 意图识别置信度（浮点数，0.0-1.0）
-        - need_clarification: 是否需要澄清（布尔值）
+        - 所有存储在 state.edges_var 中的变量都可以在条件表达式中使用
+        - 变量名直接对应 edges_var 中的 key
+        - 例如：如果 edges_var 中有 {"intent": "record", "confidence": 0.9}，则可以使用 intent == "record" && confidence >= 0.8
         
         Args:
             condition: 条件表达式字符串（如 "intent == 'blood_pressure' && confidence >= 0.8"）
@@ -69,7 +69,7 @@ class ConditionEvaluator:
             logger.warning(
                 f"条件表达式中使用了未定义的变量: {e.name}。"
                 f"条件: {condition}。"
-                f"可用变量: intent, confidence, need_clarification"
+                f"可用变量: {list(names.keys()) if names else '无'}"
             )
             return False
         except SyntaxError as e:
@@ -110,7 +110,9 @@ class ConditionEvaluator:
     @staticmethod
     def _build_names_dict(state: FlowState) -> Dict[str, Any]:
         """
-        从流程状态构建变量字典
+        从流程状态构建变量字典（通用化设计）
+        
+        直接从 edges_var 获取所有变量，不再定制化
         
         Args:
             state: 流程状态
@@ -118,20 +120,35 @@ class ConditionEvaluator:
         Returns:
             Dict[str, Any]: 变量字典，用于条件表达式评估
         """
-        names = {
-            "intent": state.get("intent"),
-            "confidence": state.get("confidence"),
-            "need_clarification": state.get("need_clarification"),
-        }
+        # 直接从 edges_var 获取所有变量
+        edges_var = state.get("edges_var", {})
+        if edges_var is None:
+            edges_var = {}
         
-        # 处理 None 值：如果字段不存在，设置为合理的默认值
+        # 直接使用 edges_var 作为变量字典
+        names = edges_var.copy()
+        
+        # 处理 None 值：为所有 None 值设置合理的默认值
         # 这样可以避免条件表达式中的 None 比较问题
-        if names["intent"] is None:
-            names["intent"] = ""
-        if names["confidence"] is None:
-            names["confidence"] = 0.0
-        if names["need_clarification"] is None:
-            names["need_clarification"] = False
+        for key, value in list(names.items()):
+            if value is None:
+                # 根据 key 的特征设置默认值
+                if isinstance(key, str):
+                    if key.endswith("_success"):
+                        names[key] = False
+                    elif key.endswith("_type"):
+                        names[key] = ""
+                    elif key == "confidence":
+                        names[key] = 0.0
+                    elif key == "need_clarification":
+                        names[key] = False
+                    elif key == "intent":
+                        names[key] = ""
+                    else:
+                        # 其他情况，根据值的类型推断（但 value 是 None，所以使用空字符串）
+                        names[key] = ""
+                else:
+                    names[key] = ""
         
         return names
 

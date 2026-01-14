@@ -15,24 +15,12 @@ from backend.app.api.schemas.login import (
 )
 from backend.domain.context.context_manager import get_context_manager
 from backend.domain.context.user_info import UserInfo
+from backend.domain.flows.manager import FlowManager
 from backend.infrastructure.database.connection import get_async_session
 from backend.infrastructure.database.repository.user_repository import UserRepository
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-
-
-# 流程映射配置（根据前端配置构建）
-FLOW_MAPPING = {
-    "medical_agent": {
-        "flow_key": "medical_agent",
-        "flow_name": "医疗分身Agent"
-    },
-    "work_plan_agent": {
-        "flow_key": "work_plan_agent",
-        "flow_name": "工作计划Agent"
-    }
-}
 
 
 @router.post("/login/token", response_model=CreateTokenResponse)
@@ -109,20 +97,30 @@ async def create_session(request: CreateSessionRequest) -> CreateSessionResponse
         # 固定参数：医生ID
         doctor_id = "doctorId001"
         
+        # 从流程缓存中获取流程定义（参考 flows.py 的逻辑）
+        # 如果流程定义不存在，先尝试扫描
+        if flow_name not in FlowManager._flow_definitions:
+            FlowManager.scan_flows()
+        
         # 验证流程名称是否有效
-        if flow_name not in FLOW_MAPPING:
+        if flow_name not in FlowManager._flow_definitions:
+            # 获取所有可用的流程名称
+            available_flows = list(FlowManager._flow_definitions.keys())
             raise HTTPException(
                 status_code=400,
-                detail=f"无效的流程名称: {flow_name}。支持的流程: {list(FLOW_MAPPING.keys())}"
+                detail=f"无效的流程名称: {flow_name}。支持的流程: {available_flows}"
             )
+        
+        # 获取流程定义
+        flow_def = FlowManager._flow_definitions[flow_name]
         
         # 构建session_id：用户id_医生id_流程name
         session_id = f"{user_id}_{doctor_id}_{flow_name}"
         
-        # 获取流程信息
+        # 获取流程信息（从流程定义中获取）
         flow_info = {
-            "flow_key": FLOW_MAPPING[flow_name]["flow_key"],
-            "flow_name": FLOW_MAPPING[flow_name]["flow_name"]
+            "flow_key": flow_def.name,
+            "flow_name": flow_def.description or flow_def.name
         }
         
         # 构建医生信息

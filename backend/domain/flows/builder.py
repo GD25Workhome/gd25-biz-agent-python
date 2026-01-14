@@ -56,25 +56,40 @@ class GraphBuilder:
             
             if conditional_edges:
                 # 条件边：创建路由函数
-                # 使用列表捕获，避免闭包问题
+                # 关键修复：使用默认参数避免闭包问题
+                # 问题：Python 闭包捕获的是变量名，不是变量值
+                # 在循环中，所有 route_func 都引用同一个变量名 edges_list
+                # 当循环继续执行时，edges_list 被重新赋值，所有闭包都看到新值
+                # 解决方案：使用默认参数，默认参数在函数定义时求值，可以"冻结"值
                 edges_list = conditional_edges.copy()
                 
-                def route_func(state: FlowState) -> str:
+                def route_func(state: FlowState, edges_list=edges_list):
                     """路由函数"""
                     for edge in edges_list:
                         if GraphBuilder._evaluate_condition(edge.condition, state):
+                            # 如果目标是字符串 "END"，转换为 END 对象
+                            if edge.to_node == "END":
+                                return END
                             return edge.to_node
                     return END
                 
                 # 构建路由映射
-                route_map = {edge.to_node: edge.to_node for edge in conditional_edges}
+                route_map = {}
+                for edge in conditional_edges:
+                    # 如果目标是字符串 "END"，转换为 END 对象
+                    target = END if edge.to_node == "END" else edge.to_node
+                    route_map[target] = target
+                
+                # 确保 END 在路由映射中（即使没有显式使用）
                 route_map[END] = END
                 
                 graph.add_conditional_edges(from_node, route_func, route_map)
             else:
                 # 普通边
                 for edge in always_edges:
-                    graph.add_edge(edge.from_node, edge.to_node)
+                    # 如果目标是字符串 "END"，转换为 END 对象
+                    target = END if edge.to_node == "END" else edge.to_node
+                    graph.add_edge(edge.from_node, target)
         
         # 设置入口节点
         graph.set_entry_point(flow_def.entry_node)
@@ -114,7 +129,6 @@ class GraphBuilder:
             )
             
             # 创建节点函数
-            # 捕获节点名称，用于意图识别节点的特殊处理
             node_name = node_def.name
             
             async def agent_node_action(state: FlowState) -> FlowState:
@@ -151,53 +165,47 @@ class GraphBuilder:
                 
                 # 更新状态
                 new_state = state.copy()
+                
+                # 关键：每次创建新 state 时，edges_var 使用新字典，不继承原始值
+                # 确保上游节点的数据不会污染下游节点的条件判断
+                new_state["edges_var"] = {}
+                
                 if "output" in result:
                     # AgentExecutor返回output字段
                     output = result["output"]
-                    # 如果是意图识别节点，解析JSON并更新intent、confidence、need_clarification
-                    if node_name == "intent_recognition":
-                        import json
-                        try:
-                            # 尝试从输出中提取JSON
-                            if isinstance(output, str):
-                                # 查找JSON部分
-                                json_start = output.find("{")
-                                json_end = output.rfind("}") + 1
-                                if json_start >= 0 and json_end > json_start:
-                                    json_str = output[json_start:json_end]
-                                    intent_data = json.loads(json_str)
-                                    
-                                    # 提取意图
-                                    new_state["intent"] = intent_data.get("intent", "unclear")
-                                    
-                                    # 提取置信度
-                                    confidence = intent_data.get("confidence")
-                                    if confidence is not None:
-                                        try:
-                                            new_state["confidence"] = float(confidence)
-                                        except (ValueError, TypeError):
-                                            logger.warning(f"置信度格式错误: {confidence}，使用默认值 0.0")
-                                            new_state["confidence"] = 0.0
-                                    else:
-                                        new_state["confidence"] = 0.0
-                                    
-                                    # 提取是否需要澄清
-                                    need_clarification = intent_data.get("need_clarification")
-                                    if need_clarification is not None:
-                                        new_state["need_clarification"] = bool(need_clarification)
-                                    else:
-                                        new_state["need_clarification"] = False
-                                    
-                                    logger.debug(
-                                        f"意图识别结果: intent={new_state['intent']}, "
-                                        f"confidence={new_state['confidence']}, "
-                                        f"need_clarification={new_state['need_clarification']}"
-                                    )
-                        except Exception as e:
-                            logger.warning(f"解析意图识别结果失败: {e}")
-                            new_state["intent"] = "unclear"
-                            new_state["confidence"] = 0.0
-                            new_state["need_clarification"] = False
+                    import json
+                    
+                    # 通用化数据提取：不区分节点名称，统一处理所有节点
+                    # 检查两个数据来源：JSON所有属性 + additional_fields
+                    try:
+                        if isinstance(output, str):
+                            # 尝试从输出中提取 JSON
+                            json_start = output.find("{")
+                            json_end = output.rfind("}") + 1
+                            if json_start >= 0 and json_end > json_start:
+                                json_str = output[json_start:json_end]
+                                output_data = json.loads(json_str)
+                                
+                                # 数据来源1：如果是 JSON 类型，直接将所有属性存储到 edges_var
+                                # 跳过非边条件判断相关的字段（如 response_content, reasoning_summary）
+                                if isinstance(output_data, dict):
+                                    for key, value in output_data.items():
+                                        if key not in ["response_content", "reasoning_summary"]:
+                                            new_state["edges_var"][key] = value
+                                
+                                # 数据来源2：如果存在 additional_fields，将其中的所有字段也存储到 edges_var
+                                if "additional_fields" in output_data:
+                                    additional_fields = output_data["additional_fields"]
+                                    if isinstance(additional_fields, dict):
+                                        for key, value in additional_fields.items():
+                                            new_state["edges_var"][key] = value
+                                
+                                logger.debug(
+                                    f"[节点 {node_name}] 从输出提取数据到 edges_var: {new_state['edges_var']}"
+                                )
+                    except Exception as e:
+                        logger.debug(f"[节点 {node_name}] 解析输出 JSON 失败（可能不是 JSON 格式）: {e}")
+                        # 不是 JSON 格式或解析失败，不影响流程继续
                     
                     # 将AI回复存放到 flow_msgs（流程中间消息），不存放到 history_messages
                     ai_message = AIMessage(content=output)
@@ -223,7 +231,7 @@ class GraphBuilder:
         使用 ConditionEvaluator 来评估复杂的条件表达式，支持：
         - 逻辑运算符：&& (and), || (or)
         - 比较运算符：==, !=, <, <=, >, >=
-        - 状态变量：intent, confidence, need_clarification
+        - 状态变量：所有存储在 state.edges_var 中的变量都可以在条件表达式中使用
         
         Args:
             condition: 条件表达式（如 "intent == 'blood_pressure' && confidence >= 0.8"）

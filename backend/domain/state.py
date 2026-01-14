@@ -16,10 +16,11 @@ class FlowState(TypedDict, total=False):
     history_messages: List[BaseMessage]  # 历史消息列表
     flow_msgs: List[BaseMessage]  # 流程运行中的中间消息（暂存，不参与模型调用）
     session_id: str  # 会话ID
-    intent: Optional[str]  # 当前意图（用于路由条件判断）
-    confidence: Optional[float]  # 意图识别置信度（0.0-1.0）
-    need_clarification: Optional[bool]  # 是否需要澄清意图
+    intent: Optional[str]  # 当前意图（用于路由条件判断，保留用于向后兼容）
+    confidence: Optional[float]  # 意图识别置信度（0.0-1.0，保留用于向后兼容）
+    need_clarification: Optional[bool]  # 是否需要澄清意图（保留用于向后兼容）
     token_id: Optional[str]  # 令牌ID（用于工具参数注入）
     trace_id: Optional[str]  # Trace ID（用于可观测性追踪）
     prompt_vars: Optional[Dict[str, Any]]  # 字典类型，用于存储提示词中的变量
+    edges_var: Optional[Dict[str, Any]]  # 边条件判断变量存储（通用化设计）
 
