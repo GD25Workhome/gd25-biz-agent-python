@@ -21,7 +21,5 @@ class FlowState(TypedDict, total=False):
     need_clarification: Optional[bool]  # 是否需要澄清意图
     token_id: Optional[str]  # 令牌ID（用于工具参数注入）
     trace_id: Optional[str]  # Trace ID（用于可观测性追踪）
-    user_info: Optional[str]  # 患者基础信息（多行文本）
-    current_date: Optional[str]  # 当前日期时间（格式：YYYY-MM-DD HH:mm）
-    # 可以根据需要扩展其他字段
+    prompt_vars: Optional[Dict[str, Any]]  # 字典类型，用于存储提示词中的变量
 

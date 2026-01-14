@@ -3,7 +3,6 @@
 负责构建LangGraph图
 """
 import logging
-import re
 from typing import Dict, Callable, List
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
@@ -13,7 +12,6 @@ from backend.domain.flows.definition import FlowDefinition, NodeDefinition
 from backend.domain.flows.condition_evaluator import ConditionEvaluator
 from backend.domain.agents.factory import AgentFactory
 from backend.domain.tools.registry import tool_registry
-from backend.infrastructure.prompts.manager import prompt_manager
 
 logger = logging.getLogger(__name__)
 
@@ -121,21 +119,14 @@ class GraphBuilder:
             
             async def agent_node_action(state: FlowState) -> FlowState:
                 """Agent节点函数"""
-                from langchain_core.messages import SystemMessage, AIMessage
+                from langchain_core.messages import AIMessage
+                from backend.infrastructure.prompts.sys_prompt_builder import build_system_message
                 
-                # 获取系统提示词，然后替换占位符
-                system_prompt = prompt_manager.get_prompt_by_key(agent_executor.prompt_cache_key)
-                # 用FlowState user_info 属性替换提示词中的 {{user_info}} 占位符
-                user_info = state.get("user_info")
-                if user_info:
-                    # 替换 {{user_info}} 占位符（使用正则表达式支持灵活格式）
-                    system_prompt = re.sub(r'\{\{user_info\}\}', user_info, system_prompt)
-                else:
-                    # 如果 user_info 为空，替换为空字符串
-                    system_prompt = re.sub(r'\{\{user_info\}\}', "", system_prompt)
-                
-                # 将系统提示词封装为 SystemMessage
-                sys_msg = SystemMessage(content=system_prompt)
+                # 构建系统消息（自动替换占位符，内部从 state 中提取 prompt_vars）
+                sys_msg = build_system_message(
+                    prompt_cache_key=agent_executor.prompt_cache_key,
+                    state=state
+                )
                 
                 # 拼装消息列表：history_messages + current_message
                 history_messages = state.get("history_messages", [])
