@@ -18,6 +18,8 @@ from backend.domain.context.user_info import UserInfo
 from backend.domain.flows.manager import FlowManager
 from backend.infrastructure.database.connection import get_async_session
 from backend.infrastructure.database.repository.user_repository import UserRepository
+from backend.infrastructure.database.repository.token_cache_repository import TokenCacheRepository
+from backend.infrastructure.database.repository.session_cache_repository import SessionCacheRepository
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -63,6 +65,13 @@ async def create_token(
         # 为_token_contexts设置key为用户id，value为UserInfo对象
         context_manager._token_contexts[user_id] = user_info
         
+        # 持久化到数据库（新增）
+        token_repo = TokenCacheRepository(session)
+        await token_repo.upsert_token(
+            token_id=user_id,  # 使用user_id作为token_id
+            data_info=user_info.data  # 序列化UserInfo数据到data_info字段
+        )
+        
         await session.commit()
         
         logger.info(f"创建Token: user_id={user_id}, token_id={user_id}")
@@ -78,7 +87,10 @@ async def create_token(
 
 
 @router.post("/login/session", response_model=CreateSessionResponse)
-async def create_session(request: CreateSessionRequest) -> CreateSessionResponse:
+async def create_session(
+    request: CreateSessionRequest,
+    session: AsyncSession = Depends(get_async_session)
+) -> CreateSessionResponse:
     """
     创建Session接口
     
@@ -87,6 +99,7 @@ async def create_session(request: CreateSessionRequest) -> CreateSessionResponse
     
     Args:
         request: 创建Session请求（包含用户ID、流程名称、医生ID）
+        session: 数据库会话（依赖注入）
         
     Returns:
         CreateSessionResponse: 创建的Session响应（包含session_id）
@@ -142,6 +155,15 @@ async def create_session(request: CreateSessionRequest) -> CreateSessionResponse
         # 为_session_contexts设置key为session_id，value为字典对象
         context_manager._session_contexts[session_id] = session_context
         
+        # 持久化到数据库（新增）
+        session_repo = SessionCacheRepository(session)
+        await session_repo.upsert_session(
+            session_id=session_id,
+            data_info=session_context  # Session上下文数据存储到data_info字段
+        )
+        
+        await session.commit()
+        
         logger.info(
             f"创建Session: user_id={user_id}, flow_name={flow_name}, "
             f"doctor_id={doctor_id}, session_id={session_id}"
@@ -152,6 +174,7 @@ async def create_session(request: CreateSessionRequest) -> CreateSessionResponse
     except HTTPException:
         raise
     except Exception as e:
+        await session.rollback()
         logger.error(f"创建Session失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"创建Session失败: {str(e)}")
 

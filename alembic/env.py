@@ -37,7 +37,8 @@ if sync_db_url.startswith("postgresql+psycopg://"):
 elif sync_db_url.startswith("postgresql://"):
     # 如果没有驱动前缀，添加 psycopg3 驱动
     sync_db_url = sync_db_url.replace("postgresql://", "postgresql+psycopg://", 1)
-config.set_main_option("sqlalchemy.url", sync_db_url)
+# 直接设置到config.attributes，避免ConfigParser的插值问题
+config.attributes["sqlalchemy.url"] = sync_db_url
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

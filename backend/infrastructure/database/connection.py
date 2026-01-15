@@ -7,13 +7,13 @@ from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
 )
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 
 from backend.app.config import settings
 
 # 全局变量
-_async_engine: AsyncEngine | None = None
-_session_factory: async_sessionmaker[AsyncSession] | None = None
+_async_engine: Optional[AsyncEngine] = None
+_session_factory: Optional[async_sessionmaker[AsyncSession]] = None
 
 
 def get_async_engine() -> AsyncEngine:

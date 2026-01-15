@@ -50,6 +50,54 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+async def load_context_cache():
+    """
+    从数据库加载Token和Session缓存到ContextManager
+    
+    在系统启动时调用，将数据库中的缓存数据加载到内存中，
+    确保服务重启后Token和Session仍然可用。
+    """
+    from backend.infrastructure.database.connection import get_session_factory
+    from backend.infrastructure.database.repository.token_cache_repository import TokenCacheRepository
+    from backend.infrastructure.database.repository.session_cache_repository import SessionCacheRepository
+    from backend.domain.context.context_manager import get_context_manager
+    from backend.domain.context.user_info import UserInfo
+    
+    session_factory = get_session_factory()
+    async with session_factory() as session:
+        try:
+            context_manager = get_context_manager()
+            
+            # 加载Token缓存
+            token_repo = TokenCacheRepository(session)
+            token_records = await token_repo.get_all(limit=10000)  # 加载所有Token
+            
+            for token_record in token_records:
+                # 反序列化UserInfo对象
+                token_id = token_record.id  # id字段就是token_id（即user_id）
+                user_info = UserInfo(user_id=token_id)
+                if token_record.data_info:
+                    user_info.update(token_record.data_info)
+                context_manager._token_contexts[token_id] = user_info
+            
+            logger.info(f"   ✓ 加载了 {len(token_records)} 个Token缓存")
+            
+            # 加载Session缓存
+            session_repo = SessionCacheRepository(session)
+            session_records = await session_repo.get_all(limit=10000)  # 加载所有Session
+            
+            for session_record in session_records:
+                # 直接使用字典数据
+                session_id = session_record.id  # id字段就是session_id
+                context_manager._session_contexts[session_id] = session_record.data_info
+            
+            logger.info(f"   ✓ 加载了 {len(session_records)} 个Session缓存")
+            
+        except Exception as e:
+            logger.error(f"加载缓存失败: {e}", exc_info=True)
+            # 不抛出异常，允许系统继续启动（缓存加载失败不影响系统运行）
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理（替代已弃用的 on_event）"""
@@ -85,6 +133,11 @@ async def lifespan(app: FastAPI):
             logger.info(f"   ✓ 成功预加载 {len(preload_flows)} 个流程")
         else:
             logger.info("   ✓ 没有需要预加载的流程")
+        
+        # 5. 加载Token和Session缓存（新增）
+        logger.info("5. 加载Token和Session缓存...")
+        await load_context_cache()
+        logger.info("   ✓ 缓存加载完成")
         
         logger.info("=" * 60)
         logger.info("系统启动完成！")
