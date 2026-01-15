@@ -1,0 +1,151 @@
+name: medical_agent_v3
+version: "3.0"
+description: "医疗分身Agent流程V3 - 支持 thinking 和 reasoning_effort 参数优化版本"
+
+nodes:
+  # 意图识别 - 使用快速模式
+  - name: intent_recognition
+    type: agent
+    config:
+      prompt: prompts/00-intent_recognition_agent.md
+      model:
+        provider: doubao
+        name: doubao-seed-1-6-251015
+        temperature: 0.7
+        thinking:
+          type: disabled  # 关闭深度思考，加速响应
+
+  # 通用数据记录Agent - 使用轻量思考
+  - name: record_agent
+    type: agent
+    config:
+      prompt: prompts/11-record_agent.md
+      model:
+        provider: doubao
+        name: doubao-seed-1-8-251228
+        temperature: 0.7
+        thinking:
+          type: disabled  # 关闭深度思考，加速响应
+        # reasoning_effort: low  # 轻量思考，减少耗时
+        # timeout: 1800  # 30分钟超时（深度思考时建议设置）
+      tools:
+        - record_blood_pressure
+        - update_blood_pressure
+        - record_medication
+        - record_symptom
+        - record_health_event
+
+  # 记录后处理Agent（目前主要用于数据点评）- 使用轻量思考
+  - name: after_record_agent
+    type: agent
+    config:
+      prompt: prompts/12-after_record_agent.md
+      model:
+        provider: doubao
+        name: doubao-seed-1-8-251228
+        temperature: 0.7
+        thinking:
+          type: enabled  # 开启深度思考
+        reasoning_effort: low  # 轻量思考，减少耗时
+        timeout: 1800  # 30分钟超时
+      tools:
+        - query_blood_pressure
+        - query_medication
+        - query_symptom
+        - query_health_event
+
+  # 数据查询Agent - 使用轻量思考
+  - name: query_agent
+    type: agent
+    config:
+      prompt: prompts/20-query_agent.md
+      model:
+        provider: doubao
+        name: doubao-seed-1-8-251228
+        temperature: 0.7
+        thinking:
+          type: enabled  # 开启深度思考
+        reasoning_effort: low  # 轻量思考，减少耗时
+        timeout: 1800  # 30分钟超时
+      tools:
+        - query_blood_pressure
+        - query_medication
+        - query_symptom
+        - query_health_event
+
+  # QA Agent - 使用深度分析
+  - name: qa_agent
+    type: agent
+    config:
+      prompt: prompts/50-QA_agent.md
+      model:
+        provider: doubao
+        name: doubao-seed-1-8-251228
+        temperature: 0.7
+        thinking:
+          type: enabled  # 开启深度思考
+        reasoning_effort: high  # 深度分析
+        timeout: 1800  # 30分钟超时
+
+  # 不明确意图Agent - 使用默认模式（不设置 thinking 和 reasoning_effort）
+  - name: unclear_agent
+    type: agent
+    config:
+      prompt: prompts/90-unclear-agent.md
+      model:
+        provider: doubao
+        name: doubao-seed-1-6-251015
+        temperature: 0.7
+        # 不设置 thinking 和 reasoning_effort，使用模型默认行为
+
+edges:
+  # 记录数据流程
+  - from: intent_recognition
+    to: record_agent
+    condition: intent == "record" && confidence >= 0.8
+  
+  # 条件分支：根据记录是否成功决定路由
+  # 设计：使用条件边根据 record_success 字段进行精确路由
+  # - record_success == true：记录成功，进入 after_record_agent 进行点评
+  # - record_success != true：需要询问用户或记录失败，直接END（等待用户下次输入）
+  # record_success 字段由 GraphBuilder 在检测到工具调用成功时自动设置
+  - from: record_agent
+    to: after_record_agent
+    condition: record_success == true
+  
+  - from: record_agent
+    to: END
+    condition: record_success != true
+  
+  - from: after_record_agent
+    to: END
+    condition: always
+  
+  # 查询数据流程
+  - from: intent_recognition
+    to: query_agent
+    condition: intent == "query" && confidence >= 0.8
+  
+  - from: query_agent
+    to: END
+    condition: always
+  
+  # QA流程（保持不变）
+  - from: intent_recognition
+    to: qa_agent
+    condition: intent == "qa" && confidence >= 0.8
+  
+  - from: qa_agent
+    to: END
+    condition: always
+  
+  # 不明确意图流程（保持不变）
+  - from: intent_recognition
+    to: unclear_agent
+    condition: intent == "greeting" || need_clarification == true
+  
+  - from: unclear_agent
+    to: END
+    condition: always
+
+entry_node: intent_recognition

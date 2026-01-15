@@ -1,0 +1,101 @@
+name: medical_agent_v5
+version: "5.0"
+description: "医疗分身Agent流程V5 - 独立提示词聚合方案（提示词聚合 + RAG增强）"
+
+nodes:
+  # 节点1：快速意图识别节点
+  # 职责：快速识别用户意图，提取核心信息，生成检索查询文本
+  - name: intent_recognition
+    type: agent
+    config:
+      prompt: prompts/01-intent_recognition.md
+      model:
+        provider: doubao
+        name: doubao-seed-1-6-251015
+        temperature: 0.7
+        thinking:
+          type: disabled  # 关闭深度思考，加速响应
+
+  # 节点2：向量库检索与用户信息查询节点
+  # 职责：基于节点1的查询文本，从向量库检索相关示例；查询用户基础信息
+  # 注意：这是一个函数节点（function node），不是Agent节点
+  # 实现位置：在GraphBuilder中通过自定义节点函数实现
+  - name: retrieval_node
+    type: function  # 函数节点，非Agent
+    config:
+      # 向量库检索配置
+      retrieval:
+        top_k: 5  # 检索Top-K个结果
+        similarity_threshold: 0.7  # 相似度阈值
+        # 根据意图类型选择不同的表进行检索
+        # qa -> qa_examples, knowledge_base
+        # record -> record_examples
+        # query -> query_examples
+        # greeting -> 可跳过或检索通用示例
+      # 用户信息查询配置
+      user_info:
+        # 查询用户基础信息（姓名、年龄、诊断、用药、目标值等）
+
+  # 节点3：核心Agent节点
+  # 职责：统一的Agent，整合所有功能（记录、查询、QA、greeting）
+  # 使用节点2检索的示例和用户信息，动态构建提示词
+  - name: core_agent
+    type: agent
+    config:
+      prompt: prompts/03-core_agent.md
+      model:
+        provider: doubao
+        name: doubao-seed-1-8-251228
+        temperature: 0.7
+        thinking:
+          type: enabled  # 开启深度思考
+        reasoning_effort: low  # 轻量思考，减少耗时
+        timeout: 1800  # 30分钟超时
+      # 支持所有工具（记录、查询）
+      tools:
+        # 记录工具
+        - record_blood_pressure
+        - update_blood_pressure
+        - record_medication
+        - record_symptom
+        - record_health_event
+        # 查询工具
+        - query_blood_pressure
+        - query_medication
+        - query_symptom
+        - query_health_event
+
+edges:
+  # 节点1（意图识别） -> 节点2（检索）
+  # 所有意图都需要经过检索节点（即使greeting也可以检索通用示例）
+  - from: intent_recognition
+    to: retrieval_node
+    condition: always
+
+  # 节点2（检索） -> 节点3（核心Agent）
+  # 检索完成后，统一进入核心Agent处理
+  - from: retrieval_node
+    to: core_agent
+    condition: always
+
+  # 节点3（核心Agent） -> END
+  # 处理完成后结束
+  - from: core_agent
+    to: END
+    condition: always
+
+entry_node: intent_recognition
+
+# 状态字段说明
+# 需要在RouterState中新增以下字段：
+# - core_info: Optional[Dict]  # 节点1提取的核心信息（entities, query_text, question_type）
+# - retrieved_examples: Optional[List[Dict]]  # 节点2检索的示例列表
+# - user_info: Optional[Dict]  # 节点2查询的用户信息
+
+# 占位符替换说明
+# 节点3的提示词中包含以下占位符，需要在运行时动态替换：
+# - {retrieved_examples}: 格式化的检索示例文本
+# - {user_info}: 格式化的用户信息文本
+# - {llm_context_part}: 上下文信息（由系统自动填充）
+# - {llm_rule_part}: 核心原则（由系统自动填充）
+# - {end_llm_resopnse}: 输出格式要求（由系统自动填充）
