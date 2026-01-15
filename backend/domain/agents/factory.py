@@ -159,7 +159,10 @@ class AgentFactory:
         llm = get_llm(
             provider=config.model.provider,
             model=config.model.name,
-            temperature=config.model.temperature
+            temperature=config.model.temperature,
+            thinking=config.model.thinking,
+            reasoning_effort=config.model.reasoning_effort,
+            timeout=config.model.timeout
         )
         
         # 使用LangGraph的create_react_agent创建图

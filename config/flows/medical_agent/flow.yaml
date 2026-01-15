@@ -3,6 +3,7 @@ version: "1.0"
 description: "医疗分身Agent流程"
 
 nodes:
+  # 意图识别 - 使用快速模式
   - name: intent_recognition
     type: agent
     config:
@@ -11,29 +12,42 @@ nodes:
         provider: doubao
         name: doubao-seed-1-6-251015
         temperature: 0.7
+        thinking:
+          type: disabled  # 关闭深度思考，加速响应
 
+  # 血压记录Agent - 使用轻量思考
   - name: blood_pressure_agent
     type: agent
     config:
       prompt: prompts/10-blood_pressure_agent.md
       model:
         provider: doubao
-        name: doubao-seed-1-6-251015
+        name: doubao-seed-1-8-251228
         temperature: 0.7
+        thinking:
+          type: enabled  # 开启深度思考
+        reasoning_effort: low  # 轻量思考，减少耗时
+        timeout: 1800  # 30分钟超时（深度思考时建议设置）
       tools:
         - record_blood_pressure
         - query_blood_pressure
         - update_blood_pressure
 
+  # QA Agent - 使用深度分析
   - name: qa_agent
     type: agent
     config:
       prompt: prompts/50-QA_agent.md
       model:
         provider: doubao
-        name: doubao-seed-1-6-251015
+        name: doubao-seed-1-8-251228
         temperature: 0.7
+        thinking:
+          type: enabled  # 开启深度思考
+        reasoning_effort: high  # 深度分析
+        timeout: 1800  # 30分钟超时
 
+  # 不明确意图Agent - 使用默认模式（不设置 thinking 和 reasoning_effort）
   - name: unclear_agent
     type: agent
     config:
@@ -42,6 +56,7 @@ nodes:
         provider: doubao
         name: doubao-seed-1-6-251015
         temperature: 0.7
+        # 不设置 thinking 和 reasoning_effort，使用模型默认行为
 
 edges:
   - from: intent_recognition
