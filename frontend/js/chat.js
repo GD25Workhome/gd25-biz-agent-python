@@ -131,7 +131,7 @@
         const initFlowSelection = () => {
             // 从 localStorage 读取保存的流程选择
             const savedFlow = localStorage.getItem('chat_selected_flow');
-            if (savedFlow && (savedFlow === 'medical_agent' || savedFlow === 'work_plan_agent')) {
+            if (savedFlow) {
                 selectedFlow.value = savedFlow;
                 loginSelectedFlow.value = savedFlow;
             }
@@ -187,8 +187,25 @@
         const openLoginDialog = async () => {
             loginDialogVisible.value = true;
             userSearchKeyword.value = '';
-            loginSelectedUserId.value = '';
-            loginSelectedFlow.value = selectedFlow.value || 'medical_agent';
+            
+            // 从 localStorage 恢复上次选择的用户和流程
+            const savedUserId = localStorage.getItem('chat_selected_user_id');
+            const savedFlow = localStorage.getItem('chat_selected_flow');
+            
+            // 恢复流程选择
+            if (savedFlow) {
+                loginSelectedFlow.value = savedFlow;
+            } else {
+                loginSelectedFlow.value = selectedFlow.value || 'medical_agent';
+            }
+            
+            // 恢复用户选择
+            if (savedUserId) {
+                loginSelectedUserId.value = savedUserId;
+            } else {
+                loginSelectedUserId.value = '';
+            }
+            
             await loadUsers();
         };
         
@@ -360,6 +377,22 @@
         // 监听流程选择变化
         watch(selectedFlow, () => {
             saveFlowSelection();
+        });
+        
+        // 监听登录弹窗中的流程选择变化（也保存到 localStorage）
+        watch(loginSelectedFlow, () => {
+            if (loginSelectedFlow.value) {
+                localStorage.setItem('chat_selected_flow', loginSelectedFlow.value);
+            }
+        });
+        
+        // 监听登录弹窗中的用户选择变化（也保存到 localStorage）
+        watch(loginSelectedUserId, () => {
+            if (loginSelectedUserId.value) {
+                localStorage.setItem('chat_selected_user_id', loginSelectedUserId.value);
+            } else {
+                localStorage.removeItem('chat_selected_user_id');
+            }
         });
         
         // 格式化登录信息显示（多行格式）

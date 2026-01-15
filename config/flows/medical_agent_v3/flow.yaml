@@ -31,7 +31,9 @@ nodes:
       tools:
         - record_blood_pressure
         - update_blood_pressure
-        # 未来可以添加：record_symptom, record_medication 等
+        - record_medication
+        - record_symptom
+        - record_health_event
 
   # 记录后处理Agent（目前主要用于数据点评）- 使用轻量思考
   - name: after_record_agent
@@ -48,7 +50,9 @@ nodes:
         timeout: 1800  # 30分钟超时
       tools:
         - query_blood_pressure
-        # 未来可以添加：query_symptom, query_medication 等
+        - query_medication
+        - query_symptom
+        - query_health_event
 
   # 数据查询Agent - 使用轻量思考
   - name: query_agent
@@ -65,7 +69,9 @@ nodes:
         timeout: 1800  # 30分钟超时
       tools:
         - query_blood_pressure
-        # 未来可以添加：query_symptom, query_medication 等
+        - query_medication
+        - query_symptom
+        - query_health_event
 
   # QA Agent - 使用深度分析
   - name: qa_agent

@@ -32,11 +32,13 @@ def init_tools():
     """
     # 导入工具模块（触发自动注册）
     # 注意：导入顺序很重要，确保所有工具模块都被导入
-    from backend.domain.tools import blood_pressure  # noqa: F401
+    from backend.domain.tools import blood_pressure_tool  # noqa: F401
+    from backend.domain.tools import medication_tool  # noqa: F401
+    from backend.domain.tools import symptom_tool  # noqa: F401
+    from backend.domain.tools import health_event_tool  # noqa: F401
     
     # 可以在这里导入更多工具模块
     # from backend.domain.tools import appointment  # noqa: F401
-    # from backend.domain.tools import medication  # noqa: F401
     
     # 获取已注册的工具数量
     registered_tools = tool_registry.get_all_tools()
