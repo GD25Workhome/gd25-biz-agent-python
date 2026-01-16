@@ -8,6 +8,12 @@ from backend.infrastructure.database.models.session_cache import SessionCache
 from backend.infrastructure.database.models.medication import MedicationRecord
 from backend.infrastructure.database.models.symptom import SymptomRecord
 from backend.infrastructure.database.models.health_event import HealthEventRecord
+from backend.infrastructure.database.models.rag_models import (
+    QAExample,
+    RecordExample,
+    QueryExample,
+    GreetingExample
+)
 
 __all__ = [
     "BloodPressureRecord",
@@ -17,5 +23,9 @@ __all__ = [
     "MedicationRecord",
     "SymptomRecord",
     "HealthEventRecord",
+    "QAExample",
+    "RecordExample",
+    "QueryExample",
+    "GreetingExample",
 ]
 

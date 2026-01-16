@@ -46,3 +46,8 @@ python-ulid>=1.1.0,<2.0.0
 # 表达式评估
 simpleeval>=0.9.13,<1.0.0
 
+# RAG数据导入
+pandas>=2.0.0,<3.0.0
+openpyxl>=3.1.0,<4.0.0
+sentence-transformers>=2.2.0,<3.0.0
+pgvector>=0.2.0,<1.0.0

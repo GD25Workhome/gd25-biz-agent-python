@@ -22,6 +22,15 @@ from backend.app.config import settings
 from backend.infrastructure.database.base import Base
 from backend.infrastructure.database import models  # noqa: F401 导入所有模型
 
+# 导入pgvector类型支持（用于Alembic迁移）
+try:
+    import pgvector
+    from pgvector.sqlalchemy import Vector
+    HAS_PGVECTOR = True
+except ImportError:
+    HAS_PGVECTOR = False
+    Vector = None
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -80,6 +89,11 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection):
+    # 注册pgvector类型到SQLAlchemy dialect（避免类型识别警告）
+    # 这允许Alembic正确识别和处理vector类型
+    if HAS_PGVECTOR and Vector is not None:
+        connection.dialect.ischema_names['vector'] = Vector
+    
     context.configure(connection=connection, target_metadata=target_metadata)
 
     with context.begin_transaction():

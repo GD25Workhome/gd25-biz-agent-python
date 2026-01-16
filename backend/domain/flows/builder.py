@@ -219,6 +219,39 @@ class GraphBuilder:
             
             return agent_node_action
         
+        elif node_def.type == "function":
+            # 函数节点：从flows模块导入对应的函数
+            node_name = node_def.name
+            
+            # 动态导入节点函数
+            # 节点名称到模块路径的映射
+            node_function_map = {
+                "retrieval_node": "backend.domain.flows.retrieval_node.retrieval_node",
+            }
+            
+            if node_name not in node_function_map:
+                raise ValueError(f"未找到节点函数: {node_name}")
+            
+            # 导入函数
+            module_path, func_name = node_function_map[node_name].rsplit(".", 1)
+            import importlib
+            module = importlib.import_module(module_path)
+            node_func = getattr(module, func_name)
+            
+            # 函数节点是同步函数，需要包装为异步（如果LangGraph需要异步）
+            # 检查函数是否是协程函数
+            import inspect
+            if inspect.iscoroutinefunction(node_func):
+                # 已经是异步函数，直接返回
+                return node_func
+            else:
+                # 同步函数，包装为异步
+                async def async_wrapper(state: FlowState) -> FlowState:
+                    """异步包装器"""
+                    return node_func(state)
+                
+                return async_wrapper
+        
         else:
             # 其他类型的节点（本版本不支持）
             raise ValueError(f"不支持的节点类型: {node_def.type}")

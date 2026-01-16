@@ -1,6 +1,6 @@
-name: medical_agent_v3
-version: "3.0"
-description: "医疗分身Agent流程V3 - 支持 thinking 和 reasoning_effort 参数优化版本"
+name: medical_agent_v4
+version: "4.0"
+description: "医疗分身Agent流程V4 - 支持 thinking 和 reasoning_effort 参数优化版本"
 
 nodes:
   # 意图识别 - 使用快速模式

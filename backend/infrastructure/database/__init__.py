@@ -7,6 +7,10 @@ from backend.infrastructure.database.connection import (
     get_session_factory,
     get_async_session,
 )
+from backend.infrastructure.database.vector_connection import (
+    get_vector_db_connection,
+    parse_database_url,
+)
 from backend.infrastructure.database import models  # 导入所有模型
 
 __all__ = [
@@ -16,5 +20,7 @@ __all__ = [
     "get_async_engine",
     "get_session_factory",
     "get_async_session",
+    "get_vector_db_connection",
+    "parse_database_url",
 ]
 

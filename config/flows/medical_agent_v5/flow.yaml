@@ -8,7 +8,7 @@ nodes:
   - name: intent_recognition
     type: agent
     config:
-      prompt: prompts/01-intent_recognition.md
+      prompt: prompts/10-before-rag.md
       model:
         provider: doubao
         name: doubao-seed-1-6-251015
@@ -22,19 +22,15 @@ nodes:
   # 实现位置：在GraphBuilder中通过自定义节点函数实现
   - name: retrieval_node
     type: function  # 函数节点，非Agent
-    config:
-      # 向量库检索配置
-      retrieval:
-        top_k: 5  # 检索Top-K个结果
-        similarity_threshold: 0.7  # 相似度阈值
-        # 根据意图类型选择不同的表进行检索
-        # qa -> qa_examples, knowledge_base
-        # record -> record_examples
-        # query -> query_examples
-        # greeting -> 可跳过或检索通用示例
-      # 用户信息查询配置
-      user_info:
-        # 查询用户基础信息（姓名、年龄、诊断、用药、目标值等）
+    config: {}  # 函数节点暂时不需要配置，但config字段是必需的，所以提供空字典
+    # 注意：虽然config字段是必需的，但function类型节点的实际配置在代码中硬编码
+    # 如果需要配置，可以在这里添加，例如：
+    # config:
+    #   retrieval:
+    #     top_k: 5  # 检索Top-K个结果
+    #     similarity_threshold: 0.7  # 相似度阈值
+    #   user_info:
+    #     # 查询用户基础信息（姓名、年龄、诊断、用药、目标值等）
 
   # 节点3：核心Agent节点
   # 职责：统一的Agent，整合所有功能（记录、查询、QA、greeting）
@@ -42,7 +38,7 @@ nodes:
   - name: core_agent
     type: agent
     config:
-      prompt: prompts/03-core_agent.md
+      prompt: prompts/50-core_agent.md
       model:
         provider: doubao
         name: doubao-seed-1-8-251228
