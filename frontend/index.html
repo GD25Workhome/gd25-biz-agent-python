@@ -6,6 +6,10 @@
     <title>动态流程系统 MVP</title>
     <!-- Element Plus CSS -->
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <!-- Markdown 解析器 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- HTML 安全过滤 -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -172,6 +176,117 @@
         .empty-state-text {
             font-size: 14px;
         }
+        
+        /* Markdown 内容样式 */
+        .markdown-content {
+            line-height: 1.6;
+        }
+        
+        .markdown-content h1,
+        .markdown-content h2,
+        .markdown-content h3,
+        .markdown-content h4,
+        .markdown-content h5,
+        .markdown-content h6 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            font-weight: 600;
+        }
+        
+        .markdown-content h1 {
+            font-size: 1.5em;
+        }
+        
+        .markdown-content h2 {
+            font-size: 1.3em;
+        }
+        
+        .markdown-content h3 {
+            font-size: 1.1em;
+        }
+        
+        .markdown-content p {
+            margin: 0.5em 0;
+        }
+        
+        .markdown-content ul,
+        .markdown-content ol {
+            margin: 0.5em 0;
+            padding-left: 1.5em;
+        }
+        
+        .markdown-content li {
+            margin: 0.25em 0;
+        }
+        
+        .markdown-content code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        .markdown-content pre {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 0.5em 0;
+        }
+        
+        .markdown-content pre code {
+            background: none;
+            padding: 0;
+        }
+        
+        .markdown-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 0.5em 0;
+        }
+        
+        .markdown-content table th,
+        .markdown-content table td {
+            border: 1px solid #e4e7ed;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .markdown-content table th {
+            background: #f5f7fa;
+            font-weight: 600;
+        }
+        
+        .markdown-content blockquote {
+            border-left: 4px solid #409eff;
+            padding-left: 1em;
+            margin: 0.5em 0;
+            color: #606266;
+        }
+        
+        .markdown-content a {
+            color: #409eff;
+            text-decoration: none;
+        }
+        
+        .markdown-content a:hover {
+            text-decoration: underline;
+        }
+        
+        .markdown-content strong {
+            font-weight: 600;
+        }
+        
+        .markdown-content em {
+            font-style: italic;
+        }
+        
+        .markdown-content hr {
+            border: none;
+            border-top: 1px solid #e4e7ed;
+            margin: 1em 0;
+        }
     </style>
 </head>
 <body>
@@ -192,6 +307,10 @@
                     <el-menu-item index="chat">
                         <el-icon><ChatDotRound /></el-icon>
                         <span>聊天对话</span>
+                    </el-menu-item>
+                    <el-menu-item index="chat-v2">
+                        <el-icon><ChatDotRound /></el-icon>
+                        <span>聊天对话—V2</span>
                     </el-menu-item>
                     <el-menu-item index="blood-pressure">
                         <el-icon><DataLine /></el-icon>
@@ -263,6 +382,7 @@
     <!-- 模块化组件 -->
     <script src="js/framework.js"></script>
     <script src="js/chat.js"></script>
+    <script src="js/chat-v2.js"></script>
     <script src="js/blood-pressure.js"></script>
     <script src="js/users.js"></script>
     <script src="js/flow-preview.js"></script>
@@ -275,6 +395,7 @@
         const app = createApp({
             components: {
                 ChatComponent,
+                ChatV2Component,
                 BloodPressureComponent,
                 UsersComponent,
                 FlowPreviewComponent

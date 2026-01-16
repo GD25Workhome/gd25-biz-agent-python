@@ -22,6 +22,11 @@
                 component: 'ChatComponent',
                 icon: 'ChatDotRound'
             },
+            'chat-v2': {
+                title: '聊天对话—V2',
+                component: 'ChatV2Component',
+                icon: 'ChatDotRound'
+            },
             'blood-pressure': {
                 title: '血压记录',
                 component: 'BloodPressureComponent',
