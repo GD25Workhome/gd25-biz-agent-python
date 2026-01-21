@@ -252,3 +252,100 @@ def vector_db_search(
     logger.info(f"检索完成：查询文本='{query_text[:50]}...'，返回 {len(results)} 个结果")
     
     return results
+
+
+def search_popular_science_articles(
+    disease: str,
+    top_k: int = 5,
+    similarity_threshold: float = 0.7,
+    min_results: int = 3
+) -> List[Dict]:
+    """
+    查询科普文章（基于疾病名）
+    
+    Args:
+        disease: 疾病名称
+        top_k: 返回数量（默认5）
+        similarity_threshold: 相似度阈值（默认0.7）
+        min_results: 最小结果数量（用于降级策略）
+    
+    Returns:
+        List[Dict]: 检索结果列表，每个元素包含：
+            - id: 文章ID
+            - article_material_id: 文章素材ID
+            - article_title: 文章标题
+            - article_content: 文章内容
+            - similarity: 相似度分数
+            - source: 来源表名（固定为 "popular_science_article"）
+    """
+    if not disease:
+        logger.warning("疾病名为空，返回空结果")
+        return []
+    
+    table_name = "popular_science_article"
+    full_table_name = f"{TABLE_PREFIX}{table_name}"
+    
+    # 向量化疾病名
+    embedding_cache = EmbeddingModelCache()
+    disease_embedding = np.array(embedding_cache.text_to_embedding(disease))
+    embedding_list = disease_embedding.tolist()
+    
+    # 降级阈值列表
+    thresholds = [0.7, 0.6, 0.5]
+    
+    conn = None
+    results = []  # 初始化结果列表
+    try:
+        conn = get_vector_db_connection()
+        
+        for threshold in thresholds:
+            # SQL查询：使用余弦相似度
+            sql = f"""
+                SELECT 
+                    id,
+                    article_material_id,
+                    article_title,
+                    article_content,
+                    1 - (embedding <=> %s::vector) AS similarity_score
+                FROM {full_table_name}
+                WHERE embedding IS NOT NULL
+                  AND 1 - (embedding <=> %s::vector) >= %s
+                ORDER BY embedding <=> %s::vector
+                LIMIT %s
+            """
+            
+            with conn.cursor() as cur:
+                cur.execute(sql, (
+                    embedding_list,
+                    embedding_list,
+                    threshold,
+                    embedding_list,
+                    top_k
+                ))
+                
+                results = []
+                for row in cur.fetchall():
+                    results.append({
+                        'id': row[0],
+                        'article_material_id': row[1],
+                        'article_title': row[2],
+                        'article_content': row[3],
+                        'similarity': float(row[4]),
+                        'source': table_name
+                    })
+                
+                if len(results) >= min_results:
+                    logger.info(f"科普文章检索成功：疾病='{disease}'，阈值 {threshold}，结果数量 {len(results)}")
+                    return results
+        
+        # 如果所有阈值都不满足，返回已有结果（即使数量不足）
+        logger.warning(f"科普文章检索结果不足：疾病='{disease}'，仅找到 {len(results)} 个结果（期望至少 {min_results} 个）")
+        return results
+    
+    except Exception as e:
+        logger.error(f"科普文章检索失败：疾病='{disease}'，错误: {e}", exc_info=True)
+        return []
+    
+    finally:
+        if conn:
+            conn.close()

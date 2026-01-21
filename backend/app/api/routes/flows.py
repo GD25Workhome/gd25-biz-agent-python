@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
 from backend.domain.flows.manager import FlowManager
-from backend.domain.flows.definition import FlowPreviewInfo
+from backend.domain.flows.models.definition import FlowPreviewInfo
 from backend.domain.flows.preview_service import FlowPreviewService
 
 logger = logging.getLogger(__name__)

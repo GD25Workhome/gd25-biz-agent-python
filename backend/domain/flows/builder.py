@@ -8,10 +8,9 @@ from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 
 from backend.domain.state import FlowState
-from backend.domain.flows.definition import FlowDefinition, NodeDefinition
+from backend.domain.flows.models.definition import FlowDefinition, NodeDefinition
 from backend.domain.flows.condition_evaluator import ConditionEvaluator
-from backend.domain.agents.factory import AgentFactory
-from backend.domain.tools.registry import tool_registry
+from backend.domain.flows.nodes.registry import node_creator_registry
 
 logger = logging.getLogger(__name__)
 
@@ -102,159 +101,20 @@ class GraphBuilder:
         """
         创建节点函数
         
+        使用节点创建器注册表来创建不同类型的节点函数。
+        支持通过注册表动态扩展新的节点类型。
+        
         Args:
             node_def: 节点定义
             flow_def: 流程定义
             
         Returns:
             Callable: 节点函数
+            
+        Raises:
+            ValueError: 如果节点类型未注册
         """
-        if node_def.type == "agent":
-            # Agent节点
-            from backend.domain.flows.definition import AgentNodeConfig, ModelConfig
-            
-            # 解析节点配置
-            config_dict = node_def.config
-            model_config = ModelConfig(**config_dict["model"])
-            agent_config = AgentNodeConfig(
-                prompt=config_dict["prompt"],
-                model=model_config,
-                tools=config_dict.get("tools")
-            )
-            
-            # 创建Agent
-            agent_executor = AgentFactory.create_agent(
-                config=agent_config,
-                flow_dir=flow_def.flow_dir or ""
-            )
-            
-            # 创建节点函数
-            node_name = node_def.name
-            
-            async def agent_node_action(state: FlowState) -> FlowState:
-                """Agent节点函数"""
-                from langchain_core.messages import AIMessage
-                from backend.infrastructure.prompts.sys_prompt_builder import build_system_message
-                
-                # 构建系统消息（自动替换占位符，内部从 state 中提取 prompt_vars）
-                sys_msg = build_system_message(
-                    prompt_cache_key=agent_executor.prompt_cache_key,
-                    state=state
-                )
-                
-                # 拼装消息列表：history_messages + current_message
-                history_messages = state.get("history_messages", [])
-                current_message = state.get("current_message")
-                
-                # 构建消息列表
-                msgs = history_messages.copy()
-                if current_message:
-                    msgs.append(current_message)
-                
-                # 如果消息列表为空，直接返回
-                if not msgs:
-                    logger.warning(f"[节点 {node_name}] 消息列表为空，跳过执行")
-                    return state
-                
-                # 执行Agent，传入消息列表和系统消息
-                result = await agent_executor.ainvoke(
-                    msgs=msgs,
-                    callbacks=None,
-                    sys_msg=sys_msg
-                )
-                
-                # 更新状态
-                new_state = state.copy()
-                
-                # 关键：每次创建新 state 时，edges_var 使用新字典，不继承原始值
-                # 确保上游节点的数据不会污染下游节点的条件判断
-                new_state["edges_var"] = {}
-                
-                if "output" in result:
-                    # AgentExecutor返回output字段
-                    output = result["output"]
-                    import json
-                    
-                    # 通用化数据提取：不区分节点名称，统一处理所有节点
-                    # 检查两个数据来源：JSON所有属性 + additional_fields
-                    try:
-                        if isinstance(output, str):
-                            # 尝试从输出中提取 JSON
-                            json_start = output.find("{")
-                            json_end = output.rfind("}") + 1
-                            if json_start >= 0 and json_end > json_start:
-                                json_str = output[json_start:json_end]
-                                output_data = json.loads(json_str)
-                                
-                                # 数据来源1：如果是 JSON 类型，直接将所有属性存储到 edges_var
-                                # 跳过非边条件判断相关的字段（如 response_content, reasoning_summary）
-                                if isinstance(output_data, dict):
-                                    for key, value in output_data.items():
-                                        if key not in ["response_content", "reasoning_summary"]:
-                                            new_state["edges_var"][key] = value
-                                
-                                # 数据来源2：如果存在 additional_fields，将其中的所有字段也存储到 edges_var
-                                if "additional_fields" in output_data:
-                                    additional_fields = output_data["additional_fields"]
-                                    if isinstance(additional_fields, dict):
-                                        for key, value in additional_fields.items():
-                                            new_state["edges_var"][key] = value
-                                
-                                logger.debug(
-                                    f"[节点 {node_name}] 从输出提取数据到 edges_var: {new_state['edges_var']}"
-                                )
-                    except Exception as e:
-                        logger.debug(f"[节点 {node_name}] 解析输出 JSON 失败（可能不是 JSON 格式）: {e}")
-                        # 不是 JSON 格式或解析失败，不影响流程继续
-                    
-                    # 将AI回复存放到 flow_msgs（流程中间消息），不存放到 history_messages
-                    ai_message = AIMessage(content=output)
-                    flow_msgs = state.get("flow_msgs", [])
-                    new_flow_msgs = flow_msgs.copy()
-                    new_flow_msgs.append(ai_message)
-                    new_state["flow_msgs"] = new_flow_msgs
-                    # history_messages 保持不变，不添加中间节点的输出
-                
-                return new_state
-            
-            return agent_node_action
-        
-        elif node_def.type == "function":
-            # 函数节点：从flows模块导入对应的函数
-            node_name = node_def.name
-            
-            # 动态导入节点函数
-            # 节点名称到模块路径的映射
-            node_function_map = {
-                "retrieval_node": "backend.domain.flows.retrieval_node.retrieval_node",
-            }
-            
-            if node_name not in node_function_map:
-                raise ValueError(f"未找到节点函数: {node_name}")
-            
-            # 导入函数
-            module_path, func_name = node_function_map[node_name].rsplit(".", 1)
-            import importlib
-            module = importlib.import_module(module_path)
-            node_func = getattr(module, func_name)
-            
-            # 函数节点是同步函数，需要包装为异步（如果LangGraph需要异步）
-            # 检查函数是否是协程函数
-            import inspect
-            if inspect.iscoroutinefunction(node_func):
-                # 已经是异步函数，直接返回
-                return node_func
-            else:
-                # 同步函数，包装为异步
-                async def async_wrapper(state: FlowState) -> FlowState:
-                    """异步包装器"""
-                    return node_func(state)
-                
-                return async_wrapper
-        
-        else:
-            # 其他类型的节点（本版本不支持）
-            raise ValueError(f"不支持的节点类型: {node_def.type}")
+        return node_creator_registry.create_node(node_def, flow_def)
     
     @staticmethod
     def _evaluate_condition(condition: str, state: FlowState) -> bool:

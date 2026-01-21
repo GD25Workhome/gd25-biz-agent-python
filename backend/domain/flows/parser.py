@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Dict, Any
 import yaml
 
-from backend.domain.flows.definition import FlowDefinition, NodeDefinition, EdgeDefinition
+from backend.domain.flows.models.definition import FlowDefinition, NodeDefinition, EdgeDefinition
 
 logger = logging.getLogger(__name__)
 

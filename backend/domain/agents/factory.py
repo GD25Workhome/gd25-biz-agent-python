@@ -12,7 +12,7 @@ from langchain.agents import create_agent
 
 from backend.infrastructure.llm.client import get_llm
 from backend.infrastructure.prompts.manager import prompt_manager
-from backend.domain.flows.definition import AgentNodeConfig, ModelConfig
+from backend.domain.flows.models.definition import AgentNodeConfig, ModelConfig
 from backend.domain.tools.registry import tool_registry
 
 logger = logging.getLogger(__name__)

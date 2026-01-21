@@ -11,7 +11,7 @@ from langgraph.checkpoint.memory import MemorySaver
 # LangGraph编译后的图类型（使用Any作为类型占位符）
 CompiledGraph = Any
 
-from backend.domain.flows.definition import FlowDefinition
+from backend.domain.flows.models.definition import FlowDefinition
 from backend.domain.flows.parser import FlowParser
 from backend.domain.flows.builder import GraphBuilder
 from backend.app.config import find_project_root

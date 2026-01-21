@@ -239,3 +239,55 @@ class GreetingExample(Base):
     
     def __repr__(self):
         return f"<GreetingExample(id={self.id}, user_input={self.user_input[:50]}...)>"
+
+
+class PopularScienceArticle(Base):
+    """科普文章表"""
+    
+    __tablename__ = f"{TABLE_PREFIX}popular_science_article"
+    
+    id = Column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        index=True,
+        comment="主键ID"
+    )
+    article_material_id = Column(
+        String(100),
+        nullable=False,
+        unique=True,
+        index=True,
+        comment="文章素材ID"
+    )
+    article_title = Column(
+        Text,
+        nullable=False,
+        comment="文章标题"
+    )
+    article_content = Column(
+        Text,
+        nullable=False,
+        comment="文章详情内容"
+    )
+    embedding = Column(
+        Vector(768) if HAS_PGVECTOR else Text,  # 768维向量（使用moka-ai/m3e-base）
+        nullable=True,  # 初始允许为空，数据导入时会填充
+        comment="向量（768维，基于文章标题，使用moka-ai/m3e-base）"
+    )
+    created_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=sql_func.now(),
+        default=sql_func.now(),
+        comment="创建时间（自动生成）"
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        nullable=True,
+        onupdate=sql_func.now(),
+        comment="更新时间（自动更新）"
+    )
+    
+    def __repr__(self):
+        return f"<PopularScienceArticle(id={self.id}, article_material_id={self.article_material_id}, title={self.article_title[:50]}...)>"

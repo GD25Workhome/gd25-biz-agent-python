@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Optional, Dict, List
 
 from backend.domain.flows.manager import FlowManager
-from backend.domain.flows.definition import FlowDefinition, EdgeDefinition
+from backend.domain.flows.models.definition import FlowDefinition, EdgeDefinition
 from backend.app.config import find_project_root
 
 logger = logging.getLogger(__name__)
