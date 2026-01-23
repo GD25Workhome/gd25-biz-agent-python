@@ -128,6 +128,7 @@ pandas==2.3.3
 pathspec==0.12.1
 pdfminer.six==20250506
 pdfplumber==0.11.7
+pgvector==0.4.2
 pillow==10.4.0
 pip==25.1.1
 platformdirs==4.4.0
