@@ -4,17 +4,89 @@
 """
 import logging
 import json
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime, timedelta
 from langchain_core.tools import tool
 
 from backend.infrastructure.database.connection import get_session_factory
 from backend.infrastructure.database.repository.blood_pressure_repository import BloodPressureRepository
+from backend.infrastructure.database.models.blood_pressure import BloodPressureRecord
 from backend.domain.tools.context import get_token_id
 from backend.domain.tools.decorator import register_tool
 from backend.app.api.helpers import parse_datetime
 
 logger = logging.getLogger(__name__)
+
+
+async def query_blood_pressure_raw(
+    days: Optional[int] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+) -> List[BloodPressureRecord]:
+    """
+    查询血压记录（返回原始数据对象）
+    
+    这是 query_blood_pressure 工具的内部辅助函数，
+    返回原始数据对象而不是格式化字符串。
+    
+    Args:
+        days: 查询天数（默认14天，最大14天）
+        start_date: 开始日期（格式：YYYY-MM-DD，可选）
+        end_date: 结束日期（格式：YYYY-MM-DD，可选，默认为当前日期）
+        
+    Returns:
+        血压记录对象列表（BloodPressureRecord）
+    """
+    # 从运行时上下文获取 token_id
+    token_id = get_token_id()
+    if not token_id:
+        logger.warning("无法获取用户ID，返回空列表")
+        return []
+    
+    # 获取数据库会话并执行操作
+    session_factory = get_session_factory()
+    async with session_factory() as session:
+        try:
+            repo = BloodPressureRepository(session)
+            
+            # 解析日期参数（支持多种格式）
+            parsed_start_date = None
+            parsed_end_date = None
+            
+            if start_date:
+                parsed_start_date = parse_datetime(start_date)
+                if parsed_start_date is None:
+                    logger.warning(f"开始日期格式不正确: {start_date}")
+                    return []
+            
+            if end_date:
+                parsed_end_date = parse_datetime(end_date)
+                if parsed_end_date is None:
+                    logger.warning(f"结束日期格式不正确: {end_date}")
+                    return []
+                # 如果只提供了日期（没有时间），设置为当天的结束时间（23:59:59）
+                if parsed_end_date.hour == 0 and parsed_end_date.minute == 0 and parsed_end_date.second == 0:
+                    parsed_end_date = parsed_end_date.replace(hour=23, minute=59, second=59)
+            
+            # 确定查询天数（默认14天，最大14天）
+            query_days = min(days or 14, 14)
+            
+            # 查询记录
+            records = await repo.get_recent_by_user_id(
+                user_id=token_id,
+                days=query_days,
+                start_date=parsed_start_date,
+                end_date=parsed_end_date
+            )
+            await session.commit()
+            
+            logger.info(f"查询血压记录成功 (user_id={token_id}, count={len(records)})")
+            return records
+            
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"查询血压记录失败 (user_id={token_id}): {e}", exc_info=True)
+            return []
 
 
 @register_tool
@@ -119,71 +191,32 @@ async def query_blood_pressure(
     - 用户询问"查看我最近7天的血压" → days=7
     - 用户询问"查看我3月1日到3月7日的血压" → start_date="2024-03-01", end_date="2024-03-07"
     """
-    # 从运行时上下文获取 token_id
-    token_id = get_token_id()
-    if not token_id:
-        return "错误：无法获取用户ID，请确保在正确的上下文中调用此工具。"
+    # 调用辅助函数获取原始数据
+    records = await query_blood_pressure_raw(
+        days=days,
+        start_date=start_date,
+        end_date=end_date
+    )
     
-    # 获取数据库会话并执行操作
-    session_factory = get_session_factory()
-    async with session_factory() as session:
-        try:
-            repo = BloodPressureRepository(session)
-            
-            # 解析日期参数（支持多种格式）
-            parsed_start_date = None
-            parsed_end_date = None
-            
-            if start_date:
-                parsed_start_date = parse_datetime(start_date)
-                if parsed_start_date is None:
-                    return f"错误：开始日期格式不正确，请使用 YYYY-MM-DD 格式（如：2024-03-01）"
-            
-            if end_date:
-                parsed_end_date = parse_datetime(end_date)
-                if parsed_end_date is None:
-                    return f"错误：结束日期格式不正确，请使用 YYYY-MM-DD 格式（如：2024-03-07）"
-                # 如果只提供了日期（没有时间），设置为当天的结束时间（23:59:59）
-                if parsed_end_date.hour == 0 and parsed_end_date.minute == 0 and parsed_end_date.second == 0:
-                    parsed_end_date = parsed_end_date.replace(hour=23, minute=59, second=59)
-            
-            # 确定查询天数（默认14天，最大14天）
-            query_days = min(days or 14, 14)
-            
-            # 查询记录
-            records = await repo.get_recent_by_user_id(
-                user_id=token_id,
-                days=query_days,
-                start_date=parsed_start_date,
-                end_date=parsed_end_date
-            )
-            await session.commit()
-            
-            # 格式化输出
-            if not records:
-                return "您在此时间段内没有血压记录。"
-            
-            lines = [f"共找到 {len(records)} 条血压记录：\n"]
-            for i, record in enumerate(records, 1):
-                line = f"{i}. "
-                if record.record_time:
-                    line += f"{record.record_time.strftime('%Y-%m-%d %H:%M')} - "
-                else:
-                    line += f"{record.created_at.strftime('%Y-%m-%d %H:%M')} - "
-                line += f"收缩压 {record.systolic} mmHg，舒张压 {record.diastolic} mmHg"
-                if record.heart_rate:
-                    line += f"，心率 {record.heart_rate} 次/分钟"
-                if record.notes:
-                    line += f"，备注：{record.notes}"
-                lines.append(line)
-            
-            logger.info(f"查询血压记录成功 (user_id={token_id}, count={len(records)})")
-            return "\n".join(lines)
-            
-        except Exception as e:
-            await session.rollback()
-            logger.error(f"查询血压记录失败 (user_id={token_id}): {e}", exc_info=True)
-            return f"错误：查询血压记录失败 - {str(e)}"
+    # 格式化输出
+    if not records:
+        return "您在此时间段内没有血压记录。"
+    
+    lines = [f"共找到 {len(records)} 条血压记录：\n"]
+    for i, record in enumerate(records, 1):
+        line = f"{i}. "
+        if record.record_time:
+            line += f"{record.record_time.strftime('%Y-%m-%d %H:%M')} - "
+        else:
+            line += f"{record.created_at.strftime('%Y-%m-%d %H:%M')} - "
+        line += f"收缩压 {record.systolic} mmHg，舒张压 {record.diastolic} mmHg"
+        if record.heart_rate:
+            line += f"，心率 {record.heart_rate} 次/分钟"
+        if record.notes:
+            line += f"，备注：{record.notes}"
+        lines.append(line)
+    
+    return "\n".join(lines)
 
 
 @register_tool

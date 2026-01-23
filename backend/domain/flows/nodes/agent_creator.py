@@ -100,10 +100,10 @@ class AgentNodeCreator(NodeCreator):
                             output_data = json.loads(json_str)
                             
                             # 数据来源1：如果是 JSON 类型，直接将所有属性存储到 edges_var
-                            # 跳过非边条件判断相关的字段（如 response_content, reasoning_summary）
+                            # 跳过非边条件判断相关的字段（如 response_content, reasoning_summary, additional_fields）
                             if isinstance(output_data, dict):
                                 for key, value in output_data.items():
-                                    if key not in ["response_content", "reasoning_summary"]:
+                                    if key not in ["response_content", "reasoning_summary", "additional_fields"]:
                                         new_state["edges_var"][key] = value
                             
                             # 数据来源2：如果存在 additional_fields，将其中的所有字段也存储到 edges_var

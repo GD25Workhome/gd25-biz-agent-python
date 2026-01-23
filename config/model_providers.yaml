@@ -11,6 +11,11 @@ providers:
   - provider: "doubao"
     api_key: "${DOUBAO_API_KEY}"  # 从环境变量读取
     base_url: "https://ark.cn-beijing.volces.com/api/v3"
+
+  # 豆包（火山引擎）供应商(embedding)
+  - provider: "doubao-embedding"
+    api_key: "${DOUBAO_API_KEY}"  # 从环境变量读取
+    base_url: "https://ark.cn-beijing.volces.com/api/v3/embeddings"
   
   # DeepSeek供应商
   - provider: "deepseek"

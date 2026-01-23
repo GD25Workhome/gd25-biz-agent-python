@@ -9,8 +9,8 @@
 
 说明：
     - 自动读取 static/rag_source/uat_data/ 目录下的两个Excel文件
-    - 4.1 lsk_副本.xlsx：字段直接对应
-    - sh-1128_副本.xlsx：会话输入=新会话，供应商响应()=新会话响应
+    - 4.1 lsk_副本.xlsx：字段直接对应，message_id 从 ids 字段中提取
+    - sh-1128_副本.xlsx：会话输入=新会话，供应商响应()=新会话响应，message_id 从 message_id 字段中提取
     - 数据插入前会根据"来源文件名"、"来源备注1"先清空数据，再重新插入
     - 空行判断："新会话"、"新会话响应"两个字段任意字段为空，即为空行，不导入
     - 字段值为"无"时，会被当做NULL处理
@@ -166,6 +166,60 @@ def convert_to_text(value: Any) -> Optional[str]:
     return result
 
 
+def extract_message_id(value: Any) -> Optional[str]:
+    """
+    提取 message_id
+    
+    规则：
+    1. 如果 message_id 中没有换行以及中/英文冒号，就直接去除前后空格，存入
+    2. 否则需要从以下格式中提取 message_id：
+       messageId: 108fea3e-4c7c-41fd-b474-edb8f02171dd
+       patientid: 1993595802664812567
+       doctorid: 1922824398239559724
+    
+    Args:
+        value: 待处理的值
+        
+    Returns:
+        Optional[str]: 提取的 message_id，如果无法提取则返回None
+    """
+    if pd.isna(value) or value is None:
+        return None
+    
+    value_str = str(value).strip()
+    if value_str == "" or value_str == "无":
+        return None
+    
+    # 检查是否包含换行符或冒号（中英文）
+    has_newline = "\n" in value_str or "\r" in value_str
+    has_colon = ":" in value_str or "：" in value_str
+    
+    # 如果没有换行和冒号，直接返回去除空格后的值
+    if not has_newline and not has_colon:
+        return value_str.strip()
+    
+    # 如果有换行或冒号，尝试从格式中提取 messageId
+    import re
+    
+    # 尝试匹配 messageId: xxx 格式（不区分大小写）
+    patterns = [
+        r"messageId\s*[:：]\s*([^\s\n\r]+)",  # messageId: xxx
+        r"message_id\s*[:：]\s*([^\s\n\r]+)",  # message_id: xxx
+        r"messageId\s*=\s*([^\s\n\r]+)",  # messageId=xxx
+        r"message_id\s*=\s*([^\s\n\r]+)",  # message_id=xxx
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, value_str, re.IGNORECASE)
+        if match:
+            message_id = match.group(1).strip()
+            if message_id:
+                return message_id
+    
+    # 如果无法提取，返回 None
+    return None
+
+
 def is_empty_row(row: pd.Series, new_session_col: str, new_session_response_col: str) -> bool:
     """
     判断是否为空行
@@ -262,6 +316,10 @@ def import_from_excel_lsk(
                                 setattr(record, db_field, convert_to_text(value))
                             else:
                                 setattr(record, db_field, convert_to_string(value, max_length=1000))
+                    
+                    # 处理 message_id 字段：从 ids 列中提取
+                    if "ids" in df.columns:
+                        record.message_id = extract_message_id(row["ids"])
                     
                     # 保存记录
                     session.add(record)
@@ -369,6 +427,10 @@ def import_from_excel_sh1128(
                                 setattr(record, db_field, convert_to_text(value))
                             else:
                                 setattr(record, db_field, convert_to_string(value, max_length=1000))
+                    
+                    # 处理 message_id 字段：从 message_id 列中提取
+                    if "message_id" in df.columns:
+                        record.message_id = extract_message_id(row["message_id"])
                     
                     # 保存记录
                     session.add(record)

@@ -72,5 +72,8 @@ class FunctionNodeCreator(NodeCreator):
         # 实例化节点
         node_instance = node_class()
         
+        # 将配置存储到节点实例的属性中（参考 Agent 节点的设计模式）
+        node_instance._config = config
+        
         # 返回节点的execute方法（已经是异步函数）
         return node_instance.execute

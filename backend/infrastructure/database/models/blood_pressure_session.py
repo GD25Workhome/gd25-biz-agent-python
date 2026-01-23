@@ -89,6 +89,11 @@ class BloodPressureSessionRecord(Base):
         nullable=True,
         comment="ext"
     )
+    message_id = Column(
+        String(100),
+        nullable=True,
+        comment="消息ID"
+    )
     source_filename = Column(
         String(200),
         nullable=False,

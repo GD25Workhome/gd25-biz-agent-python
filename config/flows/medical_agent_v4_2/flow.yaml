@@ -35,6 +35,25 @@ nodes:
         - record_symptom
         - record_health_event
 
+  # 用户信息查询节点
+  - name: query_user_info_node
+    type: function
+    config:
+      function_key: "query_user_info_node_func"
+      query_list:
+        - blood_pressure
+
+  - name: before_rag
+    type: agent
+    config:
+      prompt: prompts/12-before_rag.md
+      model:
+        provider: doubao
+        name: doubao-seed-1-8-251228
+        temperature: 0.7
+        thinking:
+          type: disabled  # 关闭深度思考，加速响应
+
   # RAG检索节点 - 在记录成功后进行向量库检索
   - name: retrieval_node
     type: function
@@ -112,16 +131,26 @@ edges:
   
   # 条件分支：根据记录是否成功决定路由
   # 设计：使用条件边根据 record_success 字段进行精确路由
-  # - record_success == true：记录成功，进入 retrieval_node 进行RAG检索
+  # - record_success == true：记录成功，依次进入 query_user_info_node -> before_rag -> retrieval_node -> after_record_agent
   # - record_success != true：需要询问用户或记录失败，直接END（等待用户下次输入）
   # record_success 字段由 GraphBuilder 在检测到工具调用成功时自动设置
   - from: record_agent
-    to: retrieval_node
+    to: query_user_info_node
     condition: record_success == true
   
   - from: record_agent
     to: END
     condition: record_success != true
+  
+  # 用户信息查询完成后，进入 before_rag
+  - from: query_user_info_node
+    to: before_rag
+    condition: always
+  
+  # before_rag 完成后，进入 RAG检索节点
+  - from: before_rag
+    to: retrieval_node
+    condition: always
   
   # RAG检索完成后，进入 after_record_agent 进行点评
   - from: retrieval_node

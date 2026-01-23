@@ -85,10 +85,12 @@ def _init_default_creators():
     """初始化默认的节点创建器"""
     from backend.domain.flows.nodes.agent_creator import AgentNodeCreator
     from backend.domain.flows.nodes.function_creator import FunctionNodeCreator
+    from backend.domain.flows.nodes.embedding_creator import EmbeddingNodeCreator
     
     node_creator_registry.register("agent", AgentNodeCreator())
     node_creator_registry.register("function", FunctionNodeCreator())
-    logger.info("已注册默认节点创建器: agent, function")
+    node_creator_registry.register("em_agent", EmbeddingNodeCreator())
+    logger.info("已注册默认节点创建器: agent, function, em_agent")
 
 
 # 自动初始化

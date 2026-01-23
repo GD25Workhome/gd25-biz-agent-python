@@ -72,6 +72,33 @@ class AgentNodeConfig(BaseModel):
     tools: Optional[List[str]] = Field(default=None, description="工具列表")
 
 
+class EmbeddingNodeConfig(BaseModel):
+    """Embedding节点配置"""
+    model: ModelConfig = Field(description="Embedding模型配置")
+    input: Dict[str, str] = Field(description="输入配置")
+    output: Dict[str, str] = Field(description="输出配置")
+    
+    @field_validator('input')
+    @classmethod
+    def validate_input(cls, v):
+        """验证 input 配置"""
+        if not isinstance(v, dict):
+            raise ValueError("input 必须是字典类型")
+        if "filed" not in v:
+            raise ValueError("input 必须包含 'filed' 字段")
+        return v
+    
+    @field_validator('output')
+    @classmethod
+    def validate_output(cls, v):
+        """验证 output 配置"""
+        if not isinstance(v, dict):
+            raise ValueError("output 必须是字典类型")
+        if "filed" not in v:
+            raise ValueError("output 必须包含 'filed' 字段")
+        return v
+
+
 class NodeDefinition(BaseModel):
     """节点定义"""
     name: str = Field(description="节点名称")
