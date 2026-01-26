@@ -3,7 +3,8 @@
 """
 import logging
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Depends
+from datetime import datetime
+from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.api.schemas.blood_pressure import (
@@ -13,6 +14,7 @@ from backend.app.api.schemas.blood_pressure import (
 )
 from backend.infrastructure.database.connection import get_async_session
 from backend.infrastructure.database.repository.blood_pressure_repository import BloodPressureRepository
+from backend.app.api.helpers import parse_datetime
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -21,6 +23,8 @@ router = APIRouter()
 @router.get("/blood-pressure", response_model=List[BloodPressureRecordResponse])
 async def list_blood_pressure(
     user_id: Optional[str] = None,
+    start_date: Optional[str] = Query(None, description="开始日期，格式：YYYY-MM-DD"),
+    end_date: Optional[str] = Query(None, description="结束日期，格式：YYYY-MM-DD"),
     limit: int = 100,
     offset: int = 0,
     session: AsyncSession = Depends(get_async_session)
@@ -30,6 +34,8 @@ async def list_blood_pressure(
     
     Args:
         user_id: 用户ID（可选，用于筛选）
+        start_date: 开始日期（可选，格式：YYYY-MM-DD）
+        end_date: 结束日期（可选，格式：YYYY-MM-DD）
         limit: 限制数量（默认100）
         offset: 偏移量（默认0）
         session: 数据库会话（依赖注入）
@@ -39,12 +45,33 @@ async def list_blood_pressure(
     """
     try:
         repo = BloodPressureRepository(session)
-        if user_id:
-            records = await repo.get_by_user_id(user_id, limit, offset)
-        else:
-            records = await repo.get_all(limit, offset)
+        
+        # 解析日期参数
+        parsed_start_date = None
+        parsed_end_date = None
+        
+        if start_date:
+            parsed_start_date = parse_datetime(start_date)
+            if parsed_start_date is None:
+                raise HTTPException(status_code=400, detail=f"开始日期格式不正确: {start_date}，请使用 YYYY-MM-DD 格式")
+        
+        if end_date:
+            parsed_end_date = parse_datetime(end_date)
+            if parsed_end_date is None:
+                raise HTTPException(status_code=400, detail=f"结束日期格式不正确: {end_date}，请使用 YYYY-MM-DD 格式")
+        
+        # 使用新的通用查询方法
+        records = await repo.get_by_filters(
+            user_id=user_id,
+            start_date=parsed_start_date,
+            end_date=parsed_end_date,
+            limit=limit,
+            offset=offset
+        )
         await session.commit()
         return records
+    except HTTPException:
+        raise
     except Exception as e:
         await session.rollback()
         logger.error(f"查询血压记录列表失败: {e}", exc_info=True)

@@ -78,6 +78,53 @@ class BloodPressureRepository(BaseRepository[BloodPressureRecord]):
         )
         return list(result.scalars().all())
     
+    async def get_by_filters(
+        self,
+        user_id: Optional[str] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        limit: int = 100,
+        offset: int = 0
+    ) -> List[BloodPressureRecord]:
+        """
+        根据多个条件查询血压记录
+        
+        Args:
+            user_id: 用户ID（可选）
+            start_date: 开始日期（可选）
+            end_date: 结束日期（可选）
+            limit: 限制数量
+            offset: 偏移量
+            
+        Returns:
+            血压记录列表（按记录时间倒序）
+        """
+        conditions = []
+        
+        if user_id:
+            conditions.append(BloodPressureRecord.user_id == user_id)
+        
+        if start_date:
+            # 如果只提供了日期（没有时间），设置为当天的开始时间（00:00:00）
+            if start_date.hour == 0 and start_date.minute == 0 and start_date.second == 0:
+                start_date = start_date.replace(hour=0, minute=0, second=0)
+            conditions.append(BloodPressureRecord.record_time >= start_date)
+        
+        if end_date:
+            # 如果只提供了日期（没有时间），设置为当天的结束时间（23:59:59）
+            if end_date.hour == 0 and end_date.minute == 0 and end_date.second == 0:
+                end_date = end_date.replace(hour=23, minute=59, second=59)
+            conditions.append(BloodPressureRecord.record_time <= end_date)
+        
+        query = select(BloodPressureRecord)
+        if conditions:
+            query = query.where(and_(*conditions))
+        
+        query = query.order_by(desc(BloodPressureRecord.record_time)).limit(limit).offset(offset)
+        
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
+    
     async def get_latest_by_user_id(
         self,
         user_id: str

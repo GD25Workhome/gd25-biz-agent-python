@@ -324,6 +324,10 @@
                         <el-icon><Document /></el-icon>
                         <span>流程预览</span>
                     </el-menu-item>
+                    <el-menu-item index="blood-pressure-help">
+                        <el-icon><QuestionFilled /></el-icon>
+                        <span>帮助-血压范围情况</span>
+                    </el-menu-item>
                 </el-menu>
             </div>
         </div>
@@ -386,6 +390,7 @@
     <script src="js/blood-pressure.js"></script>
     <script src="js/users.js"></script>
     <script src="js/flow-preview.js"></script>
+    <script src="js/blood-pressure-help.js"></script>
     
     <script>
         const { createApp } = Vue;
@@ -398,7 +403,8 @@
                 ChatV2Component,
                 BloodPressureComponent,
                 UsersComponent,
-                FlowPreviewComponent
+                FlowPreviewComponent,
+                BloodPressureHelpComponent
             },
             setup() {
                 return useFramework();
@@ -418,6 +424,7 @@
         app.component('Edit', icons.Edit);
         app.component('Delete', icons.Delete);
         app.component('Document', icons.Document);
+        app.component('QuestionFilled', icons.QuestionFilled);
         app.mount('#app');
     </script>
 </body>

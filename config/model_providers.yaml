@@ -17,6 +17,7 @@ providers:
   - provider: "doubao-embedding"
     api_key: "${DOUBAO_API_KEY}"  # 从环境变量读取
     base_url: "https://ark.cn-beijing.volces.com/api/v3/embeddings"
+    default_model: "doubao-embedding-vision-250615"
   
   # DeepSeek供应商
   - provider: "deepseek"

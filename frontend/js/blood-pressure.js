@@ -23,7 +23,11 @@
         // 数据
         const records = ref([]);
         const loading = ref(false);
-        const filter = ref('');
+        const selectedUserId = ref('');
+        const users = ref([]);
+        const usersLoading = ref(false);
+        const startDate = ref(null);
+        const endDate = ref(null);
         
         // 对话框
         const dialogVisible = ref(false);
@@ -44,7 +48,7 @@
         // 表单验证规则
         const rules = {
             user_id: [
-                { required: true, message: '请输入用户ID', trigger: 'blur' }
+                { required: true, message: '请选择用户', trigger: 'change' }
             ],
             systolic: [
                 { required: true, message: '请输入收缩压', trigger: 'blur' },
@@ -59,13 +63,78 @@
             ]
         };
         
+        // 加载用户列表
+        const loadUsers = async () => {
+            usersLoading.value = true;
+            try {
+                const response = await axios.get(`${API_BASE}/api/v1/users?limit=1000&offset=0`);
+                // 后端返回的是 {users: [...]} 格式，需要提取 users 数组
+                users.value = response.data?.users || response.data || [];
+            } catch (error) {
+                console.error('Error:', error);
+                ElMessage.error('加载用户列表失败: ' + (error.response?.data?.detail || error.message));
+                users.value = [];
+            } finally {
+                usersLoading.value = false;
+            }
+        };
+        
+        // 格式化日期为 YYYY-MM-DD（用于API请求）
+        const formatDate = (date) => {
+            if (!date) return null;
+            // 如果已经是字符串格式（YYYY-MM-DD），直接返回
+            if (typeof date === 'string') {
+                return date;
+            }
+            // 如果是Date对象，转换为字符串
+            const d = new Date(date);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+        
+        // 自动填充14天前的时间
+        const fillLast14Days = () => {
+            const today = new Date();
+            const daysAgo14 = new Date();
+            daysAgo14.setDate(today.getDate() - 14);
+            
+            // 格式化为 YYYY-MM-DD 字符串（因为el-date-picker的value-format设置为YYYY-MM-DD）
+            const formatDateStr = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+            
+            startDate.value = formatDateStr(daysAgo14);
+            endDate.value = formatDateStr(today);
+            
+            // 自动触发查询
+            loadRecords();
+        };
+        
+        // 清空时间筛选
+        const clearDateFilter = () => {
+            startDate.value = null;
+            endDate.value = null;
+            loadRecords();
+        };
+        
         // 加载数据
         const loadRecords = async () => {
             loading.value = true;
             try {
                 let url = `${API_BASE}/api/v1/blood-pressure?limit=100&offset=0`;
-                if (filter.value.trim()) {
-                    url += `&user_id=${encodeURIComponent(filter.value.trim())}`;
+                if (selectedUserId.value) {
+                    url += `&user_id=${encodeURIComponent(selectedUserId.value)}`;
+                }
+                if (startDate.value) {
+                    url += `&start_date=${formatDate(startDate.value)}`;
+                }
+                if (endDate.value) {
+                    url += `&end_date=${formatDate(endDate.value)}`;
                 }
                 
                 const response = await axios.get(url);
@@ -75,6 +144,49 @@
                 ElMessage.error('加载血压记录失败: ' + (error.response?.data?.detail || error.message));
             } finally {
                 loading.value = false;
+            }
+        };
+        
+        // 保存上次输入的值到 localStorage
+        const saveLastInput = () => {
+            try {
+                const lastInput = {
+                    user_id: form.user_id || '',
+                    systolic: form.systolic || null,
+                    diastolic: form.diastolic || null,
+                    heart_rate: form.heart_rate || null,
+                    record_time: form.record_time || null,
+                    notes: form.notes || ''
+                };
+                localStorage.setItem('blood_pressure_last_input', JSON.stringify(lastInput));
+            } catch (error) {
+                console.error('保存上次输入值失败:', error);
+            }
+        };
+        
+        // 从 localStorage 恢复上次输入的值
+        const restoreLastInput = () => {
+            try {
+                const saved = localStorage.getItem('blood_pressure_last_input');
+                if (saved) {
+                    const lastInput = JSON.parse(saved);
+                    Object.assign(form, {
+                        id: null,
+                        user_id: lastInput.user_id || '',
+                        systolic: lastInput.systolic || null,
+                        diastolic: lastInput.diastolic || null,
+                        heart_rate: lastInput.heart_rate || null,
+                        record_time: lastInput.record_time || null,
+                        notes: lastInput.notes || ''
+                    });
+                } else {
+                    // 如果没有保存的值，则完全重置
+                    resetForm();
+                }
+            } catch (error) {
+                console.error('恢复上次输入值失败:', error);
+                // 出错时重置表单
+                resetForm();
             }
         };
         
@@ -92,8 +204,8 @@
                     notes: record.notes || ''
                 });
             } else {
-                // 新建模式
-                resetForm();
+                // 新建模式：恢复上次输入的值
+                restoreLastInput();
             }
             dialogVisible.value = true;
         };
@@ -139,6 +251,8 @@
                             // 创建
                             await axios.post(`${API_BASE}/api/v1/blood-pressure`, formData);
                             ElMessage.success('创建成功');
+                            // 保存本次输入的值，供下次新建时使用
+                            saveLastInput();
                         }
                         
                         dialogVisible.value = false;
@@ -193,19 +307,27 @@
         
         // 初始化
         onMounted(() => {
+            loadUsers();
             loadRecords();
         });
         
         return {
             records,
             loading,
-            filter,
+            selectedUserId,
+            users,
+            usersLoading,
+            startDate,
+            endDate,
             dialogVisible,
             submitting,
             formRef,
             form,
             rules,
+            loadUsers,
             loadRecords,
+            fillLast14Days,
+            clearDateFilter,
             openDialog,
             resetForm,
             submitForm,
@@ -216,22 +338,57 @@
     template: `
         <div style="height: 100%; display: flex; flex-direction: column; background: #fff;">
             <!-- 工具栏 -->
-            <div style="padding: 16px 20px; border-bottom: 1px solid #e4e7ed; display: flex; justify-content: space-between; align-items: center;">
-                <div style="display: flex; gap: 12px; align-items: center;">
-                    <el-input
-                        v-model="filter"
-                        placeholder="筛选用户ID（可选）"
-                        style="width: 200px;"
-                        clearable
-                        @keyup.enter="loadRecords"
-                    >
-                        <template #prefix>
-                            <el-icon><Search /></el-icon>
-                        </template>
-                    </el-input>
-                    <el-button @click="loadRecords" :icon="Refresh">刷新</el-button>
+            <div style="padding: 16px 20px; border-bottom: 1px solid #e4e7ed;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <el-select
+                            v-model="selectedUserId"
+                            placeholder="选择用户（可选）"
+                            style="width: 250px;"
+                            clearable
+                            filterable
+                            :loading="usersLoading"
+                            @change="loadRecords"
+                        >
+                            <el-option
+                                v-for="user in users"
+                                :key="user.id"
+                                :label="user.user_name + ' (ID: ' + user.id + ')'"
+                                :value="user.id"
+                            >
+                                <span style="float: left">{{ user.user_name }}</span>
+                                <span style="float: right; color: #8492a6; font-size: 13px;">ID: {{ user.id }}</span>
+                            </el-option>
+                        </el-select>
+                        <el-button @click="loadRecords" :icon="Refresh">刷新</el-button>
+                    </div>
+                    <el-button type="primary" @click="openDialog(null)" :icon="Plus">新建记录</el-button>
                 </div>
-                <el-button type="primary" @click="openDialog(null)" :icon="Plus">新建记录</el-button>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <el-date-picker
+                        v-model="startDate"
+                        type="date"
+                        placeholder="开始日期（可选）"
+                        style="width: 180px;"
+                        value-format="YYYY-MM-DD"
+                        format="YYYY-MM-DD"
+                        clearable
+                        @change="loadRecords"
+                    ></el-date-picker>
+                    <span style="color: #909399;">至</span>
+                    <el-date-picker
+                        v-model="endDate"
+                        type="date"
+                        placeholder="结束日期（可选）"
+                        style="width: 180px;"
+                        value-format="YYYY-MM-DD"
+                        format="YYYY-MM-DD"
+                        clearable
+                        @change="loadRecords"
+                    ></el-date-picker>
+                    <el-button @click="fillLast14Days" type="success" size="small">最近14天</el-button>
+                    <el-button @click="clearDateFilter" size="small" v-if="startDate || endDate">清空时间</el-button>
+                </div>
             </div>
             
             <!-- 表格 -->
@@ -303,8 +460,25 @@
                     :rules="rules"
                     label-width="120px"
                 >
-                    <el-form-item label="用户ID" prop="user_id">
-                        <el-input v-model="form.user_id" :disabled="!!form.id"></el-input>
+                    <el-form-item label="用户" prop="user_id">
+                        <el-select
+                            v-model="form.user_id"
+                            placeholder="请选择用户"
+                            style="width: 100%;"
+                            filterable
+                            :disabled="!!form.id"
+                            :loading="usersLoading"
+                        >
+                            <el-option
+                                v-for="user in users"
+                                :key="user.id"
+                                :label="user.user_name + ' (ID: ' + user.id + ')'"
+                                :value="user.id"
+                            >
+                                <span style="float: left">{{ user.user_name }}</span>
+                                <span style="float: right; color: #8492a6; font-size: 13px;">ID: {{ user.id }}</span>
+                            </el-option>
+                        </el-select>
                     </el-form-item>
                     <el-form-item label="收缩压 (mmHg)" prop="systolic">
                         <el-input-number 
@@ -358,7 +532,6 @@
         </div>
     `,
         components: {
-            Search: icons.Search,
             Refresh: icons.Refresh,
             Plus: icons.Plus,
             Edit: icons.Edit,

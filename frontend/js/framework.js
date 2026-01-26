@@ -41,6 +41,11 @@
                 title: '流程预览',
                 component: 'FlowPreviewComponent',
                 icon: 'Document'
+            },
+            'blood-pressure-help': {
+                title: '帮助-血压范围情况',
+                component: 'BloodPressureHelpComponent',
+                icon: 'QuestionFilled'
             }
         };
         

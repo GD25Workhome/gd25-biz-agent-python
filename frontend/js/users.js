@@ -29,11 +29,27 @@
         const submitting = ref(false);
         const formRef = ref(null);
         
+        // 性别 checkbox 数组（用于 checkbox-group）
+        const genderArray = ref([]);
+        
+        // 处理性别选择变化（确保只能选一个）
+        const handleGenderChange = (value) => {
+            if (value.length > 1) {
+                // 如果选择了多个，只保留最后一个
+                genderArray.value = [value[value.length - 1]];
+            }
+            // 更新 form.gender
+            form.gender = genderArray.value.length > 0 ? genderArray.value[0] : '';
+        };
+        
         // 表单数据
         const form = reactive({
             id: null,
             user_name: '',
-            user_info: ''
+            age: null,
+            gender: '',
+            systolic_target: null,
+            diastolic_target: null
         });
         
         // 表单验证规则
@@ -42,18 +58,68 @@
                 { required: true, message: '请输入用户名', trigger: 'blur' },
                 { min: 1, max: 100, message: '用户名长度：1-100字符', trigger: 'blur' }
             ],
-            user_info: [
+            age: [
                 {
                     validator: (rule, value, callback) => {
-                        if (!value || value.trim() === '') {
+                        if (value === null || value === undefined || value === '') {
                             callback();
                             return;
                         }
-                        try {
-                            JSON.parse(value);
+                        const num = Number(value);
+                        if (isNaN(num) || num <= 0 || !Number.isInteger(num)) {
+                            callback(new Error('年龄必须是正整数'));
+                        } else {
                             callback();
-                        } catch (e) {
-                            callback(new Error('请输入有效的JSON格式'));
+                        }
+                    },
+                    trigger: 'blur'
+                }
+            ],
+            gender: [
+                {
+                    validator: (rule, value, callback) => {
+                        if (value === '' || value === null || value === undefined) {
+                            callback();
+                            return;
+                        }
+                        if (value !== '男' && value !== '女') {
+                            callback(new Error('性别必须是"男"或"女"'));
+                        } else {
+                            callback();
+                        }
+                    },
+                    trigger: 'change'
+                }
+            ],
+            systolic_target: [
+                {
+                    validator: (rule, value, callback) => {
+                        if (value === null || value === undefined || value === '') {
+                            callback();
+                            return;
+                        }
+                        const num = Number(value);
+                        if (isNaN(num) || num <= 0 || !Number.isInteger(num)) {
+                            callback(new Error('收缩压目标值必须是正整数'));
+                        } else {
+                            callback();
+                        }
+                    },
+                    trigger: 'blur'
+                }
+            ],
+            diastolic_target: [
+                {
+                    validator: (rule, value, callback) => {
+                        if (value === null || value === undefined || value === '') {
+                            callback();
+                            return;
+                        }
+                        const num = Number(value);
+                        if (isNaN(num) || num <= 0 || !Number.isInteger(num)) {
+                            callback(new Error('舒张压目标值必须是正整数'));
+                        } else {
+                            callback();
                         }
                     },
                     trigger: 'blur'
@@ -80,12 +146,19 @@
         // 打开对话框
         const openDialog = async (user) => {
             if (user) {
-                // 编辑模式
+                // 编辑模式：从 user_info 对象中提取字段值（使用中文 key）
+                const userInfo = user.user_info || {};
+                const gender = userInfo['性别'] || '';
                 Object.assign(form, {
                     id: user.id,
                     user_name: user.user_name,
-                    user_info: user.user_info ? JSON.stringify(user.user_info, null, 2) : ''
+                    age: userInfo['年龄'] || null,
+                    gender: gender,
+                    systolic_target: userInfo['收缩压目标值（mmHg）'] || null,
+                    diastolic_target: userInfo['舒张压目标值（mmHg）'] || null
                 });
+                // 设置性别 checkbox 数组
+                genderArray.value = gender ? [gender] : [];
             } else {
                 // 新建模式
                 resetForm();
@@ -98,8 +171,12 @@
             Object.assign(form, {
                 id: null,
                 user_name: '',
-                user_info: ''
+                age: null,
+                gender: '',
+                systolic_target: null,
+                diastolic_target: null
             });
+            genderArray.value = [];
             if (formRef.value) {
                 formRef.value.clearValidate();
             }
@@ -113,9 +190,27 @@
                 if (valid) {
                     submitting.value = true;
                     try {
+                        // 构建 user_info 对象（使用中文 key）
+                        const userInfo = {};
+                        if (form.age !== null && form.age !== undefined && form.age !== '') {
+                            userInfo['年龄'] = Number(form.age);
+                        }
+                        if (form.gender) {
+                            userInfo['性别'] = form.gender;
+                        }
+                        if (form.systolic_target !== null && form.systolic_target !== undefined && form.systolic_target !== '') {
+                            userInfo['收缩压目标值（mmHg）'] = Number(form.systolic_target);
+                        }
+                        if (form.diastolic_target !== null && form.diastolic_target !== undefined && form.diastolic_target !== '') {
+                            userInfo['舒张压目标值（mmHg）'] = Number(form.diastolic_target);
+                        }
+                        
+                        // 将 user_info 对象转换为 JSON 字符串
+                        const userInfoJson = Object.keys(userInfo).length > 0 ? JSON.stringify(userInfo) : null;
+                        
                         const formData = {
                             user_name: form.user_name.trim(),
-                            user_info: form.user_info.trim() || null
+                            user_info: userInfoJson
                         };
                         
                         if (form.id) {
@@ -191,6 +286,8 @@
             formRef,
             form,
             rules,
+            genderArray,
+            handleGenderChange,
             loadUsers,
             openDialog,
             resetForm,
@@ -284,16 +381,41 @@
                             placeholder="请输入用户名"
                         ></el-input>
                     </el-form-item>
-                    <el-form-item label="用户信息" prop="user_info">
-                        <el-input 
-                            v-model="form.user_info" 
-                            type="textarea" 
-                            :rows="10"
-                            placeholder='请输入JSON格式的用户信息，例如：{"age": 30, "gender": "male", "address": "北京市"}'
-                        ></el-input>
-                        <el-text type="info" style="font-size: 12px; margin-top: 4px;">
-                            请输入有效的JSON格式数据
-                        </el-text>
+                    <el-form-item label="年龄" prop="age">
+                        <el-input-number 
+                            v-model="form.age" 
+                            :min="1"
+                            :max="150"
+                            :precision="0"
+                            placeholder="请输入年龄"
+                            style="width: 100%"
+                        ></el-input-number>
+                    </el-form-item>
+                    <el-form-item label="性别" prop="gender">
+                        <el-checkbox-group v-model="genderArray" @change="handleGenderChange">
+                            <el-checkbox label="男">男</el-checkbox>
+                            <el-checkbox label="女">女</el-checkbox>
+                        </el-checkbox-group>
+                    </el-form-item>
+                    <el-form-item label="收缩压目标值（mmHg）" prop="systolic_target">
+                        <el-input-number 
+                            v-model="form.systolic_target" 
+                            :min="1"
+                            :max="300"
+                            :precision="0"
+                            placeholder="请输入收缩压目标值"
+                            style="width: 100%"
+                        ></el-input-number>
+                    </el-form-item>
+                    <el-form-item label="舒张压目标值（mmHg）" prop="diastolic_target">
+                        <el-input-number 
+                            v-model="form.diastolic_target" 
+                            :min="1"
+                            :max="200"
+                            :precision="0"
+                            placeholder="请输入舒张压目标值"
+                            style="width: 100%"
+                        ></el-input-number>
                     </el-form-item>
                 </el-form>
                 <template #footer>

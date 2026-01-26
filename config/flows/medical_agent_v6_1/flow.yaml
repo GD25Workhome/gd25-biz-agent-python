@@ -13,20 +13,30 @@ nodes:
 
   # 节点1：词干提取，服务于rag检索
   - name: optimization_agent
-    type: opt_agent
+    type: agent
     config:
       prompt: prompts/10-optimization-agent.md
       model:
         provider: doubao
-        name: doubao-seed-1-8-251228
         temperature: 0.7
         thinking:
           type: disabled  # 关闭深度思考，加速响应
+
+  # 提取前一个节点的数据进行数据召回处理
+  - name: rag_node
+    type: rag_agent
+    config:
+      model:
+        provider: doubao-embedding
 
 edges:
 
   - from: builder_prompt_context_node
     to: optimization_agent
+    condition: always
+
+  - from: optimization_agent
+    to: rag_node
     condition: always
 
 entry_node: builder_prompt_context_node
