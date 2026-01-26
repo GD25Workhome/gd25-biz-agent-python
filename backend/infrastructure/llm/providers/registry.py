@@ -11,6 +11,10 @@ class ProviderConfig(BaseModel):
     provider: str = Field(description="供应商名称")
     api_key: str = Field(description="API密钥")
     base_url: str = Field(description="API基础URL")
+    default_model: Optional[str] = Field(
+        default=None,
+        description="默认模型名称（可选，当 flow.yaml 中未指定 model.name 时使用）"
+    )
 
 
 class ProviderRegistry:
@@ -25,7 +29,7 @@ class ProviderRegistry:
             cls._instance = super().__new__(cls)
         return cls._instance
     
-    def register(self, provider: str, api_key: str, base_url: str) -> None:
+    def register(self, provider: str, api_key: str, base_url: str, default_model: Optional[str] = None) -> None:
         """
         注册模型供应商配置
         
@@ -33,11 +37,13 @@ class ProviderRegistry:
             provider: 供应商名称
             api_key: API密钥
             base_url: API基础URL
+            default_model: 默认模型名称（可选）
         """
         self._providers[provider] = ProviderConfig(
             provider=provider,
             api_key=api_key,
-            base_url=base_url
+            base_url=base_url,
+            default_model=default_model
         )
     
     def get(self, provider: str) -> Optional[ProviderConfig]:

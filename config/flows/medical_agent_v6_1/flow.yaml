@@ -1,0 +1,32 @@
+name: medical_agent_v6.1
+version: "6.1"
+description: "医疗分身Agent流程V6.1-血压专项处理"
+
+nodes:
+    # 节点0：user_context构建节点，目的是查询当前用户的所有基础信息，为下一个节点的上下文构建提供数据
+  - name: builder_prompt_context_node
+    type: function
+    config:
+      function_key: "query_user_info_node_func"
+      query_list:
+        - blood_pressure
+
+  # 节点1：词干提取，服务于rag检索
+  - name: optimization_agent
+    type: opt_agent
+    config:
+      prompt: prompts/10-optimization-agent.md
+      model:
+        provider: doubao
+        name: doubao-seed-1-8-251228
+        temperature: 0.7
+        thinking:
+          type: disabled  # 关闭深度思考，加速响应
+
+edges:
+
+  - from: builder_prompt_context_node
+    to: optimization_agent
+    condition: always
+
+entry_node: builder_prompt_context_node

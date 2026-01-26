@@ -11,6 +11,7 @@ providers:
   - provider: "doubao"
     api_key: "${DOUBAO_API_KEY}"  # 从环境变量读取
     base_url: "https://ark.cn-beijing.volces.com/api/v3"
+    default_model: "doubao-seed-1-8-251228"  # 默认模型名称（可选，当 flow.yaml 中未指定 model.name 时使用）
 
   # 豆包（火山引擎）供应商(embedding)
   - provider: "doubao-embedding"

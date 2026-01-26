@@ -119,6 +119,7 @@ class ProviderManager:
                 provider_name = provider_data.get("provider")
                 api_key = provider_data.get("api_key", "")
                 base_url = provider_data.get("base_url", "")
+                default_model = provider_data.get("default_model")  # 新增：读取默认模型名称
                 
                 if not provider_name:
                     logger.warning(f"跳过缺少 provider 名称的配置: {provider_data}")
@@ -136,7 +137,8 @@ class ProviderManager:
                 provider_registry.register(
                     provider=provider_name,
                     api_key=api_key,
-                    base_url=base_url
+                    base_url=base_url,
+                    default_model=default_model  # 新增：传递默认模型名称
                 )
                 
                 logger.info(f"已注册模型供应商: {provider_name} (base_url: {base_url})")

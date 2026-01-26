@@ -32,7 +32,28 @@ class AgentNodeCreator(NodeCreator):
         """
         # 解析节点配置
         config_dict = node_def.config
-        model_config = ModelConfig(**config_dict["model"])
+        model_dict = config_dict["model"].copy()
+        
+        # 如果缺少 name 字段，尝试从 provider 配置中获取默认值
+        if "name" not in model_dict or not model_dict["name"]:
+            provider_name = model_dict.get("provider")
+            if provider_name:
+                from backend.infrastructure.llm.providers.manager import ProviderManager
+                
+                # 确保 ProviderManager 已加载
+                if not ProviderManager.is_loaded():
+                    ProviderManager.load_providers()
+                
+                provider_config = ProviderManager.get_provider(provider_name)
+                if provider_config and provider_config.default_model:
+                    model_dict["name"] = provider_config.default_model
+                    logger.info(
+                        f"[节点 {node_def.name}] 使用 provider '{provider_name}' 的默认模型: "
+                        f"{provider_config.default_model}"
+                    )
+        
+        # 创建 ModelConfig（如果仍然缺少 name，会抛出 ValidationError）
+        model_config = ModelConfig(**model_dict)
         agent_config = AgentNodeConfig(
             prompt=config_dict["prompt"],
             model=model_config,
