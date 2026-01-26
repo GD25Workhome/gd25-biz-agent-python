@@ -86,11 +86,13 @@ def _init_default_creators():
     from backend.domain.flows.nodes.agent_creator import AgentNodeCreator
     from backend.domain.flows.nodes.function_creator import FunctionNodeCreator
     from backend.domain.flows.nodes.embedding_creator import EmbeddingNodeCreator
+    from backend.domain.flows.nodes.rag_agent_creator import RagAgentNodeCreator
     
     node_creator_registry.register("agent", AgentNodeCreator())
     node_creator_registry.register("function", FunctionNodeCreator())
     node_creator_registry.register("em_agent", EmbeddingNodeCreator())
-    logger.info("已注册默认节点创建器: agent, function, em_agent")
+    node_creator_registry.register("rag_agent", RagAgentNodeCreator())
+    logger.info("已注册默认节点创建器: agent, function, em_agent, rag_agent")
 
 
 # 自动初始化

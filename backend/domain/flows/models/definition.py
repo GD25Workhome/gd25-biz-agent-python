@@ -99,6 +99,14 @@ class EmbeddingNodeConfig(BaseModel):
         return v
 
 
+class RagAgentNodeConfig(BaseModel):
+    """RAG Agent节点配置"""
+    model: ModelConfig = Field(description="Embedding模型配置")
+    top_k: int = Field(default=5, description="召回数量")
+    similarity_threshold: float = Field(default=0.7, description="相似度阈值")
+    output_field: str = Field(default="retrieved_examples", description="输出字段名")
+
+
 class NodeDefinition(BaseModel):
     """节点定义"""
     name: str = Field(description="节点名称")

@@ -20,17 +20,30 @@
 
 ### 1.2 流程位置
 
+**完整流程链路**：
+
 ```
+builder_prompt_context_node (function)
+    ↓
+    [输出: user_info]
+    ↓
 optimization_agent (opt_agent)
     ↓
-    [输出: scene_summary, optimization_question]
+    [输出: scene_summary, optimization_question, input_tags, response_tags]
     ↓
 rag_agent (rag_agent) ← 当前开发节点
     ↓
     [输出: retrieved_examples]
     ↓
 core_agent (agent)
+    ↓
+    [输出: ai_response]
 ```
+
+**说明**：
+- `rag_agent` 节点位于 `optimization_agent` 和 `core_agent` 之间
+- `core_agent` 节点会使用 `retrieved_examples` 作为 fewshot 示例来生成回复
+- `core_agent` 节点的提示词中包含 `{retrieved_examples}` 占位符，会在运行时被替换
 
 ---
 
@@ -38,7 +51,7 @@ core_agent (agent)
 
 ### 2.1 optimization_agent 输出格式
 
-前置节点 `optimization_agent` 的输出为 JSON 格式，包含以下字段：
+前置节点 `optimization_agent` 的类型为 `opt_agent`（不是 `agent`），其输出为 JSON 格式，包含以下字段：
 
 ```json
 {
@@ -48,6 +61,11 @@ core_agent (agent)
   "response_tags": ["警示型", "预警提醒", "就医建议"]
 }
 ```
+
+**节点配置说明**：
+- 节点类型：`opt_agent`（优化 Agent，专门用于查询优化）
+- 提示词文件：`prompts/10-optimization-agent.md`
+- 主要功能：将用户原始查询优化为更适合向量检索的查询文本
 
 ### 2.2 数据传递方式
 
@@ -76,13 +94,22 @@ core_agent (agent)
   config:
     model:
       provider: doubao-embedding
-      name: doubao-embedding-vision-250615
-    # 可选配置
-    query_field: "optimization_question"  # 用于检索的字段，默认使用 optimization_question
-    top_k: 5  # 召回数量，默认 5
-    similarity_threshold: 0.7  # 相似度阈值，默认 0.7
-    output_field: "retrieved_examples"  # 输出字段名，默认 retrieved_examples
+      name: doubao-embedding-vision-250615  # 可选，如果不指定则使用 provider 的默认模型
+    # 可选配置（如果未配置则使用默认值）
+    query_field: "optimization_question"  # 用于检索的字段，默认：optimization_question
+    top_k: 5  # 召回数量，默认：5
+    similarity_threshold: 0.7  # 相似度阈值，默认：0.7
+    output_field: "retrieved_examples"  # 输出字段名，默认：retrieved_examples
 ```
+
+**实际配置说明**（`flow.yaml`）：
+- 当前实际配置中只指定了 `model.provider: doubao-embedding`
+- 未指定 `model.name`，会使用 provider 的默认模型
+- 未指定其他可选配置，均使用默认值：
+  - `query_field`: `"optimization_question"`
+  - `top_k`: `5`
+  - `similarity_threshold`: `0.7`
+  - `output_field`: `"retrieved_examples"`
 
 ### 3.3 核心功能流程
 
@@ -234,7 +261,13 @@ async def rag_node_action(state: FlowState) -> FlowState:
 - **方案一**：存储到 `state.edges_var["retrieved_examples"]`
 - **方案二**：存储到 `state.prompt_vars["retrieved_examples"]`
 
-**推荐方案一**：与现有节点模式保持一致（参考 `agent_creator.py`）
+**推荐方案二**：存储到 `prompt_vars`，与 prompt 模板变量替换机制保持一致
+
+**实际实现说明**：
+- 检索结果存储到 `state.prompt_vars["retrieved_examples"]`
+- 下游 `core_agent` 节点的提示词中包含 `{retrieved_examples}` 占位符
+- 系统会在运行时自动将 `state.prompt_vars["retrieved_examples"]` 的值替换到提示词的 `{retrieved_examples}` 占位符中
+- 这样 `core_agent` 就可以在生成回复时参考检索到的相似案例
 
 ---
 
@@ -280,24 +313,40 @@ from backend.domain.flows.nodes.rag_agent_creator import RagAgentNodeCreator
 
 ### 9.1 第一阶段：核心功能实现
 
-1. ✅ **创建节点创建器类**
+1. ✅ **创建节点创建器类**（已完成）
    - 文件：`backend/domain/flows/nodes/rag_agent_creator.py`
    - 实现配置解析和节点函数创建
+   - 支持默认配置值（query_field, top_k, similarity_threshold, output_field）
+   - 支持从 provider 配置中自动获取默认模型名称
 
-2. ✅ **实现向量检索逻辑**
-   - 复用或参考 `retrieval.py` 中的检索逻辑
+2. ✅ **实现向量检索逻辑**（已完成）
+   - 参考 `retrieval.py` 中的检索逻辑
    - 适配 `embedding_record` 表结构
+   - 实现降级策略（0.7 → 0.6 → 0.5）
+   - 支持 `is_published = true` 过滤
 
-3. ✅ **实现 Embedding 调用**
+3. ✅ **实现 Embedding 调用**（已完成）
    - 使用 `EmbeddingFactory` 创建执行器
    - 异步调用生成向量
+   - 完善的错误处理
 
-4. ✅ **实现结果格式化**
+4. ✅ **实现结果格式化**（已完成）
    - 将检索结果格式化为 fewshot 文本
-   - 存储到 `state.edges_var`
+   - 格式包含：案例编号、相似度、用户场景、用户问题、AI回复
+   - 存储到 `state.edges_var[output_field]`
 
-5. ✅ **注册节点类型**
+5. ✅ **注册节点类型**（已完成）
    - 在 `registry.py` 中注册 `rag_agent` 类型
+   - 在 `__init__.py` 中添加导出
+
+6. ✅ **添加配置类**（已完成）
+   - 在 `definition.py` 中添加 `RagAgentNodeConfig` 配置类
+   - 支持所有可选配置的默认值
+
+7. ✅ **编写测试用例**（已完成）
+   - 文件：`cursor_test/test_rag_agent_creator.py`
+   - 测试正常流程、边界情况、错误处理
+   - 测试结果格式化功能
 
 ### 9.2 第一版本简化项
 
@@ -328,8 +377,10 @@ from backend.domain.flows.nodes.rag_agent_creator import RagAgentNodeCreator
 
 ### 10.2 集成测试
 
-- 完整流程测试：`optimization_agent` → `rag_agent` → `core_agent`
+- 完整流程测试：`optimization_agent` → `rag_node` → `core_agent`
 - 验证下游节点能正确读取检索结果
+- 验证 `core_agent` 提示词中的 `{retrieved_examples}` 占位符能正确替换
+- 验证检索结果为空时的降级处理（返回空字符串或默认提示）
 
 ---
 
@@ -360,4 +411,187 @@ from backend.domain.flows.nodes.rag_agent_creator import RagAgentNodeCreator
 
 ---
 
-**文档状态**：设计完成，待实现
+## 十三、下游节点说明
+
+### 13.1 core_agent 节点
+
+**节点类型**：`agent`（标准 Agent 节点）
+
+**节点配置**（`flow copy.all`）：
+```yaml
+- name: core_agent
+  type: agent
+  config:
+    prompt: prompts/50-core_agent.md
+    model:
+      provider: doubao
+      name: doubao-seed-1-8-251228
+      temperature: 0.7
+      thinking:
+        type: enabled  # 开启深度思考
+        reasoning_effort: low  # 轻量思考，减少耗时
+        timeout: 1800  # 30分钟超时
+    tools:
+      # 记录工具
+      - record_blood_pressure
+      - update_blood_pressure
+      - record_medication
+      - record_symptom
+      - record_health_event
+      # 查询工具
+      - query_blood_pressure
+      - query_medication
+      - query_symptom
+      - query_health_event
+```
+
+### 13.2 retrieved_examples 的使用方式
+
+**提示词占位符替换**：
+- `core_agent` 的提示词文件（`prompts/50-core_agent.md`）中包含 `{retrieved_examples}` 占位符
+- 系统会在运行时自动将 `state.prompt_vars["retrieved_examples"]` 的值替换到占位符中
+- 替换后的提示词会传递给 LLM，让 LLM 参考相似案例来生成回复
+
+**使用场景**：
+- 当 `intent="qa"`（健康问答）时，`core_agent` 会基于检索到的相似案例和用户信息来回答用户的健康咨询问题
+- 相似案例作为 fewshot 示例，帮助 LLM 生成更准确、更符合场景的回复
+
+### 13.3 数据流转示例
+
+```
+1. optimization_agent 输出：
+   {
+     "scene_summary": "高血压患者今日记录血压182/112mmHg...",
+     "optimization_question": "我刚测血压180/110，还有点头晕，这种情况危险吗？"
+   }
+   ↓
+2. rag_agent 处理：
+   - 使用 optimization_question 进行向量检索
+   - 检索到 5 个相似案例
+   - 格式化为 fewshot 文本
+   - 存储到 state.prompt_vars["retrieved_examples"]
+   ↓
+3. core_agent 使用：
+   - 读取 state.prompt_vars["retrieved_examples"]
+   - 替换提示词中的 {retrieved_examples} 占位符
+   - LLM 基于相似案例生成回复
+```
+
+---
+
+## 十四、配置验证
+
+### 14.1 flow.yaml 配置检查
+
+**当前配置**（`flow.yaml`）：
+```yaml
+- name: rag_node
+  type: rag_agent
+  config:
+    model:
+      provider: doubao-embedding
+```
+
+**配置完整性**：
+- ✅ 必需配置：`model.provider` 已配置
+- ⚠️ 可选配置：未配置，将使用默认值
+- ✅ 节点名称：`rag_node`（与 edges 中的引用一致）
+
+### 14.2 edges 配置检查
+
+**flow.yaml 中的 edges**：
+```yaml
+edges:
+  - from: optimization_agent
+    to: rag_node
+    condition: always
+```
+
+**flow copy.all 中的 edges**（注意：此文件中的配置有错误）：
+```yaml
+edges:
+  - from: optimization_agent
+    to: rag_agent  # ❌ 错误：应该是 rag_node
+    condition: always
+  - from: rag_agent  # ❌ 错误：应该是 rag_node
+    to: core_agent
+    condition: always
+```
+
+**说明**：
+- `flow.yaml` 中的 edges 配置是正确的（使用 `rag_node`）
+- `flow copy.all` 中的 edges 配置有错误（使用了 `rag_agent` 而不是 `rag_node`）
+- 节点名称必须与 `nodes` 中定义的 `name` 字段一致
+
+---
+
+---
+
+## 十五、实现完成情况
+
+### 15.1 代码实现状态
+
+**✅ 已完成**（2026-01-26）
+
+1. **核心代码实现**
+   - ✅ `backend/domain/flows/nodes/rag_agent_creator.py`：RAG Agent 节点创建器
+   - ✅ `backend/domain/flows/models/definition.py`：添加 `RagAgentNodeConfig` 配置类
+   - ✅ `backend/domain/flows/nodes/registry.py`：注册 `rag_agent` 节点类型
+   - ✅ `backend/domain/flows/nodes/__init__.py`：添加导出
+
+2. **功能实现**
+   - ✅ 配置解析（支持默认值）
+   - ✅ Embedding 模型调用（异步）
+   - ✅ 向量检索（适配 `embedding_record` 表）
+   - ✅ 降级策略（多阈值重试）
+   - ✅ 结果格式化（fewshot 文本格式）
+   - ✅ 错误处理（输入验证、异常捕获）
+
+3. **测试用例**
+   - ✅ `cursor_test/test_rag_agent_creator.py`：单元测试用例
+   - 测试覆盖：正常流程、边界情况、错误处理
+
+### 15.2 待验证项
+
+1. **集成测试**
+   - ⏳ 完整流程测试：`optimization_agent` → `rag_node` → `core_agent`
+   - ⏳ 验证 `core_agent` 提示词中的 `{retrieved_examples}` 占位符替换
+   - ⏳ 验证检索结果为空时的降级处理
+
+2. **性能测试**
+   - ⏳ 检索响应时间测试
+   - ⏳ 并发场景测试
+
+### 15.3 已知问题
+
+1. **测试依赖问题**
+   - 测试用例存在 langchain 版本兼容性问题（非代码问题）
+   - 需要在正确的 conda 环境中运行测试
+
+### 15.4 使用说明
+
+**配置示例**（`flow.yaml`）：
+```yaml
+- name: rag_node
+  type: rag_agent
+  config:
+    model:
+      provider: doubao-embedding
+      # name 可选，如果不指定则使用 provider 的默认模型
+    # 以下配置均为可选，使用默认值
+    # query_field: "optimization_question"  # 默认值
+    # top_k: 5  # 默认值
+    # similarity_threshold: 0.7  # 默认值
+    # output_field: "retrieved_examples"  # 默认值
+```
+
+**前置节点输出要求**：
+- `edges_var["optimization_question"]`：优化后的问题（必填）
+- `edges_var["scene_summary"]`：场景摘要（可选，用于增强检索）
+
+**输出数据**：
+- `prompt_vars["retrieved_examples"]`：格式化的 fewshot 示例文本
+
+---
+
+**文档状态**：设计完成，代码实现完成 ✅
