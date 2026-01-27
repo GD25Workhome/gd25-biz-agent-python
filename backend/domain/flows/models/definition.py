@@ -104,7 +104,10 @@ class RagAgentNodeConfig(BaseModel):
     model: ModelConfig = Field(description="Embedding模型配置")
     top_k: int = Field(default=5, description="召回数量")
     similarity_threshold: float = Field(default=0.7, description="相似度阈值")
-    output_field: str = Field(default="retrieved_examples", description="输出字段名")
+    output_field: str = Field(
+        default="retrieved_examples",
+        description="输出字段名，存于 state.edges_var['edges_prompt_vars'] 下，供下游 agent 占位符替换"
+    )
 
 
 class NodeDefinition(BaseModel):

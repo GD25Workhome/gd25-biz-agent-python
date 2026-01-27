@@ -59,5 +59,5 @@ class SessionInfoResponse(BaseModel):
     session_id: str = Field(..., description="Session ID")
     user_id: str = Field(..., description="用户ID")
     flow_info: Dict[str, str] = Field(..., description="流程信息（包含flow_key和flow_name）")
-    doctor_info: Dict[str, str] = Field(..., description="医生信息（包含doctor_id和doctor_name）")
+    doctor_info: Dict[str, Any] = Field(..., description="医生信息（包含doctor_id、doctor_name和schedule排班列表）")
 

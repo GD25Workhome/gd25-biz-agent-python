@@ -80,6 +80,51 @@ def build_current_message(message: str) -> HumanMessage:
     return HumanMessage(content=message)
 
 
+def _format_doctor_info(doctor_info: Dict[str, Any]) -> str:
+    """
+    格式化医生信息为易读的字符串格式
+    
+    Args:
+        doctor_info: 医生信息字典，包含 doctor_name 和 schedule
+        
+    Returns:
+        str: 格式化后的医生信息字符串
+    """
+    if not doctor_info:
+        return ""
+    
+    doctor_name = doctor_info.get("doctor_name", "")
+    schedule = doctor_info.get("schedule", [])
+    
+    if not doctor_name and not schedule:
+        return ""
+    
+    parts = []
+    
+    # 医生姓名
+    if doctor_name:
+        parts.append(f"医生姓名：{doctor_name}；")
+    
+    # 排班情况
+    if schedule:
+        schedule_parts = []
+        for item in schedule:
+            date = item.get("date", "")
+            morning = item.get("morning")
+            afternoon = item.get("afternoon")
+            
+            if morning:
+                schedule_parts.append(f"{date} {morning}")
+            if afternoon:
+                schedule_parts.append(f"{date} {afternoon}")
+        
+        if schedule_parts:
+            parts.append("近期排班情况：")
+            parts.append("，".join(schedule_parts) + "。")
+    
+    return "\n".join(parts)
+
+
 def build_initial_state(request: ChatRequest, current_message: HumanMessage, 
                        history_messages: List[BaseMessage]) -> FlowState:
     """
@@ -119,6 +164,18 @@ def build_initial_state(request: ChatRequest, current_message: HumanMessage,
             logger.warning(f"Token上下文不存在: token_id={request.token_id}")
         else:
             logger.warning(f"Token上下文不是UserInfo对象: token_id={request.token_id}, type={type(token_context)}")
+    
+    # 设置 doctor_info（从 session_context 中获取）
+    session_context = context_manager.get_session_context(request.session_id)
+    if session_context:
+        doctor_info = session_context.get("doctor_info")
+        if doctor_info:
+            formatted_doctor_info = _format_doctor_info(doctor_info)
+            prompt_vars["doctor_info"] = formatted_doctor_info
+        else:
+            prompt_vars["doctor_info"] = ""
+    else:
+        prompt_vars["doctor_info"] = ""
     
     return {
         "current_message": current_message,

@@ -2,6 +2,9 @@
 登录相关路由
 """
 import logging
+import random
+from datetime import datetime, timedelta
+from typing import List, Dict, Optional, Any
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,6 +26,93 @@ from backend.infrastructure.database.repository.session_cache_repository import 
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+def generate_doctor_schedule(days: int = 14) -> List[Dict[str, Any]]:
+    """
+    生成医生排班信息
+    
+    规则：
+    - 从今天开始，往后生成指定天数的排班
+    - 一周医生休息两天，两天分为4个随机的半天（每周随机选择2天，每天随机选择上午或下午休息，共4个半天）
+    - 工作时间为国内医院的白班时间：上午 8:00-12:00，下午 14:00-18:00
+    - 如果没有排班就不显示对应的时间段
+    
+    Args:
+        days: 生成排班的天数，默认为14天
+        
+    Returns:
+        List[Dict]: 排班信息列表，每个元素包含：
+            - date: 日期字符串（YYYY-MM-DD格式）
+            - morning: 上午时间段（8:00-12:00），如果休息则不包含此字段
+            - afternoon: 下午时间段（14:00-18:00），如果休息则不包含此字段
+    """
+    schedule = []
+    today = datetime.now().date()
+    
+    # 计算需要生成的周数（向上取整）
+    weeks = (days + 6) // 7
+    
+    # 为每周生成休息时间安排
+    # rest_periods_by_week: {week_num: [(day_in_week, 'morning'|'afternoon'), ...]}
+    rest_periods_by_week = {}
+    
+    for week in range(weeks):
+        # 每周随机选择2天
+        rest_days = random.sample(range(7), 2)
+        rest_periods = []
+        
+        # 为这2天随机分配4个半天（确保总共4个半天休息）
+        # 策略：从2个休息日的4个半天中随机选择4个
+        day1, day2 = rest_days[0], rest_days[1]
+        
+        # 所有可能的半天：2个休息日 × 2个半天 = 4个半天
+        all_periods = [
+            (day1, 'morning'), (day1, 'afternoon'),
+            (day2, 'morning'), (day2, 'afternoon')
+        ]
+        
+        # 从4个半天中随机选择4个（即全部选择，但顺序随机）
+        # 这样可以确保每个休息日至少有1个半天休息（因为总共只有4个半天，2个休息日）
+        rest_periods = random.sample(all_periods, 4)
+        
+        # 验证：确保正好有4个半天休息，且每个休息日至少有1个半天
+        assert len(rest_periods) == 4, f"每周应该有4个半天休息，实际有{len(rest_periods)}个"
+        day1_count = sum(1 for d, p in rest_periods if d == day1)
+        day2_count = sum(1 for d, p in rest_periods if d == day2)
+        assert day1_count >= 1 and day2_count >= 1, f"每个休息日至少有1个半天休息"
+        
+        rest_periods_by_week[week] = rest_periods
+    
+    # 生成每天的排班信息
+    for day_offset in range(days):
+        current_date = today + timedelta(days=day_offset)
+        week_num = day_offset // 7
+        day_in_week = day_offset % 7
+        
+        # 获取本周的休息安排
+        week_rest_periods = rest_periods_by_week.get(week_num, [])
+        
+        # 检查今天上午和下午是否休息
+        morning_rest = (day_in_week, 'morning') in week_rest_periods
+        afternoon_rest = (day_in_week, 'afternoon') in week_rest_periods
+        
+        # 构建当天的排班信息
+        day_schedule = {
+            "date": current_date.strftime("%Y-%m-%d")
+        }
+        
+        # 添加上午时间段（如果不休息）
+        if not morning_rest:
+            day_schedule["morning"] = "8:00-12:00"
+        
+        # 添加下午时间段（如果不休息）
+        if not afternoon_rest:
+            day_schedule["afternoon"] = "14:00-18:00"
+        
+        schedule.append(day_schedule)
+    
+    return schedule
 
 
 @router.post("/login/token", response_model=CreateTokenResponse)
@@ -139,7 +229,8 @@ async def create_session(
         # 构建医生信息
         doctor_info = {
             "doctor_id": doctor_id,
-            "doctor_name": "张医生"
+            "doctor_name": "张医生",
+            "schedule": generate_doctor_schedule(days=14)  # 生成14天的排班信息
         }
         
         # 构建session上下文字典

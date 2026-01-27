@@ -142,21 +142,13 @@ class RagAgentNodeCreator(NodeCreator):
             new_state = state.copy()
             
             # 关键：每次创建新 state 时，edges_var 使用新字典，不继承原始值
-            # 确保上游节点的数据不会污染下游节点的条件判断
-            new_state["edges_var"] = {}
-            
-            # 将结果保存到 prompt_vars，以便下游 agent 节点可以在 prompt 模板中使用
-            # 初始化 prompt_vars（如果不存在）
-            if "prompt_vars" not in new_state:
-                new_state["prompt_vars"] = {}
-            # elif not isinstance(new_state["prompt_vars"], dict):
-            #     # 如果 prompt_vars 存在但不是字典，重新初始化
-            #     new_state["prompt_vars"] = {}
-            
-            new_state["prompt_vars"][output_field] = formatted_examples
+            # 将检索结果保存到 edges_var["edges_prompt_vars"]，供下游 agent 的 build_system_message 占位符替换
+            new_state["edges_var"] = {
+                "edges_prompt_vars": {output_field: formatted_examples}
+            }
             
             logger.debug(
-                f"[节点 {node_name}] 将检索结果保存到 prompt_vars['{output_field}']，"
+                f"[节点 {node_name}] 将检索结果保存到 edges_var['edges_prompt_vars']['{output_field}']，"
                 f"结果长度: {len(formatted_examples)} 字符"
             )
             

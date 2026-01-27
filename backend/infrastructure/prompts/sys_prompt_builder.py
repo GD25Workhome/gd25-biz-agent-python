@@ -14,6 +14,9 @@ from backend.infrastructure.prompts.manager import prompt_manager
 logger = logging.getLogger(__name__)
 
 
+# edges_var 中用于提示词占位符的专属 key，仅遍历其下级属性参与替换
+EDGES_PROMPT_VARS_KEY = "edges_prompt_vars"
+
 def build_system_message(
     prompt_cache_key: str,
     state: FlowState
@@ -23,59 +26,47 @@ def build_system_message(
     
     该方法会：
     1. 从 FlowState 中提取 prompt_vars
-    2. 从提示词缓存中获取系统提示词模板
-    3. 使用 prompt_vars 字典中的值替换占位符
-    4. 将替换后的提示词封装为 SystemMessage
+    2. 从 edges_var[edges_prompt_vars] 中提取节点专属、临时变量（通常来自上一节点）
+    3. 从提示词缓存中获取系统提示词模板
+    4. 使用上述变量替换占位符（同名时 edges_prompt_vars 优先于 prompt_vars）
+    5. 将替换后的提示词封装为 SystemMessage
     
-    支持的占位符格式：
-    - {current_date}: 当前日期时间
-    - {user_info}: 患者基础信息
-    - 其他在 prompt_vars 中定义的占位符
+    占位符来源：
+    - prompt_vars：全局/会话级变量（如 current_date、user_info）
+    - edges_var["edges_prompt_vars"]：仅遍历该 key 的下级属性，用于节点专属临时值
     
-    注意：只替换在 prompt_vars 中明确存在的占位符。
-    如果占位符不在 prompt_vars 中，将保留原样（不进行替换）。
+    注意：只替换在解析池中存在的占位符，未匹配的保留原样。
     
     Args:
         prompt_cache_key: 提示词缓存键（通过 prompt_manager.cached_prompt 获取）
-        state: 流程状态，从中提取 prompt_vars 字典
+        state: 流程状态，从中提取 prompt_vars 与 edges_var
         
     Returns:
         SystemMessage: 封装后的系统消息对象
-        
-    Example:
-        >>> state = {"prompt_vars": {"current_date": "2024-01-01 10:00:00", "user_info": {...}}}
-        >>> sys_msg = build_system_message("prompt_key", state)
     """
-    # 从 FlowState 中提取 prompt_vars
+    # 1. 提取 prompt_vars 并转为安全字典
     prompt_vars = state.get("prompt_vars")
-    if prompt_vars is None:
+    if not isinstance(prompt_vars, dict):
         prompt_vars = {}
+    safe_vars = _to_safe_vars(prompt_vars)
     
-    # 获取系统提示词模板
+    # 2. 提取 edges_var[edges_prompt_vars] 的下级属性并转为安全字典，覆盖同名 key
+    edges_var = state.get("edges_var")
+    if isinstance(edges_var, dict):
+        edges_prompt_vars = edges_var.get(EDGES_PROMPT_VARS_KEY)
+        if isinstance(edges_prompt_vars, dict):
+            safe_edges = _to_safe_vars(edges_prompt_vars)
+            safe_vars = {**safe_vars, **safe_edges}
+    
+    # 3. 获取系统提示词模板
     system_prompt_template = prompt_manager.get_prompt_by_key(prompt_cache_key)
     
-    # 将 prompt_vars 中的值转换为字符串（None 转换为空字符串）
-    safe_vars = {}
-    for key, value in prompt_vars.items():
-        if value is None:
-            safe_vars[key] = ""
-        elif isinstance(value, (dict, list)):
-            # 如果是字典或列表，格式化为 JSON 字符串
-            safe_vars[key] = json.dumps(value, ensure_ascii=False, indent=2)
-        else:
-            safe_vars[key] = str(value)
-    
-    # 使用正则表达式替换占位符（支持 {variable} 格式）
-    # 只替换在 safe_vars 中存在的占位符，其他保留原样
+    # 4. 替换占位符：仅替换解析池中存在的，其余保留原样
     def replace_placeholder(match):
-        """替换占位符的回调函数"""
-        placeholder_name = match.group(1)  # 提取占位符名称（不含花括号）
-        # 从 safe_vars 中获取值，如果不存在则保留原占位符
+        placeholder_name = match.group(1)
         if placeholder_name in safe_vars:
             return safe_vars[placeholder_name]
-        else:
-            # 不在 prompt_vars 中的占位符，保留原样
-            return match.group(0)
+        return match.group(0)
     
     # 匹配 {variable} 格式的占位符
     pattern = r'\{([^}]+)\}'
@@ -92,3 +83,18 @@ def build_system_message(
     
     return sys_msg
 
+
+
+def _to_safe_vars(raw: Dict[str, Any]) -> Dict[str, str]:
+    """将原始变量字典转为占位符可用的安全字符串字典。"""
+    if not isinstance(raw, dict):
+        return {}
+    out: Dict[str, str] = {}
+    for key, value in raw.items():
+        if value is None:
+            out[key] = ""
+        elif isinstance(value, (dict, list)):
+            out[key] = json.dumps(value, ensure_ascii=False, indent=2)
+        else:
+            out[key] = str(value)
+    return out
