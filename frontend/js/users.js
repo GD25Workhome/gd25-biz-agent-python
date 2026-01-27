@@ -48,6 +48,7 @@
             user_name: '',
             age: null,
             gender: '',
+            disease: '',
             systolic_target: null,
             diastolic_target: null
         });
@@ -154,6 +155,7 @@
                     user_name: user.user_name,
                     age: userInfo['年龄'] || null,
                     gender: gender,
+                    disease: userInfo['疾病'] || '',
                     systolic_target: userInfo['收缩压目标值（mmHg）'] || null,
                     diastolic_target: userInfo['舒张压目标值（mmHg）'] || null
                 });
@@ -173,6 +175,7 @@
                 user_name: '',
                 age: null,
                 gender: '',
+                disease: '',
                 systolic_target: null,
                 diastolic_target: null
             });
@@ -197,6 +200,9 @@
                         }
                         if (form.gender) {
                             userInfo['性别'] = form.gender;
+                        }
+                        if (form.disease !== null && form.disease !== undefined && String(form.disease).trim() !== '') {
+                            userInfo['疾病'] = String(form.disease).trim();
                         }
                         if (form.systolic_target !== null && form.systolic_target !== undefined && form.systolic_target !== '') {
                             userInfo['收缩压目标值（mmHg）'] = Number(form.systolic_target);
@@ -396,6 +402,13 @@
                             <el-checkbox label="男">男</el-checkbox>
                             <el-checkbox label="女">女</el-checkbox>
                         </el-checkbox-group>
+                    </el-form-item>
+                    <el-form-item label="疾病" prop="disease">
+                        <el-input 
+                            v-model="form.disease" 
+                            placeholder="请输入疾病"
+                            clearable
+                        ></el-input>
                     </el-form-item>
                     <el-form-item label="收缩压目标值（mmHg）" prop="systolic_target">
                         <el-input-number 

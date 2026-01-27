@@ -19,8 +19,12 @@ from backend.domain.embeddings.executor import EmbeddingExecutor
 from backend.infrastructure.database.vector_connection import get_vector_db_connection
 from backend.infrastructure.database.base import TABLE_PREFIX
 from backend.infrastructure.llm.providers.manager import ProviderManager
+from backend.infrastructure.rag.retrieval import search_popular_science_articles
 
 logger = logging.getLogger(__name__)
+
+# 文章详情页基础 URL，用于生成可点击的引用链接（与前端约定一致）
+ARTICLE_BASE_URL = "http://localhost:8000/api/v1/articles"
 
 
 class RagAgentNodeCreator(NodeCreator):
@@ -135,21 +139,47 @@ class RagAgentNodeCreator(NodeCreator):
                 logger.error(error_msg, exc_info=True)
                 raise RuntimeError(error_msg) from e
             
-            # 4. 格式化检索结果
+            # 4. 格式化案例检索结果
             formatted_examples = self._format_retrieved_examples(retrieved_results)
             
-            # 5. 更新状态
-            new_state = state.copy()
+            # 5. 并行：根据疾病信息检索科普文章并格式化为 Markdown 链接
+            disease_for_article = edges_var.get("disease_for_article") or []
+            if isinstance(disease_for_article, str):
+                disease_for_article = [disease_for_article] if disease_for_article.strip() else []
+            article_links_md = self._format_article_links_md([])
+            if disease_for_article:
+                first_disease = (disease_for_article[0] or "").strip()
+                if first_disease:
+                    try:
+                        articles = search_popular_science_articles(
+                            disease=first_disease,
+                            top_k=3,
+                            similarity_threshold=0.7,
+                            min_results=0,
+                        )
+                        article_links_md = self._format_article_links_md(articles)
+                        logger.info(
+                            f"[节点 {node_name}] 科普文章检索完成，疾病={first_disease!r}，"
+                            f"找到 {len(articles)} 篇，已格式化为 Markdown 链接"
+                        )
+                    except Exception as e:
+                        logger.warning(
+                            f"[节点 {node_name}] 科普文章检索失败，疾病={first_disease!r}，将使用占位文案: {e}"
+                        )
             
-            # 关键：每次创建新 state 时，edges_var 使用新字典，不继承原始值
-            # 将检索结果保存到 edges_var["edges_prompt_vars"]，供下游 agent 的 build_system_message 占位符替换
+            # 6. 更新状态：案例 + 文章链接一并写入 edges_prompt_vars
+            new_state = state.copy()
             new_state["edges_var"] = {
-                "edges_prompt_vars": {output_field: formatted_examples}
+                "edges_prompt_vars": {
+                    output_field: formatted_examples,
+                    "retrieved_articles": article_links_md,
+                }
             }
             
             logger.debug(
-                f"[节点 {node_name}] 将检索结果保存到 edges_var['edges_prompt_vars']['{output_field}']，"
-                f"结果长度: {len(formatted_examples)} 字符"
+                f"[节点 {node_name}] 将检索结果保存到 edges_var['edges_prompt_vars']："
+                f"'{output_field}' 长度 {len(formatted_examples)} 字符，"
+                f"'retrieved_articles' 长度 {len(article_links_md)} 字符"
             )
             
             return new_state
@@ -324,3 +354,31 @@ class RagAgentNodeCreator(NodeCreator):
             formatted_lines.append("")  # 空行分隔
         
         return "\n".join(formatted_lines)
+
+    def _format_article_links_md(self, articles: List[Dict], base_url: Optional[str] = None) -> str:
+        """
+        将科普文章列表格式化为「引用文章」Markdown 段落，使用可点击链接。
+        链接地址约定：{base_url}/{文章 id}，默认 base_url 为 ARTICLE_BASE_URL，id 使用字段 id。
+
+        Args:
+            articles: 检索结果列表，元素需含 article_title 与 id
+            base_url: 文章详情 base URL，默认使用模块常量 ARTICLE_BASE_URL
+
+        Returns:
+            str: Markdown 段落，无文章时返回占位文案「（暂无推荐文章）」
+        """
+        if base_url is None:
+            base_url = ARTICLE_BASE_URL
+        if not articles:
+            return ""
+        lines = ["## 参考文章", ""]
+        for item in articles:
+            title = (item.get("article_title") or "").strip() or "（无标题）"
+            aid = item.get("id")
+            if aid is None:
+                continue
+            url = f"{base_url.rstrip('/')}/{aid}"
+            lines.append(f"- [{title}]({url})")
+        if len(lines) <= 2:
+            return ""
+        return "\n".join(lines)

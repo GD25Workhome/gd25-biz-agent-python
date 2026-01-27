@@ -6,3 +6,5 @@
     {doctor_info}
 - 其它信息（如有会填写，否则忽略）：
     {other_info}
+- 引用文章列表（如有会填写，否则忽略）：
+    {retrieved_articles}

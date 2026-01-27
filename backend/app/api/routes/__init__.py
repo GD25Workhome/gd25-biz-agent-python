@@ -9,6 +9,7 @@ from backend.app.api.routes.blood_pressure import router as blood_pressure_route
 from backend.app.api.routes.users import router as users_router
 from backend.app.api.routes.login import router as login_router
 from backend.app.api.routes.flows import router as flows_router
+from backend.app.api.routes.articles import router as articles_router
 
 # 创建主路由
 router = APIRouter()
@@ -19,6 +20,7 @@ router.include_router(blood_pressure_router, prefix="/api/v1", tags=["血压记�
 router.include_router(users_router, prefix="/api/v1", tags=["用户管理"])
 router.include_router(login_router, prefix="/api/v1", tags=["登录"])
 router.include_router(flows_router, prefix="/api/v1", tags=["流程管理"])
+router.include_router(articles_router, prefix="/api/v1", tags=["科普文章"])
 
 __all__ = ["router"]
 
