@@ -1,0 +1,70 @@
+name: embedding_agent
+version: "1.0"
+description: "embedding的词干提取"
+
+nodes:
+
+  # 词干提取-agent（场景描述）
+  - name: stem_extraction_node
+    type: agent
+    config:
+      prompt: prompts/20-ext_agent.md
+      model:
+        provider: doubao
+        name: doubao-seed-1-8-251228
+        temperature: 0.7
+        thinking:
+          type: disabled
+
+  # 词干数据加工
+  - name: format_data_node
+    type: function
+    config:
+      function_key: "before_embedding_func"
+      output:
+        filed: embedding_str # 将结果保存到state的edges_var的哪个属性中
+
+  # 词干数据embedding-agent,将input的值调用模型进行embedding，输出embedding_value
+  - name: embedding_node
+    type: em_agent
+    config:
+      model:
+        provider: doubao-embedding
+        name: doubao-embedding-vision-250615
+      input:
+        filed: embedding_str # 从state的edges_var的哪个属性中读取数据
+      output:
+        filed: embedding_value # 将结果保存到state的edges_var的哪个属性中
+
+  # 词干数据入库
+  - name: insert_data_to_vector_db_node
+    type: function
+    config:
+      function_key: "insert_data_to_vector_db"
+      input:
+        filed: embedding_value  # 从state的edges_var的哪个属性中读取数据
+
+
+edges:
+  # 词干提取流程：按顺序连接所有节点
+  # 1. 词干提取-agent
+  - from: stem_extraction_node
+    to: format_data_node
+    condition: always
+  
+  # 2. 词干数据加工
+  - from: format_data_node
+    to: embedding_node
+    condition: always
+  
+  # 3. 词干数据embedding-agent
+  - from: embedding_node
+    to: insert_data_to_vector_db_node
+    condition: always
+  
+  # 4. 词干数据入库完成后结束
+  - from: insert_data_to_vector_db_node
+    to: END
+    condition: always
+
+entry_node: stem_extraction_node

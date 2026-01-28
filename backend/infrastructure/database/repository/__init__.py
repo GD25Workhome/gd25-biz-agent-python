@@ -6,6 +6,7 @@ from backend.infrastructure.database.repository.blood_pressure_repository import
 from backend.infrastructure.database.repository.user_repository import UserRepository
 from backend.infrastructure.database.repository.token_cache_repository import TokenCacheRepository
 from backend.infrastructure.database.repository.session_cache_repository import SessionCacheRepository
+from backend.infrastructure.database.repository.knowledge_base_repository import KnowledgeBaseRepository
 
 __all__ = [
     "BaseRepository",
@@ -13,5 +14,6 @@ __all__ = [
     "UserRepository",
     "TokenCacheRepository",
     "SessionCacheRepository",
+    "KnowledgeBaseRepository",
 ]
 

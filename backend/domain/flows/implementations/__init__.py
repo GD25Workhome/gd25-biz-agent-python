@@ -6,6 +6,7 @@ from backend.domain.flows.implementations.retrieval_node_v2 import RetrievalNode
 from backend.domain.flows.implementations.query_user_info_node import QueryUserInfoNode
 from backend.domain.flows.implementations.before_embedding_func import BeforeEmbeddingFuncNode
 from backend.domain.flows.implementations.insert_data_to_vector_db_func import InsertDataToVectorDbNode
+from backend.domain.flows.implementations.insert_rag_data_func import InsertRagDataNode
 
 __all__ = [
     "RetrievalNode",
@@ -13,4 +14,5 @@ __all__ = [
     "QueryUserInfoNode",
     "BeforeEmbeddingFuncNode",
     "InsertDataToVectorDbNode",
+    "InsertRagDataNode",
 ]

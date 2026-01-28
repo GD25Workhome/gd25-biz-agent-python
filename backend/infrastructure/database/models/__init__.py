@@ -10,6 +10,7 @@ from backend.infrastructure.database.models.medication import MedicationRecord
 from backend.infrastructure.database.models.symptom import SymptomRecord
 from backend.infrastructure.database.models.health_event import HealthEventRecord
 from backend.infrastructure.database.models.embedding_record import EmbeddingRecord
+from backend.infrastructure.database.models.knowledge_base import KnowledgeBaseRecord
 from backend.infrastructure.database.models.rag_models import (
     QAExample,
     RecordExample,
@@ -27,6 +28,7 @@ __all__ = [
     "SymptomRecord",
     "HealthEventRecord",
     "EmbeddingRecord",
+    "KnowledgeBaseRecord",
     "QAExample",
     "RecordExample",
     "QueryExample",

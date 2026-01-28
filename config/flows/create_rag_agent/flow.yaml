@@ -1,0 +1,32 @@
+# 单节点流程：将「QA 场景独立记录」md 转为结构化 cases JSON
+# 供 scripts/create_rag_data 脚本调用；占位符 {scene_record_content} 由 state.edges_var.edges_prompt_vars 注入
+name: create_rag_agent
+version: "1.0"
+description: "QA场景独立记录转结构化cases（单节点agent），然后入库"
+
+nodes:
+  - name: create_rag_agent_node
+    type: agent
+    config:
+      prompt: prompts/create_rag_agent.md
+      model:
+        provider: doubao
+        temperature: 0.7
+        thinking:
+          type: disabled
+
+  # 将提示词中的内容提取出来，存储到数据库中
+  - name: insert_rag_data_node
+    type: function
+    config:
+      function_key: "insert_rag_data_func"
+
+edges:
+  - from: create_rag_agent_node
+    to: insert_rag_data_node
+    condition: always
+  - from: insert_rag_data_node
+    to: END
+    condition: always
+
+entry_node: create_rag_agent_node
