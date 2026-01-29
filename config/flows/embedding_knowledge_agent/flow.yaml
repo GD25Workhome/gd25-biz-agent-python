@@ -1,20 +1,20 @@
-name: embedding_agent
+name: embedding_knowledge_agent
 version: "1.0"
-description: "embedding的词干提取"
+description: "知识库 embedding 词干提取（数据来自 state，不查业务表）"
 
 nodes:
-
-  # 词干提取-agent（场景描述）
-  - name: stem_extraction_node
-    type: agent
-    config:
-      prompt: prompts/20-ext_agent.md
-      model:
-        provider: doubao
-        name: doubao-seed-1-8-251228
-        temperature: 0.7
-        thinking:
-          type: disabled
+  # 调用这个流程的脚本需要满足before_embedding_func节点的数据输入要求，即下面的原始数据要能给它造出来，否则会造成流程运行数据缺失
+  #             # 1. 读取 edges_var 中的数据
+            # edges_var = state.get("edges_var", {})
+            # scene_summary = edges_var.get("scene_summary", "")
+            # optimization_question = edges_var.get("optimization_question", "")
+            # input_tags = edges_var.get("input_tags", [])
+            # response_tags = edges_var.get("response_tags", [])
+            
+            # # 2. 读取 prompt_vars 中的数据源信息
+            # prompt_vars = state.get("prompt_vars", {})
+            # source_id = prompt_vars.get("source_id")
+            # source_table_name = prompt_vars.get("source_table_name")
 
   # 词干数据加工
   - name: format_data_node
@@ -46,12 +46,7 @@ nodes:
 
 
 edges:
-  # 词干提取流程：按顺序连接所有节点
-  # 1. 词干提取-agent
-  - from: stem_extraction_node
-    to: format_data_node
-    condition: always
-  
+
   # 2. 词干数据加工
   - from: format_data_node
     to: embedding_node
@@ -67,4 +62,4 @@ edges:
     to: END
     condition: always
 
-entry_node: stem_extraction_node
+entry_node: format_data_node

@@ -59,6 +59,11 @@ class EmbeddingRecord(Base):
         nullable=True,
         comment="AI回复内容（来自原始表的new_session_response）"
     )
+    embedding_str = Column(
+        Text,
+        nullable=True,
+        comment="用于生成 embedding 的文本（scene_summary + optimization_question + ai_response 的格式化拼接）"
+    )
     embedding_value = Column(
         Vector(2048) if HAS_PGVECTOR else Text,
         nullable=True,
