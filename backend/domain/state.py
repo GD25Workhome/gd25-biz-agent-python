@@ -20,4 +20,5 @@ class FlowState(TypedDict, total=False):
     trace_id: Optional[str]  # Trace ID（用于可观测性追踪）
     prompt_vars: Optional[Dict[str, Any]]  # 字典类型，用于存储提示词中的变量
     edges_var: Optional[Dict[str, Any]]  # 边条件判断变量存储（通用化设计）
+    persistence_edges_var: Optional[Dict[str, Any]]  # 持久化边变量通道，透传到任意下级节点，边条件合并时 edges_var 优先
 

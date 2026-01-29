@@ -26,9 +26,9 @@ class ConditionEvaluator:
         - 括号：用于改变运算优先级
         
         支持的变量：
-        - 所有存储在 state.edges_var 中的变量都可以在条件表达式中使用
-        - 变量名直接对应 edges_var 中的 key
-        - 例如：如果 edges_var 中有 {"intent": "record", "confidence": 0.9}，则可以使用 intent == "record" && confidence >= 0.8
+        - 变量来源为 state.persistence_edges_var 与 state.edges_var 的合并，同名 key 以 edges_var 为准
+        - 变量名直接对应合并后的 key
+        - 例如：persistence_edges_var 中有 intent/confidence，edges_var 中有 confidence 时，条件中 confidence 取 edges_var 的值
         
         Args:
             condition: 条件表达式字符串（如 "intent == 'blood_pressure' && confidence >= 0.8"）
@@ -112,7 +112,7 @@ class ConditionEvaluator:
         """
         从流程状态构建变量字典（通用化设计）
         
-        直接从 edges_var 获取所有变量，不再定制化
+        变量来源为 persistence_edges_var 与 edges_var 的合并，edges_var 优先级更高（同名 key 以 edges_var 为准）。
         
         Args:
             state: 流程状态
@@ -120,13 +120,17 @@ class ConditionEvaluator:
         Returns:
             Dict[str, Any]: 变量字典，用于条件表达式评估
         """
-        # 直接从 edges_var 获取所有变量
+        # 先以 persistence_edges_var 为底，再以 edges_var 覆盖（edges_var 优先级更高）
+        persistence_edges_var = state.get("persistence_edges_var") or {}
+        if not isinstance(persistence_edges_var, dict):
+            persistence_edges_var = {}
+        names = persistence_edges_var.copy()
+        
         edges_var = state.get("edges_var", {})
         if edges_var is None:
             edges_var = {}
-        
-        # 直接使用 edges_var 作为变量字典
-        names = edges_var.copy()
+        for k, v in edges_var.items():
+            names[k] = v
         
         # 处理 None 值：为所有 None 值设置合理的默认值
         # 这样可以避免条件表达式中的 None 比较问题

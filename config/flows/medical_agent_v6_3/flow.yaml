@@ -1,0 +1,78 @@
+name: medical_agent_v6.3
+version: "6.3"
+description: "医疗分身Agent流程V6.3-RAG融合方案"
+
+nodes:
+  # 节点1：user_context构建节点，查询用户基础信息
+  - name: builder_prompt_context_node
+    type: function
+    config:
+      function_key: "query_user_info_node_func"
+      query_list:
+        - blood_pressure
+
+  # 节点1：词干提取，服务于rag检索
+  - name: optimization_agent
+    type: agent
+    config:
+      prompt: prompts/10-optimization-agent.md
+      persist_to_persistence_edges_var:
+        - intent
+        - confidence
+      model:
+        provider: doubao
+        temperature: 0.7
+        thinking:
+          type: disabled  # 关闭深度思考，加速响应
+
+  # 节点2：提取前一个节点的数据进行数据召回处理
+  - name: rag_node
+    type: rag_agent
+    config:
+      model:
+        provider: doubao-embedding
+      top_k: 5
+      similarity_threshold: 0.7
+      output_field: retrieved_examples
+
+  # 节点3-1：血压Agent
+  - name: blood_agent
+    type: agent
+    config:
+      prompt: prompts/61-blood_agent.md
+      model:
+        provider: doubao
+        temperature: 0.7
+        thinking:
+          type: disabled
+  # 节点3-2：QA Agent（兜底）
+  - name: QA_agent
+    type: agent
+    config:
+      prompt: prompts/69-QA_agent.md
+      model:
+        provider: doubao
+        temperature: 0.7
+        thinking:
+          type: disabled
+
+
+edges:
+
+  - from: builder_prompt_context_node
+    to: optimization_agent
+    condition: always
+
+  - from: optimization_agent
+    to: rag_node
+    condition: always
+
+  - from: rag_node
+    to: blood_agent
+    condition: intent == "blood_pressure" && confidence >= 0.8
+  # QA 或是兜底流程
+  - from: rag_node
+    to: QA_agent
+    condition: intent == "qa" || confidence < 0.8
+
+entry_node: builder_prompt_context_node

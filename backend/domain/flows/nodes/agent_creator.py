@@ -141,6 +141,18 @@ class AgentNodeCreator(NodeCreator):
                     logger.debug(f"[节点 {node_name}] 解析输出 JSON 失败（可能不是 JSON 格式）: {e}")
                     # 不是 JSON 格式或解析失败，不影响流程继续
                 
+                # 按 config 将 edges_var 指定 key 覆盖到 persistence_edges_var（持久化通道，透传到任意下级节点）
+                # 必须 .copy()：new_state=state.copy() 是浅拷贝，直接改 new_state["persistence_edges_var"][k] 会污染上游 state
+                persist_keys = config_dict.get("persist_to_persistence_edges_var")
+                if isinstance(persist_keys, list) and len(persist_keys) > 0:
+                    new_state["persistence_edges_var"] = (state.get("persistence_edges_var") or {}).copy()
+                    for k in persist_keys:
+                        if k in new_state["edges_var"]:
+                            new_state["persistence_edges_var"][k] = new_state["edges_var"][k]
+                    logger.debug(
+                        f"[节点 {node_name}] 将 edges_var 的 key 同步到 persistence_edges_var: {persist_keys}"
+                    )
+                
                 # 将AI回复存放到 flow_msgs（流程中间消息），不存放到 history_messages
                 ai_message = AIMessage(content=output)
                 flow_msgs = state.get("flow_msgs", [])
