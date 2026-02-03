@@ -191,15 +191,18 @@ def build_initial_state(request: ChatRequest, current_message: HumanMessage,
 
 def get_flow_graph(session_id: str):
     """
-    根据session_id获取流程图
+    根据session_id获取流程图及流程信息
     
-    从ContextManager中获取session_context，提取flow_key，然后通过FlowManager获取对应的流程图。
+    从ContextManager中获取session_context，提取flow_info，然后通过FlowManager获取对应的流程图。
     
     Args:
         session_id: 会话ID
         
     Returns:
-        CompiledGraph: 编译后的流程图
+        tuple: (graph, flow_key, flow_name)
+            - graph: 编译后的流程图
+            - flow_key: 流程键（与 login 中 flow_def.name 一致）
+            - flow_name: 流程名称（与 login 中 flow_def.description or flow_def.name 一致）
         
     Raises:
         HTTPException: 当session不存在或flow_key不存在时抛出异常
@@ -223,18 +226,19 @@ def get_flow_graph(session_id: str):
             detail=f"Session数据格式错误：缺少flow_info。session_id={session_id}"
         )
     
-    # 从flow_info中提取flow_key
+    # 从flow_info中提取flow_key和flow_name
     flow_key = flow_info.get("flow_key")
     if flow_key is None:
         raise HTTPException(
             status_code=500,
             detail=f"Session数据格式错误：flow_info中缺少flow_key。session_id={session_id}"
         )
+    flow_name = flow_info.get("flow_name") or flow_key
     
     # 通过FlowManager获取流程图（按需加载）
     try:
         graph = FlowManager.get_flow(flow_key)
-        return graph
+        return graph, flow_key, flow_name
     except ValueError as e:
         raise HTTPException(
             status_code=500,

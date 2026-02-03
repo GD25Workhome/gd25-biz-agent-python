@@ -153,12 +153,9 @@ class AgentNodeCreator(NodeCreator):
                         f"[节点 {node_name}] 将 edges_var 的 key 同步到 persistence_edges_var: {persist_keys}"
                     )
                 
-                # 将AI回复存放到 flow_msgs（流程中间消息），不存放到 history_messages
+                # 将AI回复存放到 flow_msgs（由 add_messages reducer 追加），不存放到 history_messages
                 ai_message = AIMessage(content=output)
-                flow_msgs = state.get("flow_msgs", [])
-                new_flow_msgs = flow_msgs.copy()
-                new_flow_msgs.append(ai_message)
-                new_state["flow_msgs"] = new_flow_msgs
+                new_state["flow_msgs"] = [ai_message]
                 # history_messages 保持不变，不添加中间节点的输出
             
             return new_state

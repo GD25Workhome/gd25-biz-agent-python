@@ -7,7 +7,7 @@ from typing import Dict, Callable, List
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 
-from backend.domain.state import FlowState
+from backend.domain.state import FlowState, FlowInputSchema, FlowOutputSchema
 from backend.domain.flows.models.definition import FlowDefinition, NodeDefinition
 from backend.domain.flows.condition_evaluator import ConditionEvaluator
 from backend.domain.flows.nodes.registry import node_creator_registry
@@ -29,7 +29,11 @@ class GraphBuilder:
         Returns:
             StateGraph: 构建的图
         """
-        graph = StateGraph(FlowState)
+        graph = StateGraph(
+            FlowState,
+            input_schema=FlowInputSchema,
+            output_schema=FlowOutputSchema,
+        )
         
         # 为每个节点创建节点函数
         for node_def in flow_def.nodes:

@@ -51,8 +51,8 @@ async def chat(
             f"history_count={len(request.conversation_history) if request.conversation_history else 0}"
         )
         
-        # 获取流程图（按需加载）
-        graph = get_flow_graph(request.session_id)
+        # 获取流程图及流程信息（按需加载）
+        graph, flow_key, flow_name = get_flow_graph(request.session_id)
         
         # 构建历史消息列表（从conversation_history）
         history_messages = build_history_messages(request.conversation_history)
@@ -76,6 +76,16 @@ async def chat(
             config = {"configurable": {"thread_id": request.session_id}}
             if langfuse_handler:
                 config["callbacks"] = [langfuse_handler]
+                config["metadata"] = {
+                    "langfuse_user_id": request.token_id or "",
+                    "langfuse_session_id": request.session_id,
+                    "langfuse_tags": ["chat", "api"],
+                    "flow_key": flow_key,
+                    "flow_name": flow_name,
+                    "source": "chat_api",
+                    "message_length": str(len(request.message)),
+                    "history_count": str(len(request.conversation_history or [])),
+                }
             
             # 执行流程图
             result = await graph.ainvoke(initial_state, config)

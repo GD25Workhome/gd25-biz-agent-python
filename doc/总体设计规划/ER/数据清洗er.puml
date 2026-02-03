@@ -1,0 +1,67 @@
+@startuml 数据清洗_embedding_records_ER
+!theme plain
+skinparam linetype ortho
+skinparam backgroundColor #FEFEFE
+skinparam roundCorner 10
+
+title 数据清洗 ER 图（embedding_records + knowledge_base）
+
+entity "embedding_records\n(Embedding 记录)" as embedding_records {
+  * **id** : VARCHAR(50) <<PK>>\n记录ID（ULID）
+  --
+  **scene_summary** : TEXT <<NOT NULL>>\n场景摘要
+  **optimization_question** : TEXT <<NOT NULL>>\n优化后的问题
+  **input_tags** : TEXT\n输入标签（JSON数组字符串）
+  **response_tags** : TEXT\n响应标签（JSON数组字符串）
+  **ai_response** : TEXT\nAI回复内容（来自原始表的 new_session_response）
+  **embedding_str** : TEXT\n用于生成 embedding 的文本
+  **embedding_value** : VECTOR(2048)\nEmbedding向量值（2048维）
+  **message_id** : VARCHAR(100) <<IDX>>\n消息ID（关联数据源）
+  **trace_id** : VARCHAR(100) <<IDX>>\nTrace ID（可观测性追踪）
+  **version** : INT <<NOT NULL, DEFAULT 0>>\n版本号（从0递增）
+  **is_published** : BOOLEAN <<NOT NULL, DEFAULT false>>\n是否发布
+  **source_table_name** : VARCHAR(200)\n数据来源表名
+  **source_record_id** : VARCHAR(50)\n数据来源记录ID
+  **generation_status** : INT <<NOT NULL, DEFAULT 0>>\n生成状态（0=进行中，1=成功，-1=失败）
+  **failure_reason** : TEXT\n失败原因（含异常堆栈）
+  **created_at** : TIMESTAMPTZ <<NOT NULL>>\n创建时间
+  **updated_at** : TIMESTAMPTZ\n更新时间
+}
+
+note right of embedding_records
+  表说明：
+  存储词干提取后的结构化数据，
+  用于 RAG/Embedding 流程。
+  与数据源通过 message_id、
+  source_table_name/source_record_id 关联。
+end note
+
+entity "knowledge_base\n(知识库记录)" as knowledge_base {
+  * **id** : VARCHAR(50) <<PK>>\n记录ID（ULID）
+  --
+  **scene_summary** : TEXT\n场景摘要
+  **optimization_question** : TEXT\n优化问题（可为单字符串或数组的序列化存储）
+  **reply_example_or_rule** : TEXT\n回复示例或规则
+  **scene_category** : VARCHAR(500)\n场景分类
+  **input_tags** : JSONB\n输入标签数组
+  **response_tags** : JSONB\n回复标签数组
+  **raw_material_full_text** : TEXT\n原始资料-全量文字
+  **raw_material_scene_summary** : TEXT\n原始资料-场景简介
+  **raw_material_question** : TEXT\n原始资料-提问
+  **raw_material_answer** : TEXT\n原始资料-回答
+  **raw_material_other** : TEXT\n原始资料-其它
+  **source_meta** : JSONB\n来源信息（含 source_file 相对路径）
+  **technical_tag_classification** : JSONB\n技术标记分类
+  **business_tag_classification** : JSONB\n业务标记分类
+  **created_at** : TIMESTAMPTZ <<NOT NULL>>\n创建时间
+  **updated_at** : TIMESTAMPTZ\n更新时间
+}
+
+note right of knowledge_base
+  表说明：
+  存储 RAG/向量话术场景下的
+  场景摘要、优化问题、回复示例与规则、
+  场景分类及各类标签。
+end note
+
+@enduml
