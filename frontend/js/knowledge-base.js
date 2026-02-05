@@ -231,8 +231,8 @@
                         <template #default="props">
                             <div style="padding: 12px 24px;">
                                 <p v-if="props.row.reply_example_or_rule"><strong>回复示例或规则：</strong>{{ props.row.reply_example_or_rule }}</p>
-                                <p v-if="props.row.technical_tag_classification && Object.keys(props.row.technical_tag_classification).length"><strong>技术标记分类：</strong><pre style="margin:4px 0;font-size:12px;">{{ JSON.stringify(props.row.technical_tag_classification, null, 2) }}</pre></p>
-                                <p v-if="props.row.business_tag_classification && Object.keys(props.row.business_tag_classification).length"><strong>业务标记分类：</strong><pre style="margin:4px 0;font-size:12px;">{{ JSON.stringify(props.row.business_tag_classification, null, 2) }}</pre></p>
+                                <div v-if="props.row.technical_tag_classification && Object.keys(props.row.technical_tag_classification).length"><strong>技术标记分类：</strong><pre style="margin:4px 0;font-size:12px;">{{ JSON.stringify(props.row.technical_tag_classification, null, 2) }}</pre></div>
+                                <div v-if="props.row.business_tag_classification && Object.keys(props.row.business_tag_classification).length"><strong>业务标记分类：</strong><pre style="margin:4px 0;font-size:12px;">{{ JSON.stringify(props.row.business_tag_classification, null, 2) }}</pre></div>
                             </div>
                         </template>
                     </el-table-column>

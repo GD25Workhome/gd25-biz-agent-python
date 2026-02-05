@@ -192,3 +192,86 @@ def merge_history_to_messages(
         messages.append({"type": "human", "content": humans[i]})
         messages.append({"type": "ai", "content": ais[i]})
     return messages
+
+
+def extract_message_id(value: Any) -> Optional[str]:
+    """
+    从 ids 或 message_id 列提取 message_id。
+    支持纯 UUID 或 messageId: xxx 格式。
+    """
+    ids = extract_message_ids(value)
+    return ids[0] if ids else None
+
+
+def extract_message_ids(value: Any) -> List[str]:
+    """
+    从 message_id 列提取多个 message_id，支持多行/多值。
+
+    支持：
+    - 换行分隔（\\n、\\r\\n）
+    - 分号、逗号分隔
+    - messageId: xxx、message_id: xxx 格式
+    - 纯 UUID
+
+    Returns:
+        List[str]: message_id 列表，空则返回 []
+    """
+    if pd.isna(value) or value is None:
+        return []
+    value_str = str(value).strip()
+    if is_empty_like(value_str):
+        return []
+    # 先尝试按 messageId: xxx 格式批量提取
+    patterns = [
+        r"messageId\s*[:：]\s*([^\s\n\r;,\"]+)",
+        r"message_id\s*[:：]\s*([^\s\n\r;,\"]+)",
+        r"messageId\s*=\s*([^\s\n\r;,\"]+)",
+        r"message_id\s*=\s*([^\s\n\r;,\"]+)",
+    ]
+    found: List[str] = []
+    for pattern in patterns:
+        for match in re.finditer(pattern, value_str, re.IGNORECASE):
+            msg_id = match.group(1).strip()
+            if msg_id and msg_id not in found:
+                found.append(msg_id)
+    if found:
+        return found
+    # 无 messageId 前缀时，按换行、分号、逗号分割
+    parts = re.split(r"[\n\r;,\t]+", value_str)
+    return [p.strip() for p in parts if p.strip()]
+
+
+def parse_qa_blocks(text: Optional[str]) -> List[str]:
+    """
+    从「会话输入」字段提取 Q 块列表。
+
+    按 Q：、Q: 分割，取每个 Q 后的内容直到下一个 Q 或 A 标记。
+    支持中英文冒号。
+
+    Returns:
+        List[str]: 用户提问列表 [Q1, Q2, ...]
+    """
+    if not text or not str(text).strip():
+        return []
+    content = str(text).strip()
+    pattern = r"[Qq][：:]\s*([\s\S]+?)(?=[QqAa][：:]|\Z)"
+    matches = re.findall(pattern, content)
+    return [m.strip() for m in matches if m.strip()]
+
+
+def parse_response_blocks(text: Optional[str]) -> List[str]:
+    """
+    从「供应商响应」字段提取 A 块列表。
+
+    按行首的 A: 或 A： 分割，每个块可包含 [未知类型(tool_xxx): {...}] 等 tool 标记。
+    支持中英文冒号。
+
+    Returns:
+        List[str]: 供应商响应列表 [A1, A2, ...]
+    """
+    if not text or not str(text).strip():
+        return []
+    content = str(text).strip()
+    pattern = r"(?:^|\n)\s*[Aa][：:]\s*([\s\S]+?)(?=\n\s*[Aa][：:]|\Z)"
+    matches = re.findall(pattern, content)
+    return [m.strip() for m in matches if m.strip()]

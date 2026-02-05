@@ -395,9 +395,37 @@ async def delete_dataset_item(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.delete("/datasets/{dataset_id}/items")
+async def clear_all_dataset_items(
+    dataset_id: str,
+    session: AsyncSession = Depends(get_async_session),
+):
+    """
+    清空指定 DataSet 下所有数据项。
+    设计文档：cursor_docs/020504-DataSets数据清理能力技术设计.md
+    """
+    try:
+        ds_repo = DataSetsRepository(session)
+        dataset = await ds_repo.get_by_id(dataset_id)
+        if not dataset:
+            raise HTTPException(status_code=404, detail="数据集合不存在")
+        items_repo = DataSetsItemsRepository(session)
+        deleted_count = await items_repo.delete_all_by_dataset_id(dataset_id)
+        await session.commit()
+        return {"message": "清空成功", "deleted_count": deleted_count}
+    except HTTPException:
+        raise
+    except Exception as e:
+        await session.rollback()
+        logger.error("清空数据项失败: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ---------- ImportConfig ----------
 @router.get("/import-configs", response_model=ImportConfigListResponse)
 async def list_import_configs(
+    name: Optional[str] = Query(None, description="名称（包含）"),
+    keyword: Optional[str] = Query(None, description="关键词（在 name/description/import_config 中搜索）"),
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_async_session),
@@ -405,7 +433,9 @@ async def list_import_configs(
     """导入配置列表"""
     try:
         repo = ImportConfigRepository(session)
-        items, total = await repo.get_list_with_total(limit=limit, offset=offset)
+        items, total = await repo.get_list_with_total(
+            name=name, keyword=keyword, limit=limit, offset=offset
+        )
         await session.commit()
         return ImportConfigListResponse(
             total=total,

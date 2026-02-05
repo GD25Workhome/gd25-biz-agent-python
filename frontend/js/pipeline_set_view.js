@@ -6,7 +6,7 @@
 (function() {
     'use strict';
 
-    const { defineComponent, ref, reactive, computed, onMounted, watch, inject } = Vue;
+    const { defineComponent, ref, reactive, computed, onMounted, watch, inject, nextTick, onBeforeUnmount } = Vue;
     const { ElMessage, ElMessageBox } = ElementPlus;
     const icons = ElementPlusIconsVue;
     const { API_PREFIX, formatDateTime, parseJsonField, getApiErrorMsg, PAGE_SIZE_OPTIONS } = window.PipelineCommon || {};
@@ -230,6 +230,57 @@
                 openTabForDatasetItems(row.id, row.name);
             }
 
+            // JSONEditor 实验弹窗（与表单 JSON 字段联动：打开时加载输入框内容，关闭时回填）
+            const jsonEditorTestVisible = ref(false);
+            const jsonEditorTestContainer = ref(null);
+            const jsonEditorTestData = ref(null);
+            const jsonEditorTestFieldKey = ref('');
+            let jsonEditorTestInstance = null;
+
+            function openJsonEditorTest(data, fieldKey) {
+                jsonEditorTestFieldKey.value = fieldKey || '';
+                try {
+                    jsonEditorTestData.value = (data != null && typeof data === 'object') ? data : (typeof data === 'string' && data.trim() ? JSON.parse(data) : {});
+                } catch (_) {
+                    jsonEditorTestData.value = { _raw: String(data), _note: '解析失败' };
+                }
+                jsonEditorTestVisible.value = true;
+            }
+
+            function destroyJsonEditorTest(writeBack) {
+                if (jsonEditorTestInstance && writeBack && jsonEditorTestFieldKey.value) {
+                    try {
+                        const json = jsonEditorTestInstance.get();
+                        datasetForm[jsonEditorTestFieldKey.value] = JSON.stringify(json, null, 2);
+                    } catch (_) {}
+                }
+                if (jsonEditorTestInstance) {
+                    try { jsonEditorTestInstance.destroy(); } catch (_) {}
+                    jsonEditorTestInstance = null;
+                }
+            }
+
+            watch(jsonEditorTestVisible, async (visible) => {
+                if (!visible) { destroyJsonEditorTest(true); return; }
+                await nextTick();
+                if (!jsonEditorTestContainer.value || typeof window.JSONEditor === 'undefined') {
+                    if (typeof window.JSONEditor === 'undefined') ElMessage.error('JSONEditor 库未加载');
+                    return;
+                }
+                try {
+                    let initialData = jsonEditorTestData.value;
+                    if (!initialData || typeof initialData !== 'object') initialData = { _note: '空数据' };
+                    jsonEditorTestInstance = new window.JSONEditor(jsonEditorTestContainer.value, {
+                        mode: 'tree', modes: ['tree', 'code', 'text'], search: true
+                    });
+                    jsonEditorTestInstance.set(initialData);
+                } catch (e) {
+                    ElMessage.error('JSONEditor 初始化失败: ' + (e?.message || e));
+                }
+            });
+
+            onBeforeUnmount(() => destroyJsonEditorTest(false));
+
             onMounted(() => {
                 loadPathTree();
             });
@@ -239,10 +290,11 @@
                 queryExpanded, queryName, queryKeyword, limit, offset, currentPage, PAGE_SIZE_OPTIONS: pageSizeOpts,
                 pathDialogVisible, pathDialogMode, pathForm, pathFormParentId,
                 datasetDialogVisible, datasetDialogMode, datasetForm, datasetEditingId,
+                jsonEditorTestVisible, jsonEditorTestContainer, openJsonEditorTest,
                 formatDateTime: fmtDateTime,
                 loadPathTree, loadDatasets, onSearch, onResetQuery, onPageChange, onSizeChange,
                 onPathSelect,
-                openPathCreate, submitPathForm,
+                openPathCreate, openPathEdit, submitPathForm,
                 openDatasetCreate, openDatasetEdit, submitDatasetForm, deleteDataset, openDatasetItems,
                 Plus: icons.Plus, Edit: icons.Edit, Delete: icons.Delete, Document: icons.Document, Search: icons.Search, Refresh: icons.Refresh, ArrowDown: icons.ArrowDown, ArrowUp: icons.ArrowUp
             };
@@ -286,9 +338,9 @@
                         <el-table-column type="expand" width="48">
                             <template #default="props">
                                 <div style="padding:12px 24px;background:#fafafa;">
-                                    <p v-if="props.row.input_schema"><strong>input_schema：</strong><pre style="margin:4px 0;font-size:12px;max-height:120px;overflow:auto;">{{ JSON.stringify(props.row.input_schema,null,2) }}</pre></p>
-                                    <p v-if="props.row.output_schema"><strong>output_schema：</strong><pre style="margin:4px 0;font-size:12px;max-height:120px;overflow:auto;">{{ JSON.stringify(props.row.output_schema,null,2) }}</pre></p>
-                                    <p v-if="props.row.metadata"><strong>metadata：</strong><pre style="margin:4px 0;font-size:12px;max-height:120px;overflow:auto;">{{ JSON.stringify(props.row.metadata,null,2) }}</pre></p>
+                                    <div v-if="props.row.input_schema"><strong>input_schema：</strong><pre style="margin:4px 0;font-size:12px;white-space:pre-wrap;word-break:break-all;">{{ JSON.stringify(props.row.input_schema,null,2) }}</pre></div>
+                                    <div v-if="props.row.output_schema"><strong>output_schema：</strong><pre style="margin:4px 0;font-size:12px;white-space:pre-wrap;word-break:break-all;">{{ JSON.stringify(props.row.output_schema,null,2) }}</pre></div>
+                                    <div v-if="props.row.metadata"><strong>metadata：</strong><pre style="margin:4px 0;font-size:12px;white-space:pre-wrap;word-break:break-all;">{{ JSON.stringify(props.row.metadata,null,2) }}</pre></div>
                                     <p v-if="!props.row.input_schema&&!props.row.output_schema&&!props.row.metadata" style="color:#909399;">无扩展内容</p>
                                 </div>
                             </template>
@@ -298,9 +350,11 @@
                         <el-table-column label="创建时间" width="160"><template #default="s">{{ formatDateTime(s.row.created_at) }}</template></el-table-column>
                         <el-table-column label="操作" width="200" fixed="right">
                             <template #default="s">
-                                <el-button link type="primary" size="small" @click="openDatasetItems(s.row)" :icon="Document">数据项</el-button>
-                                <el-button link type="primary" size="small" @click="openDatasetEdit(s.row)" :icon="Edit">编辑</el-button>
-                                <el-button link type="danger" size="small" @click="deleteDataset(s.row)" :icon="Delete">删除</el-button>
+                                <span style="white-space:nowrap;">
+                                    <el-button link type="primary" size="small" @click="openDatasetItems(s.row)" :icon="Document">数据项</el-button>
+                                    <el-button link type="primary" size="small" @click="openDatasetEdit(s.row)" :icon="Edit">编辑</el-button>
+                                    <el-button link type="danger" size="small" @click="deleteDataset(s.row)" :icon="Delete">删除</el-button>
+                                </span>
                             </template>
                         </el-table-column>
                     </el-table>
@@ -315,7 +369,7 @@
                 </div>
             </div>
 
-            <el-dialog v-model="pathDialogVisible" title="路径" width="420px">
+            <el-dialog v-model="pathDialogVisible" title="路径" width="420px" :close-on-click-modal="false" :close-on-press-escape="true">
                 <el-form :model="pathForm" label-width="80px">
                     <el-form-item label="ID" v-if="pathDialogMode==='create'"><el-input v-model="pathForm.id" placeholder="留空自动生成" /></el-form-item>
                     <el-form-item label="上级路径"><el-input v-model="pathForm.id_path" placeholder="根节点留空" /></el-form-item>
@@ -325,15 +379,37 @@
                 <template #footer><el-button @click="pathDialogVisible=false">取消</el-button><el-button type="primary" @click="submitPathForm">确定</el-button></template>
             </el-dialog>
 
-            <el-dialog v-model="datasetDialogVisible" :title="datasetDialogMode==='create'?'新建数据集':'编辑数据集'" width="500px">
+            <el-dialog v-model="datasetDialogVisible" :title="datasetDialogMode==='create'?'新建数据集':'编辑数据集'" width="500px" :close-on-click-modal="false" :close-on-press-escape="true">
                 <el-form :model="datasetForm" label-width="100px">
                     <el-form-item label="名称" required><el-input v-model="datasetForm.name" /></el-form-item>
                     <el-form-item label="路径ID"><el-input v-model="datasetForm.path_id" placeholder="关联的 path id" /></el-form-item>
-                    <el-form-item label="input_schema"><el-input v-model="datasetForm.input_schema" type="textarea" placeholder="JSON" :rows="2" /></el-form-item>
-                    <el-form-item label="output_schema"><el-input v-model="datasetForm.output_schema" type="textarea" placeholder="JSON" :rows="2" /></el-form-item>
-                    <el-form-item label="metadata"><el-input v-model="datasetForm.metadata" type="textarea" placeholder="JSON" :rows="2" /></el-form-item>
+                    <el-form-item label="input_schema">
+                        <div style="display:flex;align-items:flex-start;gap:8px;width:100%;">
+                            <el-input v-model="datasetForm.input_schema" type="textarea" placeholder="JSON" :rows="2" style="flex:1;" />
+                            <el-button size="small" @click="openJsonEditorTest(datasetForm.input_schema, 'input_schema')" :icon="Document" title="JSONEditor 实验弹窗">JSONEditor</el-button>
+                        </div>
+                    </el-form-item>
+                    <el-form-item label="output_schema">
+                        <div style="display:flex;align-items:flex-start;gap:8px;width:100%;">
+                            <el-input v-model="datasetForm.output_schema" type="textarea" placeholder="JSON" :rows="2" style="flex:1;" />
+                            <el-button size="small" @click="openJsonEditorTest(datasetForm.output_schema, 'output_schema')" :icon="Document" title="JSONEditor 实验弹窗">JSONEditor</el-button>
+                        </div>
+                    </el-form-item>
+                    <el-form-item label="metadata">
+                        <div style="display:flex;align-items:flex-start;gap:8px;width:100%;">
+                            <el-input v-model="datasetForm.metadata" type="textarea" placeholder="JSON" :rows="2" style="flex:1;" />
+                            <el-button size="small" @click="openJsonEditorTest(datasetForm.metadata, 'metadata')" :icon="Document" title="JSONEditor 实验弹窗">JSONEditor</el-button>
+                        </div>
+                    </el-form-item>
                 </el-form>
                 <template #footer><el-button @click="datasetDialogVisible=false">取消</el-button><el-button type="primary" @click="submitDatasetForm">确定</el-button></template>
+            </el-dialog>
+
+            <el-dialog v-model="jsonEditorTestVisible" title="JSONEditor 实验弹窗" width="85%" class="pipeline-json-editor-dialog" :close-on-click-modal="false" :close-on-press-escape="true" @close="jsonEditorTestVisible=false">
+                <div class="pipeline-json-editor-test-wrap" style="min-height:400px;">
+                    <div ref="jsonEditorTestContainer" style="width:100%;height:450px;min-height:400px;"></div>
+                </div>
+                <template #footer><el-button @click="jsonEditorTestVisible=false">关闭</el-button></template>
             </el-dialog>
         </div>
         `

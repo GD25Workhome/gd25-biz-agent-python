@@ -4,7 +4,7 @@
 设计文档：cursor_docs/020401-数据导入管理模块技术设计.md
 """
 from typing import List, Optional, Tuple
-from sqlalchemy import select, func, and_, or_, cast
+from sqlalchemy import delete, select, func, and_, or_, cast
 from sqlalchemy.types import Text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -80,3 +80,19 @@ class DataSetsItemsRepository(BaseRepository[DataSetsItemsRecord]):
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def delete_all_by_dataset_id(self, dataset_id: str) -> int:
+        """
+        删除指定 dataset 下所有数据项。
+
+        Args:
+            dataset_id: 数据集 ID
+
+        Returns:
+            删除的记录数
+        """
+        stmt = delete(DataSetsItemsRecord).where(
+            DataSetsItemsRecord.dataset_id == dataset_id
+        )
+        result = await self.session.execute(stmt)
+        return result.rowcount or 0

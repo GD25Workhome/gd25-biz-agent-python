@@ -29,6 +29,14 @@
         .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #909399; }
         .empty-state-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.5; }
         .empty-state-text { font-size: 14px; }
+        /* JSONEditor 在 Dialog 内 LTR 修复，避免树形布局右偏（参考 020503） */
+        .pipeline-json-editor-dialog .el-dialog__body { direction: ltr !important; }
+        .pipeline-json-editor-dialog .jsoneditor,
+        .pipeline-json-editor-dialog .jsoneditor-outer,
+        .pipeline-json-editor-dialog .jsoneditor-table,
+        .pipeline-json-editor-dialog .jsoneditor-tree,
+        .pipeline-json-editor-dialog .jsoneditor-value { direction: ltr !important; text-align: left !important; }
+        .pipeline-json-editor-dialog .pipeline-json-editor-test-wrap { min-width: 0; }
     </style>
 </head>
 <body>
@@ -85,11 +93,17 @@
         });
         app.use(ElementPlus);
         app.component('Upload', icons.Upload);
-        app.component('FolderOpened', icons.FolderOpened);
+        // 同时注册 folderopened 以兼容 Vue 解析（部分场景会查找小写名），Folder 作为 fallback
+        const FolderIcon = icons.FolderOpened || icons.Folder;
+        if (FolderIcon) {
+            app.component('FolderOpened', FolderIcon);
+            app.component('folderopened', FolderIcon);
+        }
         app.component('Close', icons.Close);
         app.component('Plus', icons.Plus);
         app.component('Edit', icons.Edit);
         app.component('Delete', icons.Delete);
+        app.component('Copy', icons.Copy || icons.DocumentCopy);
         app.component('VideoPlay', icons.VideoPlay);
         app.component('Document', icons.Document);
         app.component('Search', icons.Search);

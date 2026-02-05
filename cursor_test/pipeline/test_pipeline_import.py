@@ -15,6 +15,9 @@ from backend.pipeline.cleaners.canonical import (
 )
 from backend.pipeline.cleaners.registry import get_cleaner_by_type
 from backend.pipeline.cleaners.impl.lsk import LskCleaner
+from backend.pipeline.cleaners.impl.sh1128 import Sh1128Cleaner
+from backend.pipeline.cleaners.impl.sh1128_history_qa import Sh1128HistoryQACleaner
+from backend.pipeline.cleaners.impl.sh1128_multi import Sh1128MultiCleaner
 
 
 # ---------- canonical_to_dataset_item ----------
@@ -61,6 +64,24 @@ def test_get_cleaner_by_type_lsk():
     """获取 LSK 清洗器"""
     cleaner = get_cleaner_by_type("lsk")
     assert isinstance(cleaner, LskCleaner)
+
+
+def test_get_cleaner_by_type_sh1128():
+    """获取 Sh1128 清洗器"""
+    cleaner = get_cleaner_by_type("sh1128")
+    assert isinstance(cleaner, Sh1128Cleaner)
+
+
+def test_get_cleaner_by_type_sh1128_multi():
+    """获取 Sh1128 多轮清洗器"""
+    cleaner = get_cleaner_by_type("sh1128_multi")
+    assert isinstance(cleaner, Sh1128MultiCleaner)
+
+
+def test_get_cleaner_by_type_sh1128_history_qa():
+    """获取 Sh1128 历史 Q/A 清洗器"""
+    cleaner = get_cleaner_by_type("sh1128_history_qa")
+    assert isinstance(cleaner, Sh1128HistoryQACleaner)
 
 
 def test_get_cleaner_by_type_unknown():
@@ -134,3 +155,95 @@ def test_lsk_cleaner_clean_strip_content_prefix():
     items = cleaner.clean(row, df)
     assert len(items) == 1
     assert items[0].response_message == "实际回复内容"
+
+
+# ---------- Sh1128Cleaner ----------
+
+
+def test_sh1128_cleaner_clean_simple():
+    """Sh1128 清洗器简单行清洗"""
+    cleaner = Sh1128Cleaner()
+    df = pd.DataFrame(
+        columns=["会话输入", "供应商响应()", "历史会话", "历史会话响应", "message_id", "patient_id", "年龄"]
+    )
+    row = pd.Series(
+        {
+            "会话输入": "血压多少？",
+            "供应商响应()": "您的血压正常",
+            "历史会话": "历史提问",
+            "历史会话响应": "历史回复",
+            "message_id": "msg-001",
+            "patient_id": "p-001",
+            "年龄": 35,
+        }
+    )
+    items = cleaner.clean(row, df)
+    assert len(items) == 1
+    item = items[0]
+    assert item.current_msg == "血压多少？"
+    assert item.response_message == "您的血压正常"
+    assert item.message_id == "msg-001"
+    assert item.patient_id == "p-001"
+    assert item.context.get("age") == 35
+    assert len(item.history_messages) == 2
+    assert item.history_messages[0] == {"type": "human", "content": "历史提问"}
+    assert item.history_messages[1] == {"type": "ai", "content": "历史回复"}
+
+
+# ---------- Sh1128HistoryQACleaner ----------
+
+
+def test_sh1128_history_qa_cleaner_parse_qa():
+    """Sh1128 历史 Q/A 清洗器应解析 Q/A 格式"""
+    cleaner = Sh1128HistoryQACleaner()
+    df = pd.DataFrame(
+        columns=["会话输入", "供应商响应()", "历史会话", "历史会话响应"]
+    )
+    row = pd.Series(
+        {
+            "会话输入": "当前问",
+            "供应商响应()": "当前答",
+            "历史会话": "Q：历史问题1\nA：历史回答1\nQ：历史问题2\nA：历史回答2",
+            "历史会话响应": "",
+        }
+    )
+    items = cleaner.clean(row, df)
+    assert len(items) == 1
+    item = items[0]
+    assert item.current_msg == "当前问"
+    assert item.response_message == "当前答"
+    assert len(item.history_messages) == 4
+    assert item.history_messages[0] == {"type": "human", "content": "历史问题1"}
+    assert item.history_messages[1] == {"type": "ai", "content": "历史回答1"}
+    assert item.history_messages[2] == {"type": "human", "content": "历史问题2"}
+    assert item.history_messages[3] == {"type": "ai", "content": "历史回答2"}
+
+
+# ---------- Sh1128MultiCleaner ----------
+
+
+def test_sh1128_multi_cleaner_parse_qa_blocks():
+    """Sh1128 多轮清洗器应拆分 Q/A 为多 Item"""
+    cleaner = Sh1128MultiCleaner()
+    df = pd.DataFrame(
+        columns=["会话输入", "供应商响应()", "message_id", "patient_id"]
+    )
+    row = pd.Series(
+        {
+            "会话输入": "Q：第一问\nA：第一答（此处被忽略）\nQ：第二问",
+            "供应商响应()": "A：第一答\nA：第二答",
+            "message_id": "msg-001\nmsg-002",
+            "patient_id": "p-001",
+        }
+    )
+    items = cleaner.clean(row, df)
+    assert len(items) == 2
+    assert items[0].current_msg == "第一问"
+    assert items[0].response_message == "第一答"
+    assert items[0].history_messages == []
+    assert items[0].message_id == "msg-001"
+    assert items[1].current_msg == "第二问"
+    assert items[1].response_message == "第二答"
+    assert len(items[1].history_messages) == 2
+    assert items[1].history_messages[0] == {"type": "human", "content": "第一问"}
+    assert items[1].history_messages[1] == {"type": "ai", "content": "第一答"}

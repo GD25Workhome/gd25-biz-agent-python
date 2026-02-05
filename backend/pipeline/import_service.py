@@ -10,6 +10,9 @@ from typing import Any, Dict
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.infrastructure.database.repository.data_sets_items_repository import (
+    DataSetsItemsRepository,
+)
 from backend.infrastructure.database.repository.data_sets_repository import DataSetsRepository
 from backend.infrastructure.database.repository.import_config_repository import (
     ImportConfigRepository,
@@ -139,6 +142,13 @@ async def execute_import(config_id: str, session: AsyncSession) -> ImportResult:
 
     source_path = meta.get("sourcePath") or {}
     file_path = source_path.get("filePath") or ""
+
+    # 5.5 可选：导入前清空
+    clear_before = meta.get("clearBeforeImport") is True
+    if clear_before:
+        items_repo = DataSetsItemsRepository(session)
+        deleted_count = await items_repo.delete_all_by_dataset_id(dataset.id)
+        logger.info("导入前清空 DataSet %s，删除 %d 条", data_sets_id, deleted_count)
 
     # 6. 迭代 sheet → 清洗 → 入库
     for sheet_name, df in reader.iter_sheets():
