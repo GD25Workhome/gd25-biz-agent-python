@@ -20,6 +20,7 @@ from backend.infrastructure.database.repository.import_config_repository import 
 from backend.pipeline.cleaners.canonical import canonical_to_dataset_item
 from backend.pipeline.cleaners.registry import get_cleaner_by_type
 from backend.pipeline.readers.excel_reader import ExcelReader
+from backend.pipeline.readers.pg_reader import PgReader
 from backend.pipeline.writers.dataset_item_writer import DatasetItemWriter
 
 logger = logging.getLogger(__name__)
@@ -125,7 +126,7 @@ async def execute_import(config_id: str, session: AsyncSession) -> ImportResult:
 
     # 3. 根据 sourceType 选择读取器
     source_type = meta.get("sourceType") or "excel"
-    if source_type != "excel":
+    if source_type not in ("excel", "pg"):
         raise UnsupportedSourceTypeError(source_type)
 
     # 4. 校验 cleaners 配置
@@ -136,12 +137,18 @@ async def execute_import(config_id: str, session: AsyncSession) -> ImportResult:
         raise PipelineImportError("配置 cleaners 必须包含 default 键")
 
     # 5. 创建读取器与写入器
-    reader = ExcelReader(meta) # TODO 这里现在是定制的，后续需要升级
+    if source_type == "excel":
+        reader = ExcelReader(meta)
+    else:
+        reader = PgReader(meta)
+        await reader.fetch(session)
+
     writer = DatasetItemWriter(session)
     stats = ImportResult()
 
     source_path = meta.get("sourcePath") or {}
     file_path = source_path.get("filePath") or ""
+    table_name = source_path.get("tableName") or ""
 
     # 5.5 可选：导入前清空
     clear_before = meta.get("clearBeforeImport") is True
@@ -157,7 +164,10 @@ async def execute_import(config_id: str, session: AsyncSession) -> ImportResult:
             raise CleanerNotConfiguredError(sheet_name)
 
         cleaner = get_cleaner_by_type(cleaner_key)
-        source_value = f"excel:{file_path}:{sheet_name}" if file_path else f"excel:{sheet_name}"
+        if source_type == "excel":
+            source_value = f"excel:{file_path}:{sheet_name}" if file_path else f"excel:{sheet_name}"
+        else:
+            source_value = f"pg:{table_name}" if table_name else "pg"
 
         for idx, row in df.iterrows():
             if cleaner.is_empty_row(row, df):

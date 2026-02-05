@@ -7,12 +7,14 @@
 from typing import Dict, Type
 
 from backend.pipeline.cleaners.base import BaseSheetCleaner
+from backend.pipeline.cleaners.impl.knowledge_base import KnowledgeBaseCleaner
 from backend.pipeline.cleaners.impl.lsk import LskCleaner
 from backend.pipeline.cleaners.impl.sh1128 import Sh1128Cleaner
 from backend.pipeline.cleaners.impl.sh1128_history_qa import Sh1128HistoryQACleaner
 from backend.pipeline.cleaners.impl.sh1128_multi import Sh1128MultiCleaner
 
 _CLEANER_REGISTRY: Dict[str, Type[BaseSheetCleaner]] = {
+    "knowledge_base": KnowledgeBaseCleaner,
     "lsk": LskCleaner,
     "sh1128": Sh1128Cleaner,
     "sh1128_multi": Sh1128MultiCleaner,

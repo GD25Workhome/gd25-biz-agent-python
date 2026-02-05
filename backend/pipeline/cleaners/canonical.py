@@ -20,6 +20,8 @@ class CanonicalItem:
     current_msg: str = ""
     history_messages: List[Dict[str, str]] = field(default_factory=list)
     response_message: str = ""
+    response_rule: Optional[str] = None  # 回复规则，与 response_message 二选一。设计文档：020507
+    step1_metadata: Optional[Dict[str, Any]] = None  # 阶段一源表追溯信息（id、source_meta）。设计文档：020507
     message_id: Optional[str] = None
     patient_id: Optional[str] = None
     doctor_id: Optional[str] = None
@@ -55,9 +57,10 @@ def canonical_to_dataset_item(item: CanonicalItem) -> DatasetItemDto:
         "history_messages": item.history_messages or [],
     }
 
-    # Output：仅 response_message、flow_msgs
+    # Output：response_message、response_rule、flow_msgs
     output_data: Dict[str, Any] = {
         "response_message": item.response_message or "",
+        "response_rule": item.response_rule or "",
         "flow_msgs": [],
     }
 
@@ -66,6 +69,9 @@ def canonical_to_dataset_item(item: CanonicalItem) -> DatasetItemDto:
 
     if item.message_id:
         item_metadata["query_message_id"] = item.message_id
+
+    if item.step1_metadata:
+        item_metadata["step1_metadata"] = item.step1_metadata
 
     content_info: Dict[str, Any] = {}
     if item.context:
