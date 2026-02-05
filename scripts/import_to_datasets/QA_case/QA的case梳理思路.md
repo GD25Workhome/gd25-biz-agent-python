@@ -1,28 +1,3 @@
-# 基础数据来源
-- 表：gd2502_knowledge_base
-- 表的数据来自于产品prd的数据提取，借助流程create_rag_agent进行数据清洗后得到的数据
-- 提取后表红的关键字段如下：
-    1. scene_summary（场景摘要）：1～3 句自然语言，概括**该案例**的提问背景
-    2. optimization_question（优化问题）：从原文的患者提问中总结出来，表达为完整、清晰、保留原意的问题；
-    3. reply_example_or_rule（回复案例 or 规则）： 如果能直接提取出回复案例，则拿到回复案例；否则将规则提取出来，但是要在规则前加上“回复规则：”前缀
-    4. scene_category（场景大类）：与原文「场景标识」中的「大类」严格一致
-    5. input_tags（输入侧标签）：从 场景摘要 和 优化问题中提取
-    6. response_tags（回复侧标签）：从回复案例中提取
-    7. raw_material_full_text（原始资料-全量文字）：流程create_rag_agent的rag节点提取数据时用到的原属文本数据
-
-# 如何整理成我的业务数据
-- input
-    - optimization_question 可以作为患者的发言
-- output
-    - reply_example_or_rule：可以作为回复或者回复的规则。
-        - 如果是“回复规则：”开头，则需要将数据移动到回复规则中，这里就需要我的数据清洗时，设置规则兼容这种只有回复规则的schema了
-- metadata
-    - 新增original_extract字段的scene_summary字段，存储表中的scene_summary
-    - 新增original_extract字段的scene_category字段，存储表中的scene_category
-    - 新增original_extract字段的input_tags字段，存储表中的input_tags
-    - 新增original_extract字段的response_tags字段，存储表中的response_tags
-    - 新增original_extract字段的raw_material_full_text字段，存储表中的raw_material_full_text
-
 # 如何设计当前的数据提取流程？
 - 如何融合，这套需要从数据库中去取值，故来源和之前的设计不一致了！
 - 老的设计是使用langfuse进行管理，但是你实际用下来会发现langfuse其实使用起来没那么舒服，尤其是在进行数据查询时
@@ -107,16 +82,46 @@
 - 数据格式
     ```
         {
-            "sourceType": "excel",
-            "sourcePath": {
-                "filePath": "static/rag_source/uat_data/sh-1128_副本.xlsx"
-            },
-            "sheetNames": ["常见问题及单轮"],
-            "cleaners": {
-                "default": "lsk",
-                "常见问题及单轮": "sh1128_multi",
-                "患者无数据+历史会话+历史Action": "sh1128_history_qa"
-            },
-            "dataSetsId": "01KGKT1RS0776XC90KCMGKG2J9"
+        "cleaners": {
+            "default": "lsk",
+            "常见问题及单轮": "sh1128_multi",
+            "患者无数据+历史会话+历史Action": "sh1128_history_qa"
+        },
+        "dataSetsId": "01KGKT1RS0776XC90KCMGKG2J9",
+        "sheetNames": [
+            "常见问题及单轮",
+            "患者无数据+历史会话+历史Action"
+        ],
+        "sourcePath": {
+            "filePath": "static/rag_source/uat_data/sh-1128_副本.xlsx"
+        },
+        "sourceType": "excel",
+        "clearBeforeImport": true
         }
     ```
+
+
+# 来自安全边界的数据清洗
+- 表：gd2502_knowledge_base
+- 表的数据来自于产品prd的数据提取，借助流程create_rag_agent进行数据清洗后得到的数据
+- 提取后表红的关键字段如下：
+    1. scene_summary（场景摘要）：1～3 句自然语言，概括**该案例**的提问背景
+    2. optimization_question（优化问题）：从原文的患者提问中总结出来，表达为完整、清晰、保留原意的问题；
+    3. reply_example_or_rule（回复案例 or 规则）： 如果能直接提取出回复案例，则拿到回复案例；否则将规则提取出来，但是要在规则前加上“回复规则：”前缀
+    4. scene_category（场景大类）：与原文「场景标识」中的「大类」严格一致
+    5. input_tags（输入侧标签）：从 场景摘要 和 优化问题中提取
+    6. response_tags（回复侧标签）：从回复案例中提取
+    7. raw_material_full_text（原始资料-全量文字）：流程create_rag_agent的rag节点提取数据时用到的原属文本数据
+
+## 如何整理成我的业务数据
+- input
+    - optimization_question 可以作为患者的发言
+- output
+    - reply_example_or_rule：可以作为回复或者回复的规则。
+        - 如果是“回复规则：”开头，则需要将数据移动到回复规则中，这里就需要我的数据清洗时，设置规则兼容这种只有回复规则的schema了
+- metadata
+    - 新增original_extract字段的scene_summary字段，存储表中的scene_summary
+    - 新增original_extract字段的scene_category字段，存储表中的scene_category
+    - 新增original_extract字段的input_tags字段，存储表中的input_tags
+    - 新增original_extract字段的response_tags字段，存储表中的response_tags
+    - 新增original_extract字段的raw_material_full_text字段，存储表中的raw_material_full_text

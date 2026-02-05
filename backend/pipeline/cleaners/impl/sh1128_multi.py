@@ -56,6 +56,7 @@ class Sh1128MultiCleaner(Sh1128Cleaner):
         for i in range(n):
             q, a = q_blocks[i], a_blocks[i]
             msg_id = msg_ids[i] if i < len(msg_ids) else None
+            uk = msg_id
             result.append(
                 CanonicalItem(
                     current_msg=q,
@@ -65,6 +66,7 @@ class Sh1128MultiCleaner(Sh1128Cleaner):
                     patient_id=patient_id,
                     context=context,
                     ext=ext,
+                    unique_key=uk,
                 )
             )
             history_messages.append({"type": "human", "content": q})

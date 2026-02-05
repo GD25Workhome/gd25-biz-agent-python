@@ -108,5 +108,6 @@ class Sh1128Cleaner(BaseSheetCleaner):
                 patient_id=patient_id,
                 context=context,
                 ext=ext,
+                unique_key=msg_id,
             )
         ]

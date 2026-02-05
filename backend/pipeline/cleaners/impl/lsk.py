@@ -111,5 +111,6 @@ class LskCleaner(BaseSheetCleaner):
                 doctor_id=ids_data["doctor_id"],
                 context=context,
                 ext=ext,
+                unique_key=ids_data["message_id"],
             )
         ]

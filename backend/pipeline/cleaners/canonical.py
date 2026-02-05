@@ -25,6 +25,7 @@ class CanonicalItem:
     doctor_id: Optional[str] = None
     context: Dict[str, Any] = field(default_factory=dict)
     ext: Optional[str] = None
+    unique_key: Optional[str] = None  # 业务唯一 key，由各清洗器按规则生成。设计文档：020506
 
 
 @dataclass

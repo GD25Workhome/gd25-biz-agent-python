@@ -171,6 +171,7 @@ async def execute_import(config_id: str, session: AsyncSession) -> ImportResult:
                         dataset_id=dataset.id,
                         item=dto,
                         source=source_value,
+                        unique_key=item.unique_key,
                         status=1,
                     )
                     stats.success += 1
