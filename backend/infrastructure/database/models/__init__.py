@@ -17,6 +17,10 @@ from backend.infrastructure.database.models.rag_models import (
     QueryExample,
     GreetingExample
 )
+from backend.infrastructure.database.models.data_sets_path import DataSetsPathRecord
+from backend.infrastructure.database.models.data_sets import DataSetsRecord
+from backend.infrastructure.database.models.data_sets_items import DataSetsItemsRecord
+from backend.infrastructure.database.models.import_config import ImportConfigRecord
 
 __all__ = [
     "BloodPressureRecord",
@@ -33,5 +37,9 @@ __all__ = [
     "RecordExample",
     "QueryExample",
     "GreetingExample",
+    "DataSetsPathRecord",
+    "DataSetsRecord",
+    "DataSetsItemsRecord",
+    "ImportConfigRecord",
 ]
 

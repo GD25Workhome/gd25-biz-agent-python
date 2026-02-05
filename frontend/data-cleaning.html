@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据清洗</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <!-- JSON 编辑器方案依赖（按需加载，仅 JSON 编辑器页使用） -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsoneditor@10.4.2/dist/jsoneditor.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; height: 100vh; width: 100%; overflow: hidden; }
+        #app { height: 100vh; width: 100%; min-width: 0; display: flex; }
+        .sidebar { width: 240px; flex-shrink: 0; background: #304156; color: #fff; display: flex; flex-direction: column; box-shadow: 2px 0 6px rgba(0,0,0,0.1); z-index: 100; }
+        .sidebar-header { padding: 20px; background: #2b3a4a; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-header h1 { font-size: 18px; font-weight: 600; color: #fff; }
+        .sidebar-menu { flex: 1; overflow-y: auto; padding: 10px 0; }
+        .main-container { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; background: #f0f2f5; }
+        .tabs-container { background: #fff; border-bottom: 1px solid #e4e7ed; display: flex; align-items: center; padding: 0 8px; overflow-x: auto; box-shadow: 0 2px 4px rgba(0,0,0,0.05); flex-shrink: 0; }
+        .tab-item { display: flex; align-items: center; padding: 8px 16px; margin: 4px 2px; background: #f5f7fa; border: 1px solid #e4e7ed; border-bottom: none; border-radius: 4px 4px 0 0; cursor: pointer; user-select: none; white-space: nowrap; min-width: 120px; max-width: 200px; transition: all 0.2s; }
+        .tab-item:hover { background: #ecf5ff; }
+        .tab-item.active { background: #fff; border-color: #409eff; border-bottom-color: #fff; color: #409eff; z-index: 1; margin-bottom: -1px; }
+        .tab-item-title { flex: 1; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
+        .tab-item-close { margin-left: 8px; padding: 2px 4px; border-radius: 2px; opacity: 0.6; }
+        .tab-item-close:hover { opacity: 1; background: rgba(64,158,255,0.1); }
+        .tab-content-area { flex: 1; min-width: 0; overflow: hidden; position: relative; width: 100%; }
+        .tab-pane { position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; min-width: 0; display: none; overflow: hidden; }
+        .tab-pane.active { display: flex; flex-direction: column; }
+        .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #909399; }
+        .empty-state-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.5; }
+        .empty-state-text { font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="sidebar">
+            <div class="sidebar-header"><h1>数据清洗</h1></div>
+            <div class="sidebar-menu">
+                <el-menu :default-active="activeMenu" @select="handleMenuSelect" background-color="#304156" text-color="#bfcbd9" active-text-color="#409EFF">
+                    <el-menu-item index="import-manage"><el-icon><Upload /></el-icon><span>Step00导入管理</span></el-menu-item>
+                    <el-menu-item index="set-view"><el-icon><FolderOpened /></el-icon><span>Step01原始数据管理</span></el-menu-item>
+                    <el-menu-item index="json-editors"><el-icon><Edit /></el-icon><span>JSON编辑器方案对比</span></el-menu-item>
+                </el-menu>
+            </div>
+        </div>
+        <div class="main-container">
+            <div class="tabs-container" v-if="tabs.length > 0">
+                <div v-for="tab in tabs" :key="tab.id" :class="['tab-item', { active: tab.id === activeTabId }]" @click="switchTab(tab.id)">
+                    <span class="tab-item-title">{{ tab.title }}</span>
+                    <span class="tab-item-close" @click.stop="closeTab(tab.id)" v-if="tabs.length > 1"><el-icon><Close /></el-icon></span>
+                </div>
+            </div>
+            <div class="tab-content-area">
+                <div v-if="tabs.length === 0" class="empty-state">
+                    <div class="empty-state-icon">📋</div>
+                    <div class="empty-state-text">点击左侧菜单打开功能页面</div>
+                </div>
+                <div v-for="tab in tabs" :key="tab.id" :class="['tab-pane', { active: tab.id === activeTabId }]" v-show="tab.id === activeTabId">
+                    <component :is="tab.component" :tab-id="tab.id" :dataset-id="tab.datasetId" :dataset-name="tab.datasetName" style="height:100%;width:100%;min-width:0;" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus/dist/index.full.js"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue/dist/index.iife.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <!-- JSON 编辑器方案依赖 -->
+    <script src="https://cdn.jsdelivr.net/npm/jsoneditor@10.4.2/dist/jsoneditor.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ace-builds@1.16.0/src-min-noconflict/ace.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+    <script src="js/pipeline_common.js"></script>
+    <script src="js/pipeline_cleaning.js"></script>
+    <script src="js/pipeline_import_manage.js"></script>
+    <script src="js/pipeline_set_view.js"></script>
+    <script src="js/pipeline_dataset_items.js"></script>
+    <script src="js/pipeline_json_editors.js"></script>
+    <script>
+        const { createApp } = Vue;
+        const icons = ElementPlusIconsVue;
+        const app = createApp({
+            components: { PipelineImportManageComponent, PipelineSetViewComponent, PipelineDatasetItemsComponent, PipelineJsonEditorsComponent },
+            setup() { return usePipelineCleaning(); }
+        });
+        app.use(ElementPlus);
+        app.component('Upload', icons.Upload);
+        app.component('FolderOpened', icons.FolderOpened);
+        app.component('Close', icons.Close);
+        app.component('Plus', icons.Plus);
+        app.component('Edit', icons.Edit);
+        app.component('Delete', icons.Delete);
+        app.component('VideoPlay', icons.VideoPlay);
+        app.component('Document', icons.Document);
+        app.component('Search', icons.Search);
+        app.component('Refresh', icons.Refresh);
+        app.component('ArrowDown', icons.ArrowDown);
+        app.component('ArrowUp', icons.ArrowUp);
+        app.mount('#app');
+    </script>
+</body>
+</html>

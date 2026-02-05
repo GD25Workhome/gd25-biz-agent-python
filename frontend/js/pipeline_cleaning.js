@@ -1,0 +1,89 @@
+/**
+ * 数据清洗主框架
+ * 负责 Tab 页管理、菜单导航
+ * 设计文档：cursor_docs/020401-数据导入管理模块技术设计.md
+ */
+(function() {
+    'use strict';
+
+    const { ref, provide, onMounted } = Vue;
+    const { ElMessage } = ElementPlus;
+
+    window.usePipelineCleaning = function() {
+        const tabs = ref([]);
+        const activeTabId = ref(null);
+        const activeMenu = ref('');
+
+        const tabConfigs = {
+            'import-manage': { title: 'Step00导入管理', component: 'PipelineImportManageComponent', icon: 'Upload' },
+            'set-view': { title: 'Step01原始数据管理', component: 'PipelineSetViewComponent', icon: 'FolderOpened' },
+            'json-editors': { title: 'JSON编辑器方案对比', component: 'PipelineJsonEditorsComponent', icon: 'Edit' }
+        };
+
+        const generateTabId = (type) => `${type}_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+
+        const openTab = (type) => {
+            const config = tabConfigs[type];
+            if (!config) {
+                ElMessage.warning('未知的功能类型');
+                return;
+            }
+            const existingTab = tabs.value.find(tab => tab.type === type);
+            if (existingTab) {
+                activeTabId.value = existingTab.id;
+                return;
+            }
+            const tabId = generateTabId(type);
+            tabs.value.push({ id: tabId, type: type, title: config.title, component: config.component, icon: config.icon });
+            activeTabId.value = tabId;
+        };
+
+        /** 打开数据集数据项管理 Tab，标题为「XX数据集名称-数据项管理」 */
+        const openTabForDatasetItems = (datasetId, datasetName) => {
+            const tabTitle = `${datasetName || '数据集'}-数据项管理`;
+            const existingTab = tabs.value.find(tab => tab.type === 'dataset-items' && tab.datasetId === datasetId);
+            if (existingTab) {
+                activeTabId.value = existingTab.id;
+                return;
+            }
+            const tabId = generateTabId('dataset-items');
+            tabs.value.push({
+                id: tabId,
+                type: 'dataset-items',
+                title: tabTitle,
+                component: 'PipelineDatasetItemsComponent',
+                icon: 'Document',
+                datasetId,
+                datasetName
+            });
+            activeTabId.value = tabId;
+        };
+
+        const switchTab = (tabId) => { activeTabId.value = tabId; };
+
+        const closeTab = (tabId) => {
+            const index = tabs.value.findIndex(tab => tab.id === tabId);
+            if (index === -1) return;
+            tabs.value.splice(index, 1);
+            if (activeTabId.value === tabId) {
+                activeTabId.value = tabs.value.length > 0 ? tabs.value[Math.min(index, tabs.value.length - 1)].id : null;
+            }
+        };
+
+        const handleMenuSelect = (index) => {
+            activeMenu.value = index;
+            openTab(index);
+        };
+
+        provide('pipelineTabManager', { closeTab, getActiveTabId: () => activeTabId.value, openTabForDatasetItems });
+
+        onMounted(() => {
+            if (tabs.value.length === 0) {
+                openTab('import-manage');
+                activeMenu.value = 'import-manage';
+            }
+        });
+
+        return { tabs, activeTabId, activeMenu, openTab, openTabForDatasetItems, switchTab, closeTab, handleMenuSelect };
+    };
+})();
