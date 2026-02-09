@@ -15,7 +15,7 @@ PIPELINE_TABLE_PREFIX = "pipeline_"
 
 
 class DataSetsPathRecord(Base):
-    """数据集合文件夹模型"""
+    """数据集合文件夹路径"""
 
     __tablename__ = f"{PIPELINE_TABLE_PREFIX}data_sets_path"
 

@@ -20,6 +20,7 @@ from backend.infrastructure.database.models.rag_models import (
 from backend.infrastructure.database.models.data_sets_path import DataSetsPathRecord
 from backend.infrastructure.database.models.data_sets import DataSetsRecord
 from backend.infrastructure.database.models.data_sets_items import DataSetsItemsRecord
+from backend.infrastructure.database.models.data_items_rewritten import DataItemsRewrittenRecord
 from backend.infrastructure.database.models.import_config import ImportConfigRecord
 
 __all__ = [
@@ -40,6 +41,7 @@ __all__ = [
     "DataSetsPathRecord",
     "DataSetsRecord",
     "DataSetsItemsRecord",
+    "DataItemsRewrittenRecord",
     "ImportConfigRecord",
 ]
 

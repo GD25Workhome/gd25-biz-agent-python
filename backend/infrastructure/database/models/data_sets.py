@@ -14,7 +14,7 @@ PIPELINE_TABLE_PREFIX = "pipeline_"
 
 
 class DataSetsRecord(Base):
-    """数据集合模型"""
+    """数据集合"""
 
     __tablename__ = f"{PIPELINE_TABLE_PREFIX}data_sets"
 
