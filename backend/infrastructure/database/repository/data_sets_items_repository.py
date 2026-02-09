@@ -81,6 +81,50 @@ class DataSetsItemsRepository(BaseRepository[DataSetsItemsRecord]):
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
+    async def get_by_ids(
+        self,
+        dataset_id: str,
+        item_ids: List[str],
+    ) -> List[DataSetsItemsRecord]:
+        """
+        按 dataset_id 和 item_ids 列表查询数据项。
+        仅返回属于该 dataset 的 record，且 id 在 item_ids 中。
+        设计文档：cursor_docs/020902-Step01数据项界面数据清洗入口技术设计.md
+        """
+        if not item_ids:
+            return []
+        stmt = select(DataSetsItemsRecord).where(
+            and_(
+                DataSetsItemsRecord.dataset_id == dataset_id,
+                DataSetsItemsRecord.id.in_(item_ids),
+            )
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_list_by_conditions(
+        self,
+        dataset_id: str,
+        status: Optional[int] = None,
+        unique_key: Optional[str] = None,
+        source: Optional[str] = None,
+        keyword: Optional[str] = None,
+    ) -> List[DataSetsItemsRecord]:
+        """
+        按 dataset_id 及筛选条件查询，无分页，返回所有命中记录。
+        命中多少条就返回多少条。设计文档：cursor_docs/020902-Step01数据项界面数据清洗入口技术设计.md
+        """
+        items, _ = await self.get_list_with_total(
+            dataset_id=dataset_id,
+            status=status,
+            unique_key=unique_key,
+            source=source,
+            keyword=keyword,
+            limit=99999,
+            offset=0,
+        )
+        return items
+
     async def delete_all_by_dataset_id(self, dataset_id: str) -> int:
         """
         删除指定 dataset 下所有数据项。

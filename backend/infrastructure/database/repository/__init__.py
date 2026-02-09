@@ -7,6 +7,9 @@ from backend.infrastructure.database.repository.user_repository import UserRepos
 from backend.infrastructure.database.repository.token_cache_repository import TokenCacheRepository
 from backend.infrastructure.database.repository.session_cache_repository import SessionCacheRepository
 from backend.infrastructure.database.repository.knowledge_base_repository import KnowledgeBaseRepository
+from backend.infrastructure.database.repository.data_items_rewritten_repository import (
+    DataItemsRewrittenRepository,
+)
 
 __all__ = [
     "BaseRepository",
@@ -15,5 +18,6 @@ __all__ = [
     "TokenCacheRepository",
     "SessionCacheRepository",
     "KnowledgeBaseRepository",
+    "DataItemsRewrittenRepository",
 ]
 

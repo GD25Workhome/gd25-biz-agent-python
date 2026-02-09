@@ -20,10 +20,16 @@ from backend.app.api.schemas.data_cleaning import (
     DataSetsItemsUpdate,
     DataSetsItemsResponse,
     DataSetsItemsListResponse,
+    DataItemsRewrittenUpdate,
+    DataItemsRewrittenResponse,
+    DataItemsRewrittenListResponse,
     ImportConfigCreate,
     ImportConfigUpdate,
     ImportConfigResponse,
     ImportConfigListResponse,
+    RewrittenExecuteRequest,
+    RewrittenExecuteResponse,
+    RewrittenExecuteStats,
 )
 from backend.infrastructure.database.connection import get_async_session
 from backend.infrastructure.database.repository.data_sets_path_repository import (
@@ -37,6 +43,9 @@ from backend.infrastructure.database.repository.data_sets_items_repository impor
 )
 from backend.infrastructure.database.repository.import_config_repository import (
     ImportConfigRepository,
+)
+from backend.infrastructure.database.repository.data_items_rewritten_repository import (
+    DataItemsRewrittenRepository,
 )
 
 logger = logging.getLogger(__name__)
@@ -418,6 +427,181 @@ async def clear_all_dataset_items(
     except Exception as e:
         await session.rollback()
         logger.error("清空数据项失败: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/datasets/{dataset_id}/items/rewritten/execute",
+    response_model=RewrittenExecuteResponse,
+)
+async def execute_rewritten_endpoint(
+    dataset_id: str,
+    data: RewrittenExecuteRequest,
+    session: AsyncSession = Depends(get_async_session),
+):
+    """
+    执行数据清洗（Step02 rewritten）。
+    支持 item_ids 或 query_params 两种模式，命中多少执行多少。
+    设计文档：cursor_docs/020902-Step01数据项界面数据清洗入口技术设计.md
+    """
+    from backend.pipeline.rewritten_service import execute_rewritten
+
+    # 参数校验
+    item_ids = data.item_ids if data.item_ids else None
+    query_params = (
+        data.query_params.model_dump(exclude_unset=True)
+        if data.query_params is not None
+        else None
+    )
+
+    if not item_ids and not query_params:
+        raise HTTPException(status_code=400, detail="至少提供 item_ids 或 query_params")
+    if item_ids is not None and len(item_ids) == 0:
+        raise HTTPException(status_code=400, detail="item_ids 不能为空")
+
+    try:
+        ds_repo = DataSetsRepository(session)
+        dataset = await ds_repo.get_by_id(dataset_id)
+        if not dataset:
+            raise HTTPException(status_code=404, detail="数据集合不存在")
+
+        stats = await execute_rewritten(
+            dataset_id=dataset_id,
+            session=session,
+            item_ids=item_ids,
+            query_params=query_params,
+        )
+        await session.commit()
+
+        return RewrittenExecuteResponse(
+            success=True,
+            message="数据清洗完成",
+            stats=RewrittenExecuteStats(
+                total=stats.total,
+                success=stats.success,
+                failed=stats.failed,
+            ),
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        await session.rollback()
+        logger.error("执行数据清洗失败: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------- DataItemsRewritten（Step02 数据清洗管理）----------
+@router.get(
+    "/data-items-rewritten",
+    response_model=DataItemsRewrittenListResponse,
+)
+async def list_data_items_rewritten(
+    scenario_description: Optional[str] = Query(None, description="场景描述（包含）"),
+    rewritten_question: Optional[str] = Query(None, description="改写后的问题（包含）"),
+    rewritten_answer: Optional[str] = Query(None, description="改写后的回答（包含）"),
+    rewritten_rule: Optional[str] = Query(None, description="改写后的规则（包含）"),
+    source_dataset_id: Optional[str] = Query(None, description="来源 dataSetsId（精确）"),
+    source_item_id: Optional[str] = Query(None, description="来源 dataItemsId（精确）"),
+    scenario_type: Optional[str] = Query(None, description="场景类型（包含）"),
+    sub_scenario_type: Optional[str] = Query(None, description="子场景类型（包含）"),
+    limit: int = Query(20, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """改写后数据项列表（Step02 数据清洗管理）"""
+    try:
+        repo = DataItemsRewrittenRepository(session)
+        items, total = await repo.get_list_with_total(
+            scenario_description=scenario_description,
+            rewritten_question=rewritten_question,
+            rewritten_answer=rewritten_answer,
+            rewritten_rule=rewritten_rule,
+            source_dataset_id=source_dataset_id,
+            source_item_id=source_item_id,
+            scenario_type=scenario_type,
+            sub_scenario_type=sub_scenario_type,
+            limit=limit,
+            offset=offset,
+        )
+        await session.commit()
+        return DataItemsRewrittenListResponse(
+            total=total,
+            items=[DataItemsRewrittenResponse.model_validate(r) for r in items],
+        )
+    except Exception as e:
+        await session.rollback()
+        logger.error("查询改写后数据项列表失败: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get(
+    "/data-items-rewritten/{item_id}",
+    response_model=DataItemsRewrittenResponse,
+)
+async def get_data_item_rewritten(
+    item_id: str,
+    session: AsyncSession = Depends(get_async_session),
+):
+    """获取单条改写后数据项"""
+    try:
+        repo = DataItemsRewrittenRepository(session)
+        record = await repo.get_by_id(item_id)
+        await session.commit()
+        if not record:
+            raise HTTPException(status_code=404, detail="改写后数据项不存在")
+        return DataItemsRewrittenResponse.model_validate(record)
+    except HTTPException:
+        raise
+    except Exception as e:
+        await session.rollback()
+        logger.error("获取改写后数据项失败: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put(
+    "/data-items-rewritten/{item_id}",
+    response_model=DataItemsRewrittenResponse,
+)
+async def update_data_item_rewritten(
+    item_id: str,
+    data: DataItemsRewrittenUpdate,
+    session: AsyncSession = Depends(get_async_session),
+):
+    """更新改写后数据项"""
+    try:
+        repo = DataItemsRewrittenRepository(session)
+        record = await repo.update(item_id, **data.model_dump(exclude_unset=True))
+        await session.commit()
+        if not record:
+            raise HTTPException(status_code=404, detail="改写后数据项不存在")
+        await session.refresh(record)
+        return DataItemsRewrittenResponse.model_validate(record)
+    except HTTPException:
+        raise
+    except Exception as e:
+        await session.rollback()
+        logger.error("更新改写后数据项失败: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/data-items-rewritten/{item_id}")
+async def delete_data_item_rewritten(
+    item_id: str,
+    session: AsyncSession = Depends(get_async_session),
+):
+    """删除改写后数据项"""
+    try:
+        repo = DataItemsRewrittenRepository(session)
+        ok = await repo.delete(item_id)
+        await session.commit()
+        if not ok:
+            raise HTTPException(status_code=404, detail="改写后数据项不存在")
+        return {"message": "删除成功"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        await session.rollback()
+        logger.error("删除改写后数据项失败: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

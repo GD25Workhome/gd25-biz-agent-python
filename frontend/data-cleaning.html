@@ -47,6 +47,7 @@
                 <el-menu :default-active="activeMenu" @select="handleMenuSelect" background-color="#304156" text-color="#bfcbd9" active-text-color="#409EFF">
                     <el-menu-item index="import-manage"><el-icon><Upload /></el-icon><span>Step00导入管理</span></el-menu-item>
                     <el-menu-item index="set-view"><el-icon><FolderOpened /></el-icon><span>Step01原始数据管理</span></el-menu-item>
+                    <el-menu-item index="data-items-rewritten"><el-icon><Edit /></el-icon><span>Step02数据清洗管理</span></el-menu-item>
                     <el-menu-item index="json-editors"><el-icon><Edit /></el-icon><span>JSON编辑器方案对比</span></el-menu-item>
                 </el-menu>
             </div>
@@ -83,12 +84,13 @@
     <script src="js/pipeline_import_manage.js"></script>
     <script src="js/pipeline_set_view.js"></script>
     <script src="js/pipeline_dataset_items.js"></script>
+    <script src="js/pipeline_data_items_rewritten.js"></script>
     <script src="js/pipeline_json_editors.js"></script>
     <script>
         const { createApp } = Vue;
         const icons = ElementPlusIconsVue;
         const app = createApp({
-            components: { PipelineImportManageComponent, PipelineSetViewComponent, PipelineDatasetItemsComponent, PipelineJsonEditorsComponent },
+            components: { PipelineImportManageComponent, PipelineSetViewComponent, PipelineDatasetItemsComponent, PipelineDataItemsRewrittenComponent, PipelineJsonEditorsComponent },
             setup() { return usePipelineCleaning(); }
         });
         app.use(ElementPlus);
@@ -110,6 +112,7 @@
         app.component('Refresh', icons.Refresh);
         app.component('ArrowDown', icons.ArrowDown);
         app.component('ArrowUp', icons.ArrowUp);
+        app.component('Brush', icons.Brush || icons.Refresh);
         app.mount('#app');
     </script>
 </body>

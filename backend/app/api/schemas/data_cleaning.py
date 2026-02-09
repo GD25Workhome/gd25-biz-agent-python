@@ -2,9 +2,10 @@
 数据清洗相关 Schema
 设计文档：cursor_docs/020401-数据导入管理模块技术设计.md
 """
+from decimal import Decimal
 from typing import Optional, List, Any
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
 
 
 # ---------- DataSetsPath ----------
@@ -190,3 +191,97 @@ class ImportConfigListResponse(BaseModel):
 
 # 解决前向引用
 DataSetsPathTreeNode.model_rebuild()
+
+
+# ---------- DataItemsRewritten（改写后数据项，Step02 数据清洗管理）----------
+class DataItemsRewrittenUpdate(BaseModel):
+    """更新改写后数据项"""
+
+    scenario_description: Optional[str] = Field(None, description="场景描述")
+    rewritten_question: Optional[str] = Field(None, description="改写后的问题")
+    rewritten_answer: Optional[str] = Field(None, description="改写后的回答")
+    rewritten_rule: Optional[str] = Field(None, description="改写后的规则")
+    source_dataset_id: Optional[str] = Field(None, max_length=100, description="来源 dataSets.id")
+    source_item_id: Optional[str] = Field(None, max_length=100, description="来源 dataItems.id")
+    scenario_type: Optional[str] = Field(None, max_length=1000, description="场景类型")
+    sub_scenario_type: Optional[str] = Field(None, max_length=1000, description="子场景类型")
+    ai_tags: Optional[dict] = Field(None, description="AI 标签")
+    ai_score: Optional[float] = Field(None, description="AI 评分")
+    ai_score_metadata: Optional[dict] = Field(None, description="AI 评分元数据")
+    manual_score: Optional[float] = Field(None, description="人工评分")
+    manual_score_metadata: Optional[dict] = Field(None, description="人工评分元数据")
+
+
+class DataItemsRewrittenResponse(BaseModel):
+    """改写后数据项响应"""
+
+    id: str
+    scenario_description: Optional[str] = None
+    rewritten_question: Optional[str] = None
+    rewritten_answer: Optional[str] = None
+    rewritten_rule: Optional[str] = None
+    source_dataset_id: Optional[str] = None
+    source_item_id: Optional[str] = None
+    scenario_type: Optional[str] = None
+    sub_scenario_type: Optional[str] = None
+    ai_tags: Optional[dict] = None
+    ai_score: Optional[float] = None
+    ai_score_metadata: Optional[dict] = None
+    manual_score: Optional[float] = None
+    manual_score_metadata: Optional[dict] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    @field_serializer("ai_score", "manual_score")
+    def serialize_decimal(self, v: Any) -> Optional[float]:
+        """将 Decimal 转为 float 以便 JSON 序列化"""
+        if v is not None and isinstance(v, Decimal):
+            return float(v)
+        return v
+
+    class Config:
+        from_attributes = True
+
+
+class DataItemsRewrittenListResponse(BaseModel):
+    """改写后数据项列表响应"""
+
+    total: int = Field(description="总条数")
+    items: List[DataItemsRewrittenResponse] = Field(
+        default_factory=list, description="当前页数据"
+    )
+
+
+# ---------- 数据清洗执行（rewritten execute）----------
+class RewrittenExecuteQueryParams(BaseModel):
+    """数据清洗按条件查询参数（仅筛选，无分页）"""
+
+    status: Optional[int] = Field(None, description="1=激活，0=废弃")
+    unique_key: Optional[str] = Field(None, description="unique_key（包含）")
+    source: Optional[str] = Field(None, description="source（包含）")
+    keyword: Optional[str] = Field(None, description="关键词（在 input/output/metadata 中搜索）")
+
+
+class RewrittenExecuteRequest(BaseModel):
+    """数据清洗执行请求"""
+
+    item_ids: Optional[List[str]] = Field(None, description="指定要清洗的数据项 ID 列表，若提供则忽略 query_params")
+    query_params: Optional[RewrittenExecuteQueryParams] = Field(
+        None, description="筛选条件，命中多少执行多少"
+    )
+
+
+class RewrittenExecuteStats(BaseModel):
+    """数据清洗执行统计"""
+
+    total: int = Field(description="总条数")
+    success: int = Field(description="成功条数")
+    failed: int = Field(description="失败条数")
+
+
+class RewrittenExecuteResponse(BaseModel):
+    """数据清洗执行响应"""
+
+    success: bool = Field(description="是否成功")
+    message: str = Field(description="提示信息")
+    stats: RewrittenExecuteStats = Field(description="执行统计")

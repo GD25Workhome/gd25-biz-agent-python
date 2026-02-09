@@ -17,6 +17,7 @@
         const tabConfigs = {
             'import-manage': { title: 'Step00导入管理', component: 'PipelineImportManageComponent', icon: 'Upload' },
             'set-view': { title: 'Step01原始数据管理', component: 'PipelineSetViewComponent', icon: 'FolderOpened' },
+            'data-items-rewritten': { title: 'Step02数据清洗管理', component: 'PipelineDataItemsRewrittenComponent', icon: 'Edit' },
             'json-editors': { title: 'JSON编辑器方案对比', component: 'PipelineJsonEditorsComponent', icon: 'Edit' }
         };
 

@@ -32,6 +32,7 @@
             const queryKeyword = ref('');
             const limit = ref(20);
             const offset = ref(0);
+            const rewrittenLoading = ref(false);
             const pageSizeOpts = PAGE_SIZE_OPTIONS || [10, 20, 50, 100];
             const currentPage = computed(() => (limit.value > 0 ? Math.floor(offset.value / limit.value) + 1 : 1));
 
@@ -173,6 +174,45 @@
                 }
             }
 
+            async function runRewrittenBatch() {
+                try {
+                    await ElMessageBox.confirm('将对当前查询条件下的全部数据项执行数据清洗，是否继续？', '提示', { type: 'warning' });
+                } catch (err) {
+                    if (err === 'cancel') return;
+                }
+                rewrittenLoading.value = true;
+                try {
+                    const queryParams = {
+                        status: (queryStatus.value === 0 || queryStatus.value === 1) ? queryStatus.value : undefined,
+                        unique_key: queryUniqueKey.value?.trim() || undefined,
+                        source: querySource.value?.trim() || undefined,
+                        keyword: queryKeyword.value?.trim() || undefined
+                    };
+                    const res = await axios.post(`${API_PREFIX}/datasets/${props.datasetId}/items/rewritten/execute`, { query_params: queryParams });
+                    const st = res.data?.stats || {};
+                    ElNotification.success({ message: '数据清洗完成，成功 ' + (st.success ?? 0) + ' 条，失败 ' + (st.failed ?? 0) + ' 条', position: 'bottom-left' });
+                    loadItems();
+                } catch (err) {
+                    ElMessage.error(getApiErrorMsg ? getApiErrorMsg(err) : (err.response?.data?.detail || err.message));
+                } finally {
+                    rewrittenLoading.value = false;
+                }
+            }
+
+            async function runRewrittenOne(row) {
+                rewrittenLoading.value = true;
+                try {
+                    const res = await axios.post(`${API_PREFIX}/datasets/${props.datasetId}/items/rewritten/execute`, { item_ids: [row.id] });
+                    const st = res.data?.stats || {};
+                    ElNotification.success({ message: '数据清洗完成，成功 ' + (st.success ?? 0) + ' 条，失败 ' + (st.failed ?? 0) + ' 条', position: 'bottom-left' });
+                    loadItems();
+                } catch (err) {
+                    ElMessage.error(getApiErrorMsg ? getApiErrorMsg(err) : (err.response?.data?.detail || err.message));
+                } finally {
+                    rewrittenLoading.value = false;
+                }
+            }
+
             // JSONEditor 实验弹窗（与表单 JSON 字段联动：打开时加载输入框内容，关闭时回填）
             const jsonEditorTestVisible = ref(false);
             const jsonEditorTestContainer = ref(null);
@@ -227,14 +267,15 @@
             watch(() => props.datasetId, () => { offset.value = 0; loadItems(); }, { immediate: true });
 
             return {
-                items, itemsTotal, itemsLoading,
+                items, itemsTotal, itemsLoading, rewrittenLoading,
                 queryExpanded, queryUniqueKey, querySource, queryStatus, queryKeyword,
                 limit, offset, currentPage, PAGE_SIZE_OPTIONS: pageSizeOpts,
                 itemDialogVisible, itemDialogMode, itemForm, itemEditingId,
                 jsonEditorTestVisible, jsonEditorTestContainer, openJsonEditorTest,
                 loadItems, openItemCreate, openItemEdit, submitItemForm, deleteItem, clearAllItems, toggleItemStatus,
+                runRewrittenBatch, runRewrittenOne,
                 onSearch, onResetQuery, onPageChange, onSizeChange,
-                Plus: icons.Plus, Edit: icons.Edit, Delete: icons.Delete, Document: icons.Document, Search: icons.Search, ArrowDown: icons.ArrowDown, ArrowUp: icons.ArrowUp
+                Plus: icons.Plus, Edit: icons.Edit, Delete: icons.Delete, Document: icons.Document, Search: icons.Search, ArrowDown: icons.ArrowDown, ArrowUp: icons.ArrowUp, Brush: icons.Brush
             };
         },
         template: `
@@ -244,6 +285,7 @@
                     <span style="font-weight:600;">{{ datasetName || '数据项' }}</span><span v-if="datasetId" style="font-size:12px;color:#909399;">ID: {{ datasetId }}</span>
                 </div>
                 <div style="display:flex;gap:8px;">
+                    <el-button size="small" type="warning" plain @click="runRewrittenBatch" :icon="Brush" :loading="rewrittenLoading" :disabled="itemsTotal===0">进行数据清洗</el-button>
                     <el-button size="small" type="primary" @click="openItemCreate" :icon="Plus">新建数据项</el-button>
                     <el-button size="small" type="danger" plain @click="clearAllItems" :icon="Delete" :disabled="itemsTotal===0">清理所有数据</el-button>
                 </div>
@@ -281,11 +323,12 @@
                     <el-table-column prop="unique_key" label="unique_key" min-width="120" show-overflow-tooltip />
                     <el-table-column prop="source" label="source" min-width="120" show-overflow-tooltip />
                     <el-table-column prop="status" label="状态" width="80"><template #default="s"><el-tag :type="s.row.status===1?'success':'info'" size="small">{{ s.row.status===1?'激活':'废弃' }}</el-tag></template></el-table-column>
-                    <el-table-column label="操作" width="200" fixed="right">
+                    <el-table-column label="操作" width="260" fixed="right">
                         <template #default="s">
                             <span style="white-space:nowrap;">
                                 <el-button link type="primary" size="small" @click="toggleItemStatus(s.row)">{{ s.row.status===1?'废弃':'激活' }}</el-button>
                                 <el-button link type="primary" size="small" @click="openItemEdit(s.row)" :icon="Edit">编辑</el-button>
+                                <el-button link type="warning" size="small" @click="runRewrittenOne(s.row)" :icon="Brush" :disabled="rewrittenLoading">数据清洗</el-button>
                                 <el-button link type="danger" size="small" @click="deleteItem(s.row)" :icon="Delete">删除</el-button>
                             </span>
                         </template>
