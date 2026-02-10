@@ -209,7 +209,7 @@ class DataItemsRewrittenUpdate(BaseModel):
     scenario_confidence: Optional[float] = Field(None, description="场景置信度（0-1）")
     trace_id: Optional[str] = Field(None, max_length=100, description="流程执行 traceId")
     batch_code: Optional[str] = Field(None, max_length=100, description="批次code")
-    status: Optional[str] = Field(None, max_length=20, description="执行状态：success / failed")
+    status: Optional[str] = Field(None, max_length=20, description="执行状态：init / processing / success / failed")
     execution_metadata: Optional[dict] = Field(None, description="执行过程元数据")
     ai_tags: Optional[dict] = Field(None, description="AI 标签")
     ai_score: Optional[float] = Field(None, description="AI 评分")

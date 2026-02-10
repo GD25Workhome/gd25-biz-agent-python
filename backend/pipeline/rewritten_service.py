@@ -284,7 +284,8 @@ async def create_rewritten_batch(
 
     if item_ids:
         records = await ds_repo.get_by_ids(dataset_id, item_ids)
-    elif query_params:
+    elif query_params is not None:
+        # query_params 为 {} 时表示无筛选条件，命中该 dataset 下全部记录
         records = await ds_repo.get_list_by_conditions(
             dataset_id=dataset_id,
             status=query_params.get("status"),

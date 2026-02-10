@@ -144,7 +144,7 @@ async def lifespan(app: FastAPI):
         # 6. 启动 Rewritten 后台 Worker（批量异步执行）
         logger.info("6. 启动 Rewritten 后台 Worker...")
         from backend.pipeline.rewritten_service import rewritten_worker_loop
-        worker_task = asyncio.create_task(rewritten_worker_loop())
+        # worker_task = asyncio.create_task(rewritten_worker_loop())
         logger.info("   ✓ Rewritten Worker 已启动")
 
         logger.info("=" * 60)

@@ -445,15 +445,17 @@ async def execute_rewritten_endpoint(
     """
     from backend.pipeline.rewritten_service import create_rewritten_batch
 
-    # 参数校验
+    # 参数校验：用户显式传入 query_params: {} 时也视为已提供（空筛选条件 = 命中全部）
     item_ids = data.item_ids if data.item_ids else None
     query_params = (
         data.query_params.model_dump(exclude_unset=True)
         if data.query_params is not None
         else None
     )
+    has_item_ids = item_ids is not None and len(item_ids) > 0
+    has_query_params = data.query_params is not None  # 显式传入 {} 也算提供
 
-    if not item_ids and not query_params:
+    if not has_item_ids and not has_query_params:
         raise HTTPException(status_code=400, detail="至少提供 item_ids 或 query_params")
     if item_ids is not None and len(item_ids) == 0:
         raise HTTPException(status_code=400, detail="item_ids 不能为空")
@@ -502,7 +504,7 @@ async def list_data_items_rewritten(
     sub_scenario_type: Optional[str] = Query(None, description="子场景类型（包含）"),
     batch_code: Optional[str] = Query(None, description="批次code（包含）"),
     trace_id: Optional[str] = Query(None, description="流程 traceId（包含）"),
-    status: Optional[str] = Query(None, description="执行状态（精确）：success / failed"),
+    status: Optional[str] = Query(None, description="执行状态（精确）：init / processing / success / failed"),
     limit: int = Query(20, ge=1, le=500),
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_async_session),

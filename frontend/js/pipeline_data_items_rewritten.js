@@ -215,8 +215,10 @@
                     <el-input v-model="queryBatchCode" placeholder="批次code（包含）" clearable style="width:140px;" size="small" />
                     <el-input v-model="queryTraceId" placeholder="traceId（包含）" clearable style="width:140px;" size="small" />
                     <el-select v-model="queryStatus" placeholder="执行状态" clearable style="width:120px;" size="small">
-                        <el-option label="success" value="success" />
-                        <el-option label="failed" value="failed" />
+                        <el-option label="待处理" value="init" />
+                        <el-option label="执行中" value="processing" />
+                        <el-option label="成功" value="success" />
+                        <el-option label="失败" value="failed" />
                     </el-select>
                 </div>
             </div>
@@ -284,7 +286,7 @@
                     <el-form-item label="场景置信度"><el-input v-model="itemForm.scenario_confidence" placeholder="0-1" /></el-form-item>
                     <el-form-item label="批次 code"><el-input v-model="itemForm.batch_code" placeholder="批次code" /></el-form-item>
                     <el-form-item label="traceId"><el-input v-model="itemForm.trace_id" placeholder="流程执行 traceId" /></el-form-item>
-                    <el-form-item label="执行状态"><el-select v-model="itemForm.status" placeholder="success / failed" clearable style="width:100%;"><el-option label="success" value="success" /><el-option label="failed" value="failed" /></el-select></el-form-item>
+                    <el-form-item label="执行状态"><el-select v-model="itemForm.status" placeholder="init / processing / success / failed" clearable style="width:100%;"><el-option label="待处理" value="init" /><el-option label="执行中" value="processing" /><el-option label="成功" value="success" /><el-option label="失败" value="failed" /></el-select></el-form-item>
                     <el-form-item label="AI 评分"><el-input v-model="itemForm.ai_score" placeholder="数字" /></el-form-item>
                     <el-form-item label="人工评分"><el-input v-model="itemForm.manual_score" placeholder="数字" /></el-form-item>
                 </el-form>
