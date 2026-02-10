@@ -2,7 +2,8 @@
 数据清洗（Step02 rewritten）服务
 
 从 DataSetsItemsRecord 查询数据，构建 state，并发执行 rewritten_data_service_agent 流程。
-设计文档：cursor_docs/020902-Step01数据项界面数据清洗入口技术设计.md
+支持批量创建 + 异步 Worker 轮询执行模式。
+设计文档：cursor_docs/021001-Rewritten流程批量异步执行技术设计.md
 """
 from __future__ import annotations
 
@@ -10,6 +11,7 @@ import asyncio
 import json
 import logging
 import secrets
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass
 
@@ -18,7 +20,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.domain.state import FlowState
 from backend.domain.tools.context import RuntimeContext
+from backend.infrastructure.database.connection import get_session_factory
+from backend.infrastructure.database.models.data_items_rewritten import (
+    DataItemsRewrittenRecord,
+)
 from backend.infrastructure.database.models.data_sets_items import DataSetsItemsRecord
+from backend.infrastructure.database.repository.data_items_rewritten_repository import (
+    DataItemsRewrittenRepository,
+    STATUS_FAILED,
+    STATUS_INIT,
+    STATUS_PROCESSING,
+)
 from backend.infrastructure.database.repository.data_sets_items_repository import (
     DataSetsItemsRepository,
 )
@@ -30,6 +42,9 @@ logger = logging.getLogger(__name__)
 FLOW_KEY = "rewritten_data_service_agent"
 # 最大并发数（后端常量，不开放给前端）
 MAX_CONCURRENT = 4
+# Worker 配置（设计文档 5.3.2.1）
+POLL_INTERVAL_SECONDS = 2
+BATCH_SIZE = 10
 # 占位 token_id（无真实 Token 时使用）
 TOKEN_ID_PLACEHOLDER = "rewritten_data_service"
 SESSION_ID_PREFIX = "rewritten_"
@@ -37,7 +52,7 @@ SESSION_ID_PREFIX = "rewritten_"
 
 @dataclass
 class RewrittenExecuteStats:
-    """执行统计"""
+    """执行统计（旧接口兼容）"""
 
     total: int
     success: int
@@ -45,6 +60,14 @@ class RewrittenExecuteStats:
 
     def to_dict(self) -> Dict[str, int]:
         return {"total": self.total, "success": self.success, "failed": self.failed}
+
+
+@dataclass
+class RewrittenBatchCreateResult:
+    """批量创建改写任务结果"""
+
+    batch_code: str
+    total: int
 
 
 def _safe_str(v: Any) -> str:
@@ -83,6 +106,7 @@ def build_state_from_record(
     dataset_id: str,
     session_id: str,
     trace_id: str,
+    rewritten_record_id: Optional[str] = None,
 ) -> FlowState:
     """
     从 DataSetsItemsRecord 构建 FlowState。
@@ -90,7 +114,7 @@ def build_state_from_record(
     映射规则（设计文档 §4.3）：
     - q_context: 来自 metadata.content_info.user_info，若不存在则不填充
     - manual_ext: 来自 metadata.content_info.ext 与 metadata.content_info.user_info.response_tags
-    - prompt_vars: source_dataset_id, source_item_id（供 insert_rewritten_data_func 使用）
+    - prompt_vars: rewritten_record_id（供 update_rewritten_data_func 按 id 更新）
     """
     meta = getattr(record, "metadata_", None) or {}
     content_info = meta.get("content_info") if isinstance(meta, dict) else {}
@@ -139,8 +163,7 @@ def build_state_from_record(
         "manual_ext": manual_ext,
         "response_message": response_message,
         "response_rule": response_rule,
-        "source_dataset_id": dataset_id,
-        "source_item_id": record.id,
+        "rewritten_record_id": rewritten_record_id,
     }
 
     # 构建顶层 current_message，供 Agent 节点判断「有消息需处理」并触发 LLM 调用
@@ -163,6 +186,7 @@ async def _run_one(
     record: DataSetsItemsRecord,
     dataset_id: str,
     graph: Any,
+    rewritten_record_id: Optional[str] = None,
 ) -> bool:
     """对单条 record 执行 flow，成功返回 True。"""
     record_id = getattr(record, "id", "?")
@@ -171,7 +195,8 @@ async def _run_one(
 
     try:
         initial_state = build_state_from_record(
-            record, dataset_id, session_id, trace_id
+            record, dataset_id, session_id, trace_id,
+            rewritten_record_id=rewritten_record_id,
         )
     except Exception as e:
         logger.warning(
@@ -243,25 +268,24 @@ async def _run_batch_parallel(
     return (ok, fail)
 
 
-async def execute_rewritten(
+async def create_rewritten_batch(
     dataset_id: str,
     session: AsyncSession,
     *,
     item_ids: Optional[List[str]] = None,
     query_params: Optional[Dict[str, Any]] = None,
-) -> RewrittenExecuteStats:
+) -> RewrittenBatchCreateResult:
     """
-    执行数据清洗。
-
-    若 item_ids 非空，按 ID 查询；否则按 query_params 查询，命中多少执行多少。
+    批量创建改写任务。查询待处理记录，在 pipeline_data_items_rewritten 中创建 init 记录，
+    立即返回 batch_code 和 total，由后台 Worker 异步执行。
     """
-    repo = DataSetsItemsRepository(session)
+    ds_repo = DataSetsItemsRepository(session)
     records: List[DataSetsItemsRecord] = []
 
     if item_ids:
-        records = await repo.get_by_ids(dataset_id, item_ids)
+        records = await ds_repo.get_by_ids(dataset_id, item_ids)
     elif query_params:
-        records = await repo.get_list_by_conditions(
+        records = await ds_repo.get_list_by_conditions(
             dataset_id=dataset_id,
             status=query_params.get("status"),
             unique_key=query_params.get("unique_key"),
@@ -269,18 +293,147 @@ async def execute_rewritten(
             keyword=query_params.get("keyword"),
         )
     else:
-        return RewrittenExecuteStats(total=0, success=0, failed=0)
+        return RewrittenBatchCreateResult(batch_code="", total=0)
 
     if not records:
-        return RewrittenExecuteStats(total=0, success=0, failed=0)
+        return RewrittenBatchCreateResult(batch_code="", total=0)
 
+    batch_code = datetime.now().strftime("%Y%m%d%H%M%S")
+    rewritten_repo = DataItemsRewrittenRepository(session)
+    created = await rewritten_repo.create_init_batch(
+        records=records,
+        batch_code=batch_code,
+        dataset_id=dataset_id,
+    )
+    return RewrittenBatchCreateResult(batch_code=batch_code, total=created)
+
+
+async def run_one_rewritten(rec: DataItemsRewrittenRecord) -> None:
+    """
+    对单条 DataItemsRewrittenRecord 执行改写流程。
+    根据 source_dataset_id、source_item_id 查 DataSetsItemsRecord，调用 _run_one。
+    查不到则更新为 failed。内部使用独立 session。
+    """
     from backend.domain.flows.manager import FlowManager
 
-    graph = FlowManager.get_flow(FLOW_KEY)
-    ok, fail = await _run_batch_parallel(records, dataset_id, graph)
+    session_factory = get_session_factory()
+    dataset_id = rec.source_dataset_id or ""
+    item_id = rec.source_item_id or ""
 
-    return RewrittenExecuteStats(
-        total=len(records),
-        success=ok,
-        failed=fail,
+    if not dataset_id or not item_id:
+        async with session_factory() as session:
+            repo = DataItemsRewrittenRepository(session)
+            await repo.update_status(
+                rec.id,
+                STATUS_FAILED,
+                execution_metadata={
+                    "failure_reason": "source_dataset_id 或 source_item_id 为空",
+                    "stage": "run_one_rewritten",
+                },
+            )
+            await session.commit()
+        return
+
+    async with session_factory() as session:
+        ds_repo = DataSetsItemsRepository(session)
+        item_record = await ds_repo.get_by_dataset_and_item_id(
+            dataset_id=dataset_id,
+            item_id=item_id,
+        )
+        if not item_record:
+            rewritten_repo = DataItemsRewrittenRepository(session)
+            await rewritten_repo.update_status(
+                rec.id,
+                STATUS_FAILED,
+                execution_metadata={
+                    "failure_reason": "来源 data_sets_items 记录不存在",
+                    "stage": "run_one_rewritten",
+                },
+            )
+            await session.commit()
+            return
+
+    graph = FlowManager.get_flow(FLOW_KEY)
+    await _run_one(
+        item_record, dataset_id, graph, rewritten_record_id=rec.id
     )
+
+
+async def _mark_failed(record_id: str, reason: str) -> None:
+    """将 record 标记为 failed。"""
+    session_factory = get_session_factory()
+    async with session_factory() as session:
+        repo = DataItemsRewrittenRepository(session)
+        await repo.update_status(
+            record_id,
+            STATUS_FAILED,
+            execution_metadata={"failure_reason": reason, "stage": "run_one"},
+        )
+        await session.commit()
+
+
+async def rewritten_worker_loop() -> None:
+    """
+    后台 Worker 主循环。子方案 B（并行）：拉取 init → 更新 processing → 并行执行。
+    由 main.py lifespan 启动。
+    """
+    session_factory = get_session_factory()
+    semaphore = asyncio.Semaphore(MAX_CONCURRENT)
+
+    async def run_with_semaphore(
+        rec: DataItemsRewrittenRecord,
+    ) -> Tuple[str, bool, Optional[Exception]]:
+        async with semaphore:
+            try:
+                await run_one_rewritten(rec)
+                return (rec.id, True, None)
+            except Exception as e:
+                return (rec.id, False, e)
+
+    while True:
+        try:
+            async with session_factory() as session:
+                repo = DataItemsRewrittenRepository(session)
+                records = await repo.get_init_records(limit=BATCH_SIZE)
+                if not records:
+                    await asyncio.sleep(POLL_INTERVAL_SECONDS)
+                    continue
+
+                updated_records: List[DataItemsRewrittenRecord] = []
+                for rec in records:
+                    try:
+                        ok = await repo.update_status(rec.id, STATUS_PROCESSING)
+                        if ok:
+                            updated_records.append(rec)
+                    except Exception as e:
+                        await session.rollback()
+                        logger.exception(
+                            "更新 status=processing 失败 record_id=%s", rec.id
+                        )
+                        updated_records = []
+                        break
+                await session.commit()
+                records = updated_records
+
+                if not records:
+                    await asyncio.sleep(POLL_INTERVAL_SECONDS)
+                    continue
+
+                results = await asyncio.gather(
+                    *[run_with_semaphore(rec) for rec in records],
+                    return_exceptions=True,
+                )
+
+                for i, res in enumerate(results):
+                    if i >= len(records):
+                        break
+                    rec = records[i]
+                    if isinstance(res, Exception):
+                        await _mark_failed(rec.id, str(res))
+                    elif isinstance(res, tuple) and not res[1] and res[2]:
+                        await _mark_failed(rec.id, str(res[2]))
+
+        except Exception as e:
+            logger.exception("rewritten_worker_loop 异常: %s", e)
+
+        await asyncio.sleep(POLL_INTERVAL_SECONDS)

@@ -10,6 +10,9 @@ from backend.domain.flows.implementations.insert_rag_data_func import InsertRagD
 from backend.domain.flows.implementations.insert_rewritten_data_func import (
     InsertRewrittenDataNode,
 )
+from backend.domain.flows.implementations.update_rewritten_data_func import (
+    UpdateRewrittenDataNode,
+)
 
 __all__ = [
     "RetrievalNode",
@@ -19,4 +22,5 @@ __all__ = [
     "InsertDataToVectorDbNode",
     "InsertRagDataNode",
     "InsertRewrittenDataNode",
+    "UpdateRewrittenDataNode",
 ]

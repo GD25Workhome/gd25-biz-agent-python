@@ -205,6 +205,12 @@ class DataItemsRewrittenUpdate(BaseModel):
     source_item_id: Optional[str] = Field(None, max_length=100, description="来源 dataItems.id")
     scenario_type: Optional[str] = Field(None, max_length=1000, description="场景类型")
     sub_scenario_type: Optional[str] = Field(None, max_length=1000, description="子场景类型")
+    rewrite_basis: Optional[str] = Field(None, description="改写依据")
+    scenario_confidence: Optional[float] = Field(None, description="场景置信度（0-1）")
+    trace_id: Optional[str] = Field(None, max_length=100, description="流程执行 traceId")
+    batch_code: Optional[str] = Field(None, max_length=100, description="批次code")
+    status: Optional[str] = Field(None, max_length=20, description="执行状态：success / failed")
+    execution_metadata: Optional[dict] = Field(None, description="执行过程元数据")
     ai_tags: Optional[dict] = Field(None, description="AI 标签")
     ai_score: Optional[float] = Field(None, description="AI 评分")
     ai_score_metadata: Optional[dict] = Field(None, description="AI 评分元数据")
@@ -224,6 +230,12 @@ class DataItemsRewrittenResponse(BaseModel):
     source_item_id: Optional[str] = None
     scenario_type: Optional[str] = None
     sub_scenario_type: Optional[str] = None
+    rewrite_basis: Optional[str] = None
+    scenario_confidence: Optional[float] = None
+    trace_id: Optional[str] = None
+    batch_code: Optional[str] = None
+    status: Optional[str] = None
+    execution_metadata: Optional[dict] = None
     ai_tags: Optional[dict] = None
     ai_score: Optional[float] = None
     ai_score_metadata: Optional[dict] = None
@@ -232,7 +244,7 @@ class DataItemsRewrittenResponse(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    @field_serializer("ai_score", "manual_score")
+    @field_serializer("ai_score", "manual_score", "scenario_confidence")
     def serialize_decimal(self, v: Any) -> Optional[float]:
         """将 Decimal 转为 float 以便 JSON 序列化"""
         if v is not None and isinstance(v, Decimal):
@@ -272,7 +284,7 @@ class RewrittenExecuteRequest(BaseModel):
 
 
 class RewrittenExecuteStats(BaseModel):
-    """数据清洗执行统计"""
+    """数据清洗执行统计（旧接口兼容）"""
 
     total: int = Field(description="总条数")
     success: int = Field(description="成功条数")
@@ -280,8 +292,9 @@ class RewrittenExecuteStats(BaseModel):
 
 
 class RewrittenExecuteResponse(BaseModel):
-    """数据清洗执行响应"""
+    """数据清洗执行响应（批量创建模式）"""
 
     success: bool = Field(description="是否成功")
     message: str = Field(description="提示信息")
-    stats: RewrittenExecuteStats = Field(description="执行统计")
+    batch_code: str = Field(description="批次编码")
+    total: int = Field(description="创建的任务总数")

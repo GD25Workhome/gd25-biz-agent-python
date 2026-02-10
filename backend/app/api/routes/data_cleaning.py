@@ -29,7 +29,6 @@ from backend.app.api.schemas.data_cleaning import (
     ImportConfigListResponse,
     RewrittenExecuteRequest,
     RewrittenExecuteResponse,
-    RewrittenExecuteStats,
 )
 from backend.infrastructure.database.connection import get_async_session
 from backend.infrastructure.database.repository.data_sets_path_repository import (
@@ -440,11 +439,11 @@ async def execute_rewritten_endpoint(
     session: AsyncSession = Depends(get_async_session),
 ):
     """
-    执行数据清洗（Step02 rewritten）。
-    支持 item_ids 或 query_params 两种模式，命中多少执行多少。
-    设计文档：cursor_docs/020902-Step01数据项界面数据清洗入口技术设计.md
+    执行数据清洗（Step02 rewritten）。批量创建模式：创建 init 记录后立即返回，
+    由后台 Worker 异步执行。支持 item_ids 或 query_params 两种模式。
+    设计文档：cursor_docs/021001-Rewritten流程批量异步执行技术设计.md
     """
-    from backend.pipeline.rewritten_service import execute_rewritten
+    from backend.pipeline.rewritten_service import create_rewritten_batch
 
     # 参数校验
     item_ids = data.item_ids if data.item_ids else None
@@ -465,7 +464,7 @@ async def execute_rewritten_endpoint(
         if not dataset:
             raise HTTPException(status_code=404, detail="数据集合不存在")
 
-        stats = await execute_rewritten(
+        result = await create_rewritten_batch(
             dataset_id=dataset_id,
             session=session,
             item_ids=item_ids,
@@ -475,12 +474,9 @@ async def execute_rewritten_endpoint(
 
         return RewrittenExecuteResponse(
             success=True,
-            message="数据清洗完成",
-            stats=RewrittenExecuteStats(
-                total=stats.total,
-                success=stats.success,
-                failed=stats.failed,
-            ),
+            message="批次已创建，任务将异步执行",
+            batch_code=result.batch_code,
+            total=result.total,
         )
     except HTTPException:
         raise
@@ -504,6 +500,9 @@ async def list_data_items_rewritten(
     source_item_id: Optional[str] = Query(None, description="来源 dataItemsId（精确）"),
     scenario_type: Optional[str] = Query(None, description="场景类型（包含）"),
     sub_scenario_type: Optional[str] = Query(None, description="子场景类型（包含）"),
+    batch_code: Optional[str] = Query(None, description="批次code（包含）"),
+    trace_id: Optional[str] = Query(None, description="流程 traceId（包含）"),
+    status: Optional[str] = Query(None, description="执行状态（精确）：success / failed"),
     limit: int = Query(20, ge=1, le=500),
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_async_session),
@@ -520,6 +519,9 @@ async def list_data_items_rewritten(
             source_item_id=source_item_id,
             scenario_type=scenario_type,
             sub_scenario_type=sub_scenario_type,
+            batch_code=batch_code,
+            trace_id=trace_id,
+            status=status,
             limit=limit,
             offset=offset,
         )

@@ -101,6 +101,8 @@ async def load_context_cache():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理（替代已弃用的 on_event）"""
+    import asyncio
+    worker_task = None
     # 启动时执行
     logger.info("=" * 60)
     logger.info("系统启动中...")
@@ -138,18 +140,32 @@ async def lifespan(app: FastAPI):
         logger.info("5. 加载Token和Session缓存...")
         await load_context_cache()
         logger.info("   ✓ 缓存加载完成")
-        
+
+        # 6. 启动 Rewritten 后台 Worker（批量异步执行）
+        logger.info("6. 启动 Rewritten 后台 Worker...")
+        from backend.pipeline.rewritten_service import rewritten_worker_loop
+        worker_task = asyncio.create_task(rewritten_worker_loop())
+        logger.info("   ✓ Rewritten Worker 已启动")
+
         logger.info("=" * 60)
         logger.info("系统启动完成！")
         logger.info("=" * 60)
-        
+
     except Exception as e:
         logger.error(f"系统启动失败: {e}", exc_info=True)
         raise
     
     yield  # 应用运行期间
-    
-    # 关闭时执行（如果需要）
+
+    # 关闭时取消 Worker 任务
+    if worker_task is not None:
+        worker_task.cancel()
+        try:
+            await worker_task
+        except asyncio.CancelledError:
+            pass
+        logger.info("Rewritten Worker 已停止")
+
     logger.info("系统正在关闭...")
 
 

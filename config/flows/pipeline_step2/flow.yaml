@@ -14,17 +14,17 @@ nodes:
         thinking:
           type: disabled
 
-  # 将提示词中的内容提取出来，存储到数据库中
-  - name: insert_rewritten_data_node
+  # 将提示词中的内容提取出来，更新到数据库中（记录已由批次创建阶段预写入）
+  - name: update_rewritten_data_node
     type: function
     config:
-      function_key: "insert_rewritten_data_func"
+      function_key: "update_rewritten_data_func"
 
 edges:
   - from: rewritten_agent_node
-    to: insert_rewritten_data_node
+    to: update_rewritten_data_node
     condition: always
-  - from: insert_rewritten_data_node
+  - from: update_rewritten_data_node
     to: END
     condition: always
 

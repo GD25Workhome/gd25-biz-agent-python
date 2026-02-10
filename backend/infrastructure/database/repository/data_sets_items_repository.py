@@ -81,6 +81,21 @@ class DataSetsItemsRepository(BaseRepository[DataSetsItemsRecord]):
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
+    async def get_by_dataset_and_item_id(
+        self,
+        dataset_id: str,
+        item_id: str,
+    ) -> Optional[DataSetsItemsRecord]:
+        """按 dataset_id + item_id 查询单条。"""
+        stmt = select(DataSetsItemsRecord).where(
+            and_(
+                DataSetsItemsRecord.dataset_id == dataset_id,
+                DataSetsItemsRecord.id == item_id,
+            )
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
     async def get_by_ids(
         self,
         dataset_id: str,

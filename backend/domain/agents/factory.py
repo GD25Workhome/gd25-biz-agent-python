@@ -71,18 +71,28 @@ class AgentExecutor:
         
         # 提取最后一条AI消息作为输出
         output = ""
+        output_data = None  # 当 content 已是 dict 时透传，供 agent_creator 直接填入 edges_var
         if result.get("messages"):
             # 从后往前查找最后一条AI消息
             for msg in reversed(result["messages"]):
                 if hasattr(msg, "type") and msg.type == "ai":
-                    output = msg.content if isinstance(msg.content, str) else str(msg.content)
+                    content = getattr(msg, "content", None)
+                    if isinstance(content, dict):
+                        output_data = content
+                        output = str(content)  # 兼容 flow_msgs 等仍用字符串的路径
+                    else:
+                        output = content if isinstance(content, str) else str(content) if content is not None else ""
                     break
             # 如果没有找到，使用最后一条消息
             if not output and result["messages"]:
                 last_msg = result["messages"][-1]
-                output = last_msg.content if hasattr(last_msg, "content") else str(last_msg)
-        
-        return {"output": output, "messages": result.get("messages", [])}
+                content = getattr(last_msg, "content", None)
+                if isinstance(content, dict):
+                    output_data = content
+                    output = str(content)
+                else:
+                    output = content if isinstance(content, str) else str(content) if content is not None else ""
+        return {"output": output, "output_data": output_data, "messages": result.get("messages", [])}
     
     def invoke(self, msgs: List[BaseMessage], callbacks: Optional[List] = None, sys_msg: Optional[SystemMessage] = None) -> dict:
         """

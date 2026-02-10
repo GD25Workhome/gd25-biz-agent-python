@@ -84,10 +84,15 @@ class DataItemsRewrittenRecord(Base):
         index=True,
         comment="流程执行 traceId",
     )
+    batch_code = Column(
+        String(100),
+        nullable=True,
+        comment="批次code",
+    )
     status = Column(
         String(20),
         nullable=True,
-        comment="执行状态：success / failed",
+        comment="执行状态：init / processing / success / failed",
     )
     execution_metadata = Column(
         JSONB,

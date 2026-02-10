@@ -189,8 +189,13 @@
                         keyword: queryKeyword.value?.trim() || undefined
                     };
                     const res = await axios.post(`${API_PREFIX}/datasets/${props.datasetId}/items/rewritten/execute`, { query_params: queryParams });
-                    const st = res.data?.stats || {};
-                    ElNotification.success({ message: '数据清洗完成，成功 ' + (st.success ?? 0) + ' 条，失败 ' + (st.failed ?? 0) + ' 条', position: 'bottom-left' });
+                    const { success, message, batch_code: batchCode, total } = res.data ?? {};
+                    const totalNum = total ?? 0;
+                    if (success === false) {
+                        ElNotification.warning({ message: message || '批次创建未成功', position: 'bottom-left' });
+                    } else {
+                        ElNotification.success({ message: message || ('批次已创建，共 ' + totalNum + ' 条任务（batch_code: ' + (batchCode || '') + '），将异步执行。可在 Step02 数据清洗管理 中按 batch_code 查看执行进度。'), position: 'bottom-left' });
+                    }
                     loadItems();
                 } catch (err) {
                     ElMessage.error(getApiErrorMsg ? getApiErrorMsg(err) : (err.response?.data?.detail || err.message));
@@ -203,8 +208,13 @@
                 rewrittenLoading.value = true;
                 try {
                     const res = await axios.post(`${API_PREFIX}/datasets/${props.datasetId}/items/rewritten/execute`, { item_ids: [row.id] });
-                    const st = res.data?.stats || {};
-                    ElNotification.success({ message: '数据清洗完成，成功 ' + (st.success ?? 0) + ' 条，失败 ' + (st.failed ?? 0) + ' 条', position: 'bottom-left' });
+                    const { success, message, batch_code: batchCode, total } = res.data ?? {};
+                    const totalNum = total ?? 0;
+                    if (success === false) {
+                        ElNotification.warning({ message: message || '批次创建未成功', position: 'bottom-left' });
+                    } else {
+                        ElNotification.success({ message: message || ('批次已创建，共 ' + totalNum + ' 条任务（batch_code: ' + (batchCode || '') + '），将异步执行。可在 Step02 数据清洗管理 中查看执行进度。'), position: 'bottom-left' });
+                    }
                     loadItems();
                 } catch (err) {
                     ElMessage.error(getApiErrorMsg ? getApiErrorMsg(err) : (err.response?.data?.detail || err.message));

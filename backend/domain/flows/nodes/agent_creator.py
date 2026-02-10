@@ -3,7 +3,7 @@ Agent节点创建器
 """
 import logging
 import json
-from typing import Callable
+from typing import Any, Callable, Dict, List, Optional
 
 from langchain_core.messages import AIMessage
 
@@ -14,6 +14,139 @@ from backend.domain.agents.factory import AgentFactory
 from backend.infrastructure.prompts.sys_prompt_builder import build_system_message
 
 logger = logging.getLogger(__name__)
+
+# 写入 edges_var 时跳过的 key（非业务边条件字段）
+_EDGES_VAR_SKIP_KEYS = frozenset(["response_content", "reasoning_summary", "additional_fields"])
+
+
+def _apply_output_data_to_edges_var(output_data: Dict[str, Any], edges_var: Dict[str, Any]) -> None:
+    """
+    将 Agent 解析后的 output_data 写入 edges_var。
+    跳过 response_content、reasoning_summary、additional_fields；additional_fields 内容合并进 edges_var。
+    """
+    if not isinstance(output_data, dict):
+        return
+    for key, value in output_data.items():
+        if key not in _EDGES_VAR_SKIP_KEYS:
+            edges_var[key] = value
+    if "additional_fields" in output_data and isinstance(output_data["additional_fields"], dict):
+        for key, value in output_data["additional_fields"].items():
+            edges_var[key] = value
+
+
+def _fix_unescaped_newlines_in_json_string(raw: str) -> str:
+    """
+    将 JSON 字符串值内的未转义换行（\\n、\\r）替换为转义形式（两字符 \\ + n/r），
+    使整段可被 json.loads 解析。仅处理双引号字符串内部，不改变结构换行。
+    """
+    result: List[str] = []
+    in_string = False
+    escape = False
+    quote_char = '"'
+    i = 0
+    while i < len(raw):
+        c = raw[i]
+        if escape:
+            result.append(c)
+            escape = False
+            i += 1
+            continue
+        if c == "\\" and in_string:
+            result.append(c)
+            escape = True
+            i += 1
+            continue
+        if c == quote_char:
+            in_string = not in_string
+            result.append(c)
+            i += 1
+            continue
+        if in_string and c == "\n":
+            result.append("\\n")
+            i += 1
+            continue
+        if in_string and c == "\r":
+            result.append("\\r")
+            i += 1
+            continue
+        result.append(c)
+        i += 1
+    return "".join(result)
+
+
+def _parse_json_from_output_string(output: str) -> Optional[Dict[str, Any]]:
+    """
+    从输出字符串中解析 JSON 对象。
+    1. 整段 json.loads；若得到 dict 则返回；
+    2. 若得到 str（双层编码），再对该 str 解析一次；
+    3. 失败则从第一个 '{' 起按括号匹配截取根对象；若截取后仍含未转义换行则先修复再解析。
+    """
+    if not output or not isinstance(output, str):
+        return None
+    s = output.strip()
+    # 1. 整段解析
+    try:
+        parsed = json.loads(s)
+    except (json.JSONDecodeError, TypeError):
+        parsed = None
+    if isinstance(parsed, dict):
+        return parsed
+    # 2. 一次解析得到 str（双层编码）：再解析一次
+    if isinstance(parsed, str):
+        inner = parsed.strip()
+        if inner.startswith("{"):
+            try:
+                again = json.loads(inner)
+                if isinstance(again, dict):
+                    return again
+            except (json.JSONDecodeError, TypeError):
+                pass
+            try:
+                fixed_inner = _fix_unescaped_newlines_in_json_string(inner)
+                again = json.loads(fixed_inner)
+                if isinstance(again, dict):
+                    return again
+            except (json.JSONDecodeError, TypeError):
+                pass
+    # 3. 从第一个 '{' 起括号匹配截取
+    start = s.find("{")
+    if start < 0:
+        return None
+    depth = 0
+    in_string = False
+    escape = False
+    quote = None
+    for i in range(start, len(s)):
+        c = s[i]
+        if escape:
+            escape = False
+            continue
+        if c == "\\" and in_string:
+            escape = True
+            continue
+        if not in_string:
+            if c == "{":
+                depth += 1
+            elif c == "}":
+                depth -= 1
+                if depth == 0:
+                    substring = s[start : i + 1]
+                    try:
+                        return json.loads(substring)
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+                    try:
+                        fixed = _fix_unescaped_newlines_in_json_string(substring)
+                        return json.loads(fixed)
+                    except (json.JSONDecodeError, TypeError):
+                        return None
+            elif c in ('"', "'"):
+                in_string = True
+                quote = c
+        else:
+            if c == quote:
+                in_string = False
+    return None
 
 
 class AgentNodeCreator(NodeCreator):
@@ -106,40 +239,39 @@ class AgentNodeCreator(NodeCreator):
             new_state["edges_var"] = {}
             
             if "output" in result:
-                # AgentExecutor返回output字段
+                # AgentExecutor 返回 output 与可选的 output_data（当 LLM 返回的 content 已是 dict 时）
                 output = result["output"]
-                
+                output_data = result.get("output_data")
+
                 # 通用化数据提取：不区分节点名称，统一处理所有节点
-                # 检查两个数据来源：JSON所有属性 + additional_fields
+                # 数据来源1：output_data 为 dict 时直接使用（如豆包等接口直接返回结构化 content）
+                # 数据来源2：output 为 str 时尝试 JSON 解析（整段或括号匹配截取）
                 try:
-                    if isinstance(output, str):
-                        # 尝试从输出中提取 JSON
-                        json_start = output.find("{")
-                        json_end = output.rfind("}") + 1
-                        if json_start >= 0 and json_end > json_start:
-                            json_str = output[json_start:json_end]
-                            output_data = json.loads(json_str)
-                            
-                            # 数据来源1：如果是 JSON 类型，直接将所有属性存储到 edges_var
-                            # 跳过非边条件判断相关的字段（如 response_content, reasoning_summary, additional_fields）
-                            if isinstance(output_data, dict):
-                                for key, value in output_data.items():
-                                    if key not in ["response_content", "reasoning_summary", "additional_fields"]:
-                                        new_state["edges_var"][key] = value
-                            
-                            # 数据来源2：如果存在 additional_fields，将其中的所有字段也存储到 edges_var
-                            if "additional_fields" in output_data:
-                                additional_fields = output_data["additional_fields"]
-                                if isinstance(additional_fields, dict):
-                                    for key, value in additional_fields.items():
-                                        new_state["edges_var"][key] = value
-                            
+                    if isinstance(output_data, dict):
+                        # 已结构化，直接写入 edges_var
+                        _apply_output_data_to_edges_var(output_data, new_state["edges_var"])
+                        logger.debug(
+                            f"[节点 {node_name}] 从 output_data(dict) 提取数据到 edges_var: {list(new_state['edges_var'].keys())}"
+                        )
+                    elif isinstance(output, str) and output.strip():
+                        # 字符串：先整段解析，失败则按括号匹配截取根对象再解析
+                        parsed = _parse_json_from_output_string(output)
+                        if isinstance(parsed, dict):
+                            _apply_output_data_to_edges_var(parsed, new_state["edges_var"])
                             logger.debug(
-                                f"[节点 {node_name}] 从输出提取数据到 edges_var: {new_state['edges_var']}"
+                                f"[节点 {node_name}] 从输出字符串解析到 edges_var: {list(new_state['edges_var'].keys())}"
+                            )
+                        else:
+                            logger.warning(
+                                f"[节点 {node_name}] 输出字符串无法解析为 JSON，长度=%d",
+                                len(output),
                             )
                 except Exception as e:
-                    logger.debug(f"[节点 {node_name}] 解析输出 JSON 失败（可能不是 JSON 格式）: {e}")
-                    # 不是 JSON 格式或解析失败，不影响流程继续
+                    logger.warning(
+                        f"[节点 {node_name}] 解析输出 JSON 失败: {e}",
+                        exc_info=True,
+                    )
+                    # 解析失败不影响流程继续，edges_var 保持空
                 
                 # 按 config 将 edges_var 指定 key 覆盖到 persistence_edges_var（持久化通道，透传到任意下级节点）
                 # 必须 .copy()：new_state=state.copy() 是浅拷贝，直接改 new_state["persistence_edges_var"][k] 会污染上游 state

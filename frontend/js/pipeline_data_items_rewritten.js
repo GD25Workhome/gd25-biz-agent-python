@@ -29,7 +29,14 @@
                 source_dataset_id: '',
                 source_item_id: '',
                 scenario_type: '',
-                sub_scenario_type: ''
+                sub_scenario_type: '',
+                rewrite_basis: '',
+                scenario_confidence: '',
+                trace_id: '',
+                batch_code: '',
+                status: '',
+                ai_score: '',
+                manual_score: ''
             });
             const itemEditingId = ref(null);
             const queryExpanded = ref(true);
@@ -41,6 +48,9 @@
             const querySourceItemId = ref('');
             const queryScenarioType = ref('');
             const querySubScenarioType = ref('');
+            const queryBatchCode = ref('');
+            const queryTraceId = ref('');
+            const queryStatus = ref('');
             const limit = ref(20);
             const offset = ref(0);
             const pageSizeOpts = PAGE_SIZE_OPTIONS || [10, 20, 50, 100];
@@ -61,6 +71,9 @@
                 querySourceItemId.value = '';
                 queryScenarioType.value = '';
                 querySubScenarioType.value = '';
+                queryBatchCode.value = '';
+                queryTraceId.value = '';
+                queryStatus.value = '';
                 offset.value = 0;
                 loadItems();
             }
@@ -85,6 +98,9 @@
                         source_item_id: querySourceItemId.value?.trim() || undefined,
                         scenario_type: queryScenarioType.value?.trim() || undefined,
                         sub_scenario_type: querySubScenarioType.value?.trim() || undefined,
+                        batch_code: queryBatchCode.value?.trim() || undefined,
+                        trace_id: queryTraceId.value?.trim() || undefined,
+                        status: queryStatus.value?.trim() || undefined,
                         limit: limit.value,
                         offset: offset.value
                     };
@@ -109,6 +125,13 @@
                 itemForm.source_item_id = row.source_item_id || '';
                 itemForm.scenario_type = row.scenario_type || '';
                 itemForm.sub_scenario_type = row.sub_scenario_type || '';
+                itemForm.rewrite_basis = row.rewrite_basis || '';
+                itemForm.scenario_confidence = row.scenario_confidence != null ? String(row.scenario_confidence) : '';
+                itemForm.trace_id = row.trace_id || '';
+                itemForm.batch_code = row.batch_code || '';
+                itemForm.status = row.status || '';
+                itemForm.ai_score = row.ai_score != null ? String(row.ai_score) : '';
+                itemForm.manual_score = row.manual_score != null ? String(row.manual_score) : '';
                 itemEditingId.value = row.id;
                 itemDialogVisible.value = true;
             }
@@ -123,7 +146,14 @@
                         source_dataset_id: itemForm.source_dataset_id || null,
                         source_item_id: itemForm.source_item_id || null,
                         scenario_type: itemForm.scenario_type || null,
-                        sub_scenario_type: itemForm.sub_scenario_type || null
+                        sub_scenario_type: itemForm.sub_scenario_type || null,
+                        rewrite_basis: itemForm.rewrite_basis || null,
+                        scenario_confidence: itemForm.scenario_confidence !== '' ? parseFloat(itemForm.scenario_confidence) : null,
+                        trace_id: itemForm.trace_id || null,
+                        batch_code: itemForm.batch_code || null,
+                        status: itemForm.status || null,
+                        ai_score: itemForm.ai_score !== '' ? parseFloat(itemForm.ai_score) : null,
+                        manual_score: itemForm.manual_score !== '' ? parseFloat(itemForm.manual_score) : null
                     };
                     await axios.put(`${API_PREFIX}/data-items-rewritten/${itemEditingId.value}`, payload);
                     ElMessage.success('更新成功');
@@ -151,7 +181,8 @@
                 items, itemsTotal, itemsLoading,
                 queryExpanded,
                 queryScenarioDescription, queryRewrittenQuestion, queryRewrittenAnswer, queryRewrittenRule,
-                querySourceDatasetId, querySourceItemId, queryScenarioType, querySubScenarioType,
+                querySourceDatasetId, querySourceItemId,                 queryScenarioType, querySubScenarioType,
+                queryBatchCode, queryTraceId, queryStatus,
                 limit, offset, currentPage, PAGE_SIZE_OPTIONS: pageSizeOpts,
                 itemDialogVisible, itemForm, itemEditingId,
                 formatDateTime: fmtDateTime,
@@ -181,6 +212,12 @@
                     <el-input v-model="querySourceItemId" placeholder="来源 dataItemsId（精确）" clearable style="width:160px;" size="small" />
                     <el-input v-model="queryScenarioType" placeholder="场景类型（包含）" clearable style="width:140px;" size="small" />
                     <el-input v-model="querySubScenarioType" placeholder="子场景类型（包含）" clearable style="width:140px;" size="small" />
+                    <el-input v-model="queryBatchCode" placeholder="批次code（包含）" clearable style="width:140px;" size="small" />
+                    <el-input v-model="queryTraceId" placeholder="traceId（包含）" clearable style="width:140px;" size="small" />
+                    <el-select v-model="queryStatus" placeholder="执行状态" clearable style="width:120px;" size="small">
+                        <el-option label="success" value="success" />
+                        <el-option label="failed" value="failed" />
+                    </el-select>
                 </div>
             </div>
             <div style="flex:1;min-width:0;overflow:auto;padding:12px;">
@@ -192,16 +229,28 @@
                                 <div v-if="props.row.rewritten_question"><strong>改写后的问题：</strong><pre style="margin:4px 0;font-size:12px;white-space:pre-wrap;word-break:break-all;">{{ props.row.rewritten_question }}</pre></div>
                                 <div v-if="props.row.rewritten_answer"><strong>改写后的回答：</strong><pre style="margin:4px 0;font-size:12px;white-space:pre-wrap;word-break:break-all;">{{ props.row.rewritten_answer }}</pre></div>
                                 <div v-if="props.row.rewritten_rule"><strong>改写后的规则：</strong><pre style="margin:4px 0;font-size:12px;white-space:pre-wrap;word-break:break-all;">{{ props.row.rewritten_rule }}</pre></div>
-                                <p v-if="!props.row.scenario_description&&!props.row.rewritten_question&&!props.row.rewritten_answer&&!props.row.rewritten_rule" style="color:#909399;">无扩展内容</p>
+                                <div v-if="props.row.rewrite_basis"><strong>改写依据：</strong><pre style="margin:4px 0;font-size:12px;white-space:pre-wrap;word-break:break-all;">{{ props.row.rewrite_basis }}</pre></div>
+                                <div v-if="props.row.trace_id"><strong>流程 traceId：</strong><span style="font-size:12px;">{{ props.row.trace_id }}</span></div>
+                                <div v-if="props.row.batch_code"><strong>批次 code：</strong><span style="font-size:12px;">{{ props.row.batch_code }}</span></div>
+                                <div v-if="props.row.execution_metadata"><strong>执行元数据：</strong><pre style="margin:4px 0;font-size:12px;white-space:pre-wrap;word-break:break-all;">{{ typeof props.row.execution_metadata === 'object' ? JSON.stringify(props.row.execution_metadata, null, 2) : props.row.execution_metadata }}</pre></div>
+                                <div v-if="props.row.ai_tags"><strong>AI 标签：</strong><pre style="margin:4px 0;font-size:12px;white-space:pre-wrap;word-break:break-all;">{{ typeof props.row.ai_tags === 'object' ? JSON.stringify(props.row.ai_tags, null, 2) : props.row.ai_tags }}</pre></div>
+                                <p v-if="!props.row.scenario_description&&!props.row.rewritten_question&&!props.row.rewritten_answer&&!props.row.rewritten_rule&&!props.row.rewrite_basis&&!props.row.trace_id&&!props.row.batch_code&&!props.row.execution_metadata&&!props.row.ai_tags" style="color:#909399;">无扩展内容</p>
                             </div>
                         </template>
                     </el-table-column>
                     <el-table-column prop="id" label="ID" width="180" show-overflow-tooltip />
+                    <el-table-column prop="batch_code" label="批次code" min-width="100" show-overflow-tooltip />
                     <el-table-column prop="source_dataset_id" label="来源 dataSetsId" min-width="120" show-overflow-tooltip />
                     <el-table-column prop="source_item_id" label="来源 dataItemsId" min-width="120" show-overflow-tooltip />
                     <el-table-column prop="scenario_type" label="场景类型" min-width="100" show-overflow-tooltip />
                     <el-table-column prop="sub_scenario_type" label="子场景类型" min-width="100" show-overflow-tooltip />
+                    <el-table-column prop="status" label="状态" width="80" show-overflow-tooltip />
+                    <el-table-column prop="trace_id" label="traceId" width="120" show-overflow-tooltip />
+                    <el-table-column label="场景置信度" width="100"><template #default="s">{{ s.row.scenario_confidence != null ? s.row.scenario_confidence : '-' }}</template></el-table-column>
+                    <el-table-column label="AI 评分" width="90"><template #default="s">{{ s.row.ai_score != null ? s.row.ai_score : '-' }}</template></el-table-column>
+                    <el-table-column label="人工评分" width="90"><template #default="s">{{ s.row.manual_score != null ? s.row.manual_score : '-' }}</template></el-table-column>
                     <el-table-column label="创建时间" width="160"><template #default="s">{{ formatDateTime(s.row.created_at) }}</template></el-table-column>
+                    <el-table-column label="更新时间" width="160"><template #default="s">{{ formatDateTime(s.row.updated_at) }}</template></el-table-column>
                     <el-table-column label="操作" width="140" fixed="right">
                         <template #default="s">
                             <span style="white-space:nowrap;">
@@ -221,16 +270,23 @@
                 <el-pagination :current-page="currentPage" :page-size="limit" :total="itemsTotal" layout="prev,pager,next" @current-change="onPageChange" />
             </div>
 
-            <el-dialog v-model="itemDialogVisible" title="编辑改写后数据项" width="600px" :close-on-click-modal="false" :close-on-press-escape="true">
+            <el-dialog v-model="itemDialogVisible" title="编辑改写后数据项" width="640px" :close-on-click-modal="false" :close-on-press-escape="true">
                 <el-form :model="itemForm" label-width="120px">
                     <el-form-item label="场景描述"><el-input v-model="itemForm.scenario_description" type="textarea" :rows="2" /></el-form-item>
                     <el-form-item label="改写后的问题"><el-input v-model="itemForm.rewritten_question" type="textarea" :rows="2" /></el-form-item>
                     <el-form-item label="改写后的回答"><el-input v-model="itemForm.rewritten_answer" type="textarea" :rows="2" /></el-form-item>
                     <el-form-item label="改写后的规则"><el-input v-model="itemForm.rewritten_rule" type="textarea" :rows="2" /></el-form-item>
+                    <el-form-item label="改写依据"><el-input v-model="itemForm.rewrite_basis" type="textarea" :rows="2" /></el-form-item>
                     <el-form-item label="来源 dataSetsId"><el-input v-model="itemForm.source_dataset_id" /></el-form-item>
                     <el-form-item label="来源 dataItemsId"><el-input v-model="itemForm.source_item_id" /></el-form-item>
                     <el-form-item label="场景类型"><el-input v-model="itemForm.scenario_type" /></el-form-item>
                     <el-form-item label="子场景类型"><el-input v-model="itemForm.sub_scenario_type" /></el-form-item>
+                    <el-form-item label="场景置信度"><el-input v-model="itemForm.scenario_confidence" placeholder="0-1" /></el-form-item>
+                    <el-form-item label="批次 code"><el-input v-model="itemForm.batch_code" placeholder="批次code" /></el-form-item>
+                    <el-form-item label="traceId"><el-input v-model="itemForm.trace_id" placeholder="流程执行 traceId" /></el-form-item>
+                    <el-form-item label="执行状态"><el-select v-model="itemForm.status" placeholder="success / failed" clearable style="width:100%;"><el-option label="success" value="success" /><el-option label="failed" value="failed" /></el-select></el-form-item>
+                    <el-form-item label="AI 评分"><el-input v-model="itemForm.ai_score" placeholder="数字" /></el-form-item>
+                    <el-form-item label="人工评分"><el-input v-model="itemForm.manual_score" placeholder="数字" /></el-form-item>
                 </el-form>
                 <template #footer><el-button @click="itemDialogVisible=false">取消</el-button><el-button type="primary" @click="submitItemForm">确定</el-button></template>
             </el-dialog>
