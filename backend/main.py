@@ -102,12 +102,12 @@ async def load_context_cache():
 async def lifespan(app: FastAPI):
     """应用生命周期管理（替代已弃用的 on_event）"""
     import asyncio
-    worker_task = None
+    consumer_tasks = []
     # 启动时执行
     logger.info("=" * 60)
     logger.info("系统启动中...")
     logger.info("=" * 60)
-    
+
     try:
         # 1. 加载模型供应商配置
         logger.info("1. 加载模型供应商配置...")
@@ -115,17 +115,17 @@ async def lifespan(app: FastAPI):
         config_path = app_project_root / "config" / "model_providers.yaml"
         ProviderManager.load_providers(config_path)
         logger.info(f"   ✓ 成功加载模型供应商配置")
-        
+
         # 2. 初始化工具注册表
         logger.info("2. 初始化工具注册表...")
         init_tools()
         logger.info(f"   ✓ 工具注册表初始化完成")
-        
+
         # 3. 扫描流程文件
         logger.info("3. 扫描流程文件...")
         flows = FlowManager.scan_flows()
         logger.info(f"   ✓ 扫描到 {len(flows)} 个流程定义")
-        
+
         # 4. 预加载常用流程
         logger.info("4. 预加载常用流程...")
         loader_config = FlowManager.get_flow_loader_config()
@@ -135,17 +135,17 @@ async def lifespan(app: FastAPI):
             logger.info(f"   ✓ 成功预加载 {len(preload_flows)} 个流程")
         else:
             logger.info("   ✓ 没有需要预加载的流程")
-        
+
         # 5. 加载Token和Session缓存（新增）
         logger.info("5. 加载Token和Session缓存...")
         await load_context_cache()
         logger.info("   ✓ 缓存加载完成")
 
-        # 6. 启动 Rewritten 后台 Worker（批量异步执行）
-        logger.info("6. 启动 Rewritten 后台 Worker...")
-        from backend.pipeline.rewritten_service import rewritten_worker_loop
-        # worker_task = asyncio.create_task(rewritten_worker_loop())
-        logger.info("   ✓ Rewritten Worker 已启动")
+        # 6. 启动 Rewritten 任务队列消费者（021105，替代原 worker_loop）
+        logger.info("6. 启动 Rewritten 任务队列消费者...")
+        from backend.pipeline.rewritten_queue_service import start_consumers
+        consumer_tasks = start_consumers()
+        logger.info("   ✓ Rewritten 队列消费者已启动")
 
         logger.info("=" * 60)
         logger.info("系统启动完成！")
@@ -154,17 +154,18 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"系统启动失败: {e}", exc_info=True)
         raise
-    
+
     yield  # 应用运行期间
 
-    # 关闭时取消 Worker 任务
-    if worker_task is not None:
-        worker_task.cancel()
+    # 关闭时取消消费者任务
+    if consumer_tasks:
+        for t in consumer_tasks:
+            t.cancel()
         try:
-            await worker_task
-        except asyncio.CancelledError:
+            await asyncio.gather(*consumer_tasks, return_exceptions=True)
+        except Exception:
             pass
-        logger.info("Rewritten Worker 已停止")
+        logger.info("Rewritten 队列消费者已停止")
 
     logger.info("系统正在关闭...")
 

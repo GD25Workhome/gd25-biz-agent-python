@@ -4,6 +4,7 @@
 从 DataSetsItemsRecord 查询数据，构建 state，并发执行 rewritten_data_service_agent 流程。
 支持批量创建 + 异步 Worker 轮询执行模式。
 设计文档：cursor_docs/021001-Rewritten流程批量异步执行技术设计.md
+批次表设计：cursor_docs/021101-Rewritten批次表与创建流程设计.md
 """
 from __future__ import annotations
 
@@ -30,9 +31,13 @@ from backend.infrastructure.database.repository.data_items_rewritten_repository 
     STATUS_FAILED,
     STATUS_INIT,
     STATUS_PROCESSING,
+    STATUS_SUCCESS,
 )
 from backend.infrastructure.database.repository.data_sets_items_repository import (
     DataSetsItemsRepository,
+)
+from backend.infrastructure.database.repository.rewritten_batch_repository import (
+    RewrittenBatchRepository,
 )
 from backend.infrastructure.observability.langfuse_handler import create_langfuse_handler
 
@@ -87,6 +92,36 @@ def _safe_list(v: Any) -> List[Any]:
     return list(v)
 
 
+def _build_create_params(
+    dataset_id: Optional[str] = None,
+    item_ids: Optional[List[str]] = None,
+    query_params: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    构建 create_params JSON，供批次表存储。
+
+    Args:
+        dataset_id: 数据集 ID，可选，单数据集时填写。
+        item_ids: 按 ID 列表创建时的 item_ids。
+        query_params: 按条件筛选创建时的 query_params。
+
+    Returns:
+        供 create_params 字段存储的 dict。
+    """
+    base: Dict[str, Any] = {}
+    if dataset_id:
+        base["dataset_id"] = dataset_id
+    if item_ids is not None:
+        base["mode"] = "item_ids"
+        base["item_ids"] = item_ids
+        return base
+    if query_params is not None:
+        base["mode"] = "query_params"
+        base["query_params"] = query_params
+        return base
+    return base
+
+
 def _format_history_messages(history_messages: Any) -> str:
     """将 history_messages 格式化为提示词可用的字符串。"""
     if history_messages is None:
@@ -103,7 +138,6 @@ def _format_history_messages(history_messages: Any) -> str:
 
 def build_state_from_record(
     record: DataSetsItemsRecord,
-    dataset_id: str,
     session_id: str,
     trace_id: str,
     rewritten_record_id: Optional[str] = None,
@@ -184,7 +218,6 @@ def build_state_from_record(
 
 async def _run_one(
     record: DataSetsItemsRecord,
-    dataset_id: str,
     graph: Any,
     rewritten_record_id: Optional[str] = None,
 ) -> bool:
@@ -195,7 +228,7 @@ async def _run_one(
 
     try:
         initial_state = build_state_from_record(
-            record, dataset_id, session_id, trace_id,
+            record, session_id, trace_id,
             rewritten_record_id=rewritten_record_id,
         )
     except Exception as e:
@@ -232,42 +265,6 @@ async def _run_one(
         return False
 
 
-async def _run_batch_parallel(
-    records: List[DataSetsItemsRecord],
-    dataset_id: str,
-    graph: Any,
-) -> Tuple[int, int]:
-    """并行执行批次，返回 (success, failed)。"""
-    if not records:
-        return (0, 0)
-
-    semaphore = asyncio.Semaphore(MAX_CONCURRENT)
-
-    async def run_with_semaphore(r: DataSetsItemsRecord) -> bool:
-        async with semaphore:
-            return await _run_one(r, dataset_id, graph)
-
-    tasks = [run_with_semaphore(r) for r in records]
-    logger.info("创建 %d 个并行任务，最大并发数=%d", len(tasks), MAX_CONCURRENT)
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-
-    ok, fail = 0, 0
-    for i, result in enumerate(results):
-        if isinstance(result, Exception):
-            logger.error(
-                "任务执行异常 record_id=%s error=%s",
-                getattr(records[i], "id", "?"),
-                result,
-                exc_info=result,
-            )
-            fail += 1
-        elif result:
-            ok += 1
-        else:
-            fail += 1
-    return (ok, fail)
-
-
 async def create_rewritten_batch(
     dataset_id: str,
     session: AsyncSession,
@@ -300,6 +297,20 @@ async def create_rewritten_batch(
         return RewrittenBatchCreateResult(batch_code="", total=0)
 
     batch_code = datetime.now().strftime("%Y%m%d%H%M%S")
+    total_count = len(records)
+    create_params = _build_create_params(
+        dataset_id=dataset_id,
+        item_ids=item_ids,
+        query_params=query_params,
+    )
+
+    batch_repo = RewrittenBatchRepository(session)
+    await batch_repo.create(
+        batch_code=batch_code,
+        total_count=total_count,
+        create_params=create_params,
+    )
+
     rewritten_repo = DataItemsRewrittenRepository(session)
     created = await rewritten_repo.create_init_batch(
         records=records,
@@ -314,8 +325,13 @@ async def run_one_rewritten(rec: DataItemsRewrittenRecord) -> None:
     对单条 DataItemsRewrittenRecord 执行改写流程。
     根据 source_dataset_id、source_item_id 查 DataSetsItemsRecord，调用 _run_one。
     查不到则更新为 failed。内部使用独立 session。
+    设计文档：021201。入口跳过已终态（success/failed）；processing 由消费者 update-select 占位。
     """
     from backend.domain.flows.manager import FlowManager
+
+    if rec.status in (STATUS_SUCCESS, STATUS_FAILED):
+        logger.info("跳过已终态任务 record_id=%s status=%s", rec.id, rec.status)
+        return
 
     session_factory = get_session_factory()
     dataset_id = rec.source_dataset_id or ""
@@ -355,9 +371,7 @@ async def run_one_rewritten(rec: DataItemsRewrittenRecord) -> None:
             return
 
     graph = FlowManager.get_flow(FLOW_KEY)
-    await _run_one(
-        item_record, dataset_id, graph, rewritten_record_id=rec.id
-    )
+    await _run_one(item_record, graph, rewritten_record_id=rec.id)
 
 
 async def _mark_failed(record_id: str, reason: str) -> None:

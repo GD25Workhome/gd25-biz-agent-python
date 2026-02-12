@@ -298,3 +298,80 @@ class RewrittenExecuteResponse(BaseModel):
     message: str = Field(description="提示信息")
     batch_code: str = Field(description="批次编码")
     total: int = Field(description="创建的任务总数")
+
+
+# ---------- RewrittenBatch（Step02 清洗批次管理）----------
+class RewrittenBatchStatsResponse(BaseModel):
+    """批次记录 + 统计信息"""
+
+    id: str
+    batch_code: str
+    total_count: int
+    status: Optional[str] = Field(None, description="批次级状态")
+    create_params: Optional[dict] = Field(
+        None, description="创建参数（JSON）", validation_alias="create_params"
+    )
+    data_items_total: int = Field(0, description="实际关联数据项数量")
+    status_init_count: int = Field(0, description="init 状态数量")
+    status_processing_count: int = Field(0, description="processing 状态数量")
+    status_success_count: int = Field(0, description="success 状态数量")
+    status_failed_count: int = Field(0, description="failed 状态数量")
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class RewrittenBatchListResponse(BaseModel):
+    """批次列表响应"""
+
+    total: int = Field(description="总条数")
+    items: List[RewrittenBatchStatsResponse] = Field(
+        default_factory=list, description="当前页数据"
+    )
+
+
+# ---------- 批次任务队列（021105）----------
+class RewrittenBatchRunRequest(BaseModel):
+    """按批次运行请求"""
+
+    batch_code: str = Field(..., description="批次编码")
+
+
+class RewrittenBatchRunResponse(BaseModel):
+    """按批次运行响应"""
+
+    enqueued: int = Field(description="本次入队数量")
+
+
+class RewrittenBatchClearQueueResponse(BaseModel):
+    """清空全部队列响应（模式 1）"""
+
+    removed: int = Field(description="从队列移除的任务数")
+
+
+class RewrittenBatchRemoveBatchRequest(BaseModel):
+    """移除当前批次在队列中的任务请求（模式 2）"""
+
+    batch_code: str = Field(..., description="批次编码")
+
+
+class RewrittenBatchRemoveBatchResponse(BaseModel):
+    """移除当前批次响应"""
+
+    removed: int = Field(description="从队列移除的任务数")
+
+
+class DataItemRerunResponse(BaseModel):
+    """单条再次运行响应（模式 3）"""
+
+    enqueued: bool = Field(description="是否已入队")
+    message: Optional[str] = Field(None, description="未入队时说明原因")
+
+
+class QueueStatsResponse(BaseModel):
+    """队列统计响应"""
+
+    queue_size: int = Field(description="排队中任务数")
+    in_flight_count: int = Field(description="队列中+执行中的任务总数")

@@ -10,6 +10,9 @@ from backend.infrastructure.database.repository.knowledge_base_repository import
 from backend.infrastructure.database.repository.data_items_rewritten_repository import (
     DataItemsRewrittenRepository,
 )
+from backend.infrastructure.database.repository.rewritten_batch_repository import (
+    RewrittenBatchRepository,
+)
 
 __all__ = [
     "BaseRepository",
@@ -19,5 +22,6 @@ __all__ = [
     "SessionCacheRepository",
     "KnowledgeBaseRepository",
     "DataItemsRewrittenRepository",
+    "RewrittenBatchRepository",
 ]
 

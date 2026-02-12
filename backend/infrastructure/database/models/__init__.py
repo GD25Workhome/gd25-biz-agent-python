@@ -21,6 +21,7 @@ from backend.infrastructure.database.models.data_sets_path import DataSetsPathRe
 from backend.infrastructure.database.models.data_sets import DataSetsRecord
 from backend.infrastructure.database.models.data_sets_items import DataSetsItemsRecord
 from backend.infrastructure.database.models.data_items_rewritten import DataItemsRewrittenRecord
+from backend.infrastructure.database.models.rewritten_batch import RewrittenBatchRecord
 from backend.infrastructure.database.models.import_config import ImportConfigRecord
 
 __all__ = [
@@ -42,6 +43,7 @@ __all__ = [
     "DataSetsRecord",
     "DataSetsItemsRecord",
     "DataItemsRewrittenRecord",
+    "RewrittenBatchRecord",
     "ImportConfigRecord",
 ]
 

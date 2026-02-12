@@ -18,6 +18,59 @@ class DataSetsItemsRepository(BaseRepository[DataSetsItemsRecord]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, DataSetsItemsRecord)
 
+    async def get_list_with_total_optional_dataset(
+        self,
+        dataset_ids: Optional[List[str]] = None,
+        status: Optional[int] = None,
+        unique_key: Optional[str] = None,
+        source: Optional[str] = None,
+        keyword: Optional[str] = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> Tuple[List[DataSetsItemsRecord], int]:
+        """
+        分页查询数据项；dataset_ids 可选，不传或空则查全部数据集下的数据项。
+        unique_key 为精确匹配；支持 status、source（包含）、keyword（在 input/output/metadata 中搜索）。
+        """
+        conditions: List = []
+        if dataset_ids:
+            ids = [x.strip() for x in dataset_ids if x and str(x).strip()]
+            if ids:
+                conditions.append(DataSetsItemsRecord.dataset_id.in_(ids))
+        if status is not None:
+            conditions.append(DataSetsItemsRecord.status == status)
+        if unique_key is not None and unique_key.strip():
+            conditions.append(DataSetsItemsRecord.unique_key == unique_key.strip())
+        if source and source.strip():
+            conditions.append(DataSetsItemsRecord.source.ilike(f"%{source.strip()}%"))
+        if keyword and keyword.strip():
+            kw = f"%{keyword.strip()}%"
+            conditions.append(
+                or_(
+                    cast(DataSetsItemsRecord.input, Text).ilike(kw),
+                    cast(DataSetsItemsRecord.output, Text).ilike(kw),
+                    cast(DataSetsItemsRecord.metadata_, Text).ilike(kw),
+                )
+            )
+
+        base_query = select(DataSetsItemsRecord)
+        count_query = select(func.count()).select_from(DataSetsItemsRecord)
+        if conditions:
+            base_query = base_query.where(and_(*conditions))
+            count_query = count_query.where(and_(*conditions))
+
+        total_result = await self.session.execute(count_query)
+        total = total_result.scalar() or 0
+
+        list_query = (
+            base_query.order_by(DataSetsItemsRecord.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self.session.execute(list_query)
+        items = list(result.scalars().all())
+        return items, total
+
     async def get_list_with_total(
         self,
         dataset_id: str,

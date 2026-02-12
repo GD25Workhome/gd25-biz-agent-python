@@ -175,10 +175,25 @@
                 }
             }
 
+            const rerunLoading = ref(false);
+            async function rerunItem(row) {
+                rerunLoading.value = true;
+                try {
+                    const res = await axios.post(`${API_PREFIX}/data-items-rewritten/${row.id}/rerun`);
+                    if (res.data?.enqueued) ElMessage.success('已加入队列');
+                    else ElMessage.warning(res.data?.message || '该任务已在队列或执行中');
+                    loadItems();
+                } catch (err) {
+                    ElMessage.error(getApiErrorMsg ? getApiErrorMsg(err) : (err.response?.data?.detail || err.message));
+                } finally {
+                    rerunLoading.value = false;
+                }
+            }
+
             onMounted(() => loadItems());
 
             return {
-                items, itemsTotal, itemsLoading,
+                items, itemsTotal, itemsLoading, rerunLoading,
                 queryExpanded,
                 queryScenarioDescription, queryRewrittenQuestion, queryRewrittenAnswer, queryRewrittenRule,
                 querySourceDatasetId, querySourceItemId,                 queryScenarioType, querySubScenarioType,
@@ -186,9 +201,9 @@
                 limit, offset, currentPage, PAGE_SIZE_OPTIONS: pageSizeOpts,
                 itemDialogVisible, itemForm, itemEditingId,
                 formatDateTime: fmtDateTime,
-                loadItems, openItemEdit, submitItemForm, deleteItem,
+                loadItems, openItemEdit, submitItemForm, deleteItem, rerunItem,
                 onSearch, onResetQuery, onPageChange, onSizeChange,
-                Edit: icons.Edit, Delete: icons.Delete, Search: icons.Search, ArrowDown: icons.ArrowDown, ArrowUp: icons.ArrowUp
+                Edit: icons.Edit, Delete: icons.Delete, Search: icons.Search, ArrowDown: icons.ArrowDown, ArrowUp: icons.ArrowUp, VideoPlay: icons.VideoPlay
             };
         },
         template: `
@@ -253,10 +268,11 @@
                     <el-table-column label="人工评分" width="90"><template #default="s">{{ s.row.manual_score != null ? s.row.manual_score : '-' }}</template></el-table-column>
                     <el-table-column label="创建时间" width="160"><template #default="s">{{ formatDateTime(s.row.created_at) }}</template></el-table-column>
                     <el-table-column label="更新时间" width="160"><template #default="s">{{ formatDateTime(s.row.updated_at) }}</template></el-table-column>
-                    <el-table-column label="操作" width="140" fixed="right">
+                    <el-table-column label="操作" width="200" fixed="right">
                         <template #default="s">
                             <span style="white-space:nowrap;">
                                 <el-button link type="primary" size="small" @click="openItemEdit(s.row)" :icon="Edit">编辑</el-button>
+                                <el-button link type="success" size="small" :loading="rerunLoading" @click="rerunItem(s.row)" :icon="VideoPlay">再次运行</el-button>
                                 <el-button link type="danger" size="small" @click="deleteItem(s.row)" :icon="Delete">删除</el-button>
                             </span>
                         </template>

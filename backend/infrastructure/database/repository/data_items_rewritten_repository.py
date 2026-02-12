@@ -189,6 +189,33 @@ class DataItemsRewrittenRepository(BaseRepository[DataItemsRewrittenRecord]):
             created += 1
         return created
 
+    async def get_pending_by_batch_code(
+        self,
+        batch_code: str,
+    ) -> List[DataItemsRewrittenRecord]:
+        """
+        按批次获取待执行任务：status in (init, processing)。
+        用于「运行」时入队，包含上次中断的 processing 记录。
+        设计文档：cursor_docs/021105-Step02批次任务队列与运行停止技术设计.md
+        """
+        if not batch_code or not batch_code.strip():
+            return []
+        conditions = [
+            DataItemsRewrittenRecord.batch_code == batch_code.strip(),
+            DataItemsRewrittenRecord.status.in_([STATUS_INIT, STATUS_PROCESSING]),
+            DataItemsRewrittenRecord.source_dataset_id.isnot(None),
+            DataItemsRewrittenRecord.source_dataset_id != "",
+            DataItemsRewrittenRecord.source_item_id.isnot(None),
+            DataItemsRewrittenRecord.source_item_id != "",
+        ]
+        stmt = (
+            select(DataItemsRewrittenRecord)
+            .where(and_(*conditions))
+            .order_by(DataItemsRewrittenRecord.created_at.asc())
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
     async def get_init_records(
         self,
         limit: int = 10,
@@ -231,6 +258,30 @@ class DataItemsRewrittenRepository(BaseRepository[DataItemsRewrittenRecord]):
         stmt = (
             update(DataItemsRewrittenRecord)
             .where(DataItemsRewrittenRecord.id == record_id)
+            .values(**values)
+        )
+        result = await self.session.execute(stmt)
+        return (result.rowcount or 0) > 0
+
+    async def update_status_to_processing_if_init(
+        self,
+        record_id: str,
+        execution_metadata: Optional[Dict[str, Any]] = None,
+    ) -> bool:
+        """
+        仅当 status=init 时更新为 processing，用于消费者防重。
+        返回是否更新到行（rowcount>0）。
+        设计文档：cursor_docs/021201-Rewritten队列与任务状态重构技术设计.md
+        """
+        values: Dict[str, Any] = {"status": STATUS_PROCESSING}
+        if execution_metadata is not None:
+            values["execution_metadata"] = execution_metadata
+        stmt = (
+            update(DataItemsRewrittenRecord)
+            .where(
+                DataItemsRewrittenRecord.id == record_id,
+                DataItemsRewrittenRecord.status == STATUS_INIT,
+            )
             .values(**values)
         )
         result = await self.session.execute(stmt)

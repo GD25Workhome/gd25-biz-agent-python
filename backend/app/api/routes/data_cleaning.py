@@ -27,8 +27,17 @@ from backend.app.api.schemas.data_cleaning import (
     ImportConfigUpdate,
     ImportConfigResponse,
     ImportConfigListResponse,
+    RewrittenBatchListResponse,
+    RewrittenBatchStatsResponse,
     RewrittenExecuteRequest,
     RewrittenExecuteResponse,
+    RewrittenBatchRunRequest,
+    RewrittenBatchRunResponse,
+    RewrittenBatchClearQueueResponse,
+    RewrittenBatchRemoveBatchRequest,
+    RewrittenBatchRemoveBatchResponse,
+    DataItemRerunResponse,
+    QueueStatsResponse,
 )
 from backend.infrastructure.database.connection import get_async_session
 from backend.infrastructure.database.repository.data_sets_path_repository import (
@@ -45,6 +54,10 @@ from backend.infrastructure.database.repository.import_config_repository import 
 )
 from backend.infrastructure.database.repository.data_items_rewritten_repository import (
     DataItemsRewrittenRepository,
+    STATUS_INIT,
+)
+from backend.infrastructure.database.repository.rewritten_batch_repository import (
+    RewrittenBatchRepository,
 )
 
 logger = logging.getLogger(__name__)
@@ -261,6 +274,44 @@ async def delete_dataset(dataset_id: str, session: AsyncSession = Depends(get_as
 
 
 # ---------- DataSetsItems ----------
+@router.get(
+    "/items",
+    response_model=DataSetsItemsListResponse,
+)
+async def list_items_optional_dataset(
+    dataset_ids: Optional[List[str]] = Query(None, description="数据集 ID 列表，多选；不传则查全部"),
+    status: Optional[int] = Query(None, description="1=激活，0=废弃"),
+    unique_key: Optional[str] = Query(None, description="unique_key（精确匹配）"),
+    source: Optional[str] = Query(None, description="source（包含）"),
+    keyword: Optional[str] = Query(None, description="关键词（在 input/output/metadata 中搜索）"),
+    limit: int = Query(20, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """数据项列表（dataset_ids 可选、支持多 id，unique_key 精确匹配）"""
+    try:
+        ids = [x.strip() for x in (dataset_ids or []) if x and str(x).strip()] or None
+        repo = DataSetsItemsRepository(session)
+        items, total = await repo.get_list_with_total_optional_dataset(
+            dataset_ids=ids,
+            status=status,
+            unique_key=unique_key,
+            source=source,
+            keyword=keyword,
+            limit=limit,
+            offset=offset,
+        )
+        await session.commit()
+        return DataSetsItemsListResponse(
+            total=total,
+            items=[DataSetsItemsResponse.model_validate(r) for r in items],
+        )
+    except Exception as e:
+        await session.rollback()
+        logger.error("查询数据项列表失败: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get(
     "/datasets/{dataset_id}/items",
     response_model=DataSetsItemsListResponse,
@@ -488,6 +539,120 @@ async def execute_rewritten_endpoint(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ---------- RewrittenBatch（Step02 清洗批次管理）----------
+@router.get(
+    "/rewritten-batches",
+    response_model=RewrittenBatchListResponse,
+)
+async def list_rewritten_batches(
+    batch_code: Optional[str] = Query(None, description="批次code（包含）"),
+    limit: int = Query(20, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    session: AsyncSession = Depends(get_async_session),
+):
+    """查询批次列表及统计信息"""
+    try:
+        repo = RewrittenBatchRepository(session)
+        rows, total = await repo.get_batches_with_stats(
+            batch_code=batch_code,
+            limit=limit,
+            offset=offset,
+        )
+        await session.commit()
+        items = [
+            RewrittenBatchStatsResponse(
+                id=row.record.id,
+                batch_code=row.record.batch_code,
+                total_count=row.record.total_count,
+                status=row.record.status,
+                create_params=row.record.create_params,
+                data_items_total=row.data_items_total,
+                status_init_count=row.status_init_count,
+                status_processing_count=row.status_processing_count,
+                status_success_count=row.status_success_count,
+                status_failed_count=row.status_failed_count,
+                created_at=row.record.created_at,
+                updated_at=row.record.updated_at,
+            )
+            for row in rows
+        ]
+        return RewrittenBatchListResponse(total=total, items=items)
+    except Exception as e:
+        await session.rollback()
+        logger.error("查询清洗批次列表失败: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------- 批次任务队列（021105）----------
+@router.post(
+    "/rewritten-batches/run",
+    response_model=RewrittenBatchRunResponse,
+)
+async def run_rewritten_batch(
+    data: RewrittenBatchRunRequest,
+    session: AsyncSession = Depends(get_async_session),
+):
+    """按批次运行：将该批次下待处理、执行中的任务入队。设计文档：021105"""
+    from backend.pipeline.rewritten_queue_service import enqueue_batch
+
+    batch_code = (data.batch_code or "").strip()
+    if not batch_code:
+        raise HTTPException(status_code=400, detail="batch_code 不能为空")
+    try:
+        batch_repo = RewrittenBatchRepository(session)
+        batch = await batch_repo.get_by_batch_code(batch_code)
+        if not batch:
+            raise HTTPException(status_code=404, detail="批次不存在")
+        enqueued = await enqueue_batch(batch_code, session)
+        await session.commit()
+        return RewrittenBatchRunResponse(enqueued=enqueued)
+    except HTTPException:
+        raise
+    except Exception as e:
+        await session.rollback()
+        logger.error("批次运行入队失败: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/rewritten-batches/clear-queue",
+    response_model=RewrittenBatchClearQueueResponse,
+)
+async def clear_rewritten_queue():
+    """模式 1：清空全部队列。设计文档：021105"""
+    from backend.pipeline.rewritten_queue_service import clear_all_queue
+
+    removed = clear_all_queue()
+    return RewrittenBatchClearQueueResponse(removed=removed)
+
+
+@router.post(
+    "/rewritten-batches/remove-batch",
+    response_model=RewrittenBatchRemoveBatchResponse,
+)
+async def remove_batch_from_queue_endpoint(data: RewrittenBatchRemoveBatchRequest):
+    """模式 2：从队列中移除当前批次的任务。设计文档：021105"""
+    from backend.pipeline.rewritten_queue_service import remove_batch_from_queue
+
+    batch_code = (data.batch_code or "").strip()
+    if not batch_code:
+        raise HTTPException(status_code=400, detail="batch_code 不能为空")
+    removed = remove_batch_from_queue(batch_code)
+    return RewrittenBatchRemoveBatchResponse(removed=removed)
+
+
+@router.get(
+    "/rewritten-batches/queue-stats",
+    response_model=QueueStatsResponse,
+)
+async def get_rewritten_queue_stats():
+    """队列统计：排队数、执行中+排队总数。设计文档：021105"""
+    from backend.pipeline.rewritten_queue_service import get_queue_stats
+
+    stats = get_queue_stats()
+    return QueueStatsResponse(**stats)
+
+
 # ---------- DataItemsRewritten（Step02 数据清洗管理）----------
 @router.get(
     "/data-items-rewritten",
@@ -559,6 +724,44 @@ async def get_data_item_rewritten(
     except Exception as e:
         await session.rollback()
         logger.error("获取改写后数据项失败: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/data-items-rewritten/{item_id}/rerun",
+    response_model=DataItemRerunResponse,
+)
+async def rerun_data_item_rewritten(
+    item_id: str,
+    session: AsyncSession = Depends(get_async_session),
+):
+    """模式 3：单条再次运行。先检查是否已在队列/执行中，否再改 init 并入队；避免误改状态。设计文档：021201"""
+    from backend.pipeline.rewritten_queue_service import enqueue_one, is_in_flight
+
+    try:
+        repo = DataItemsRewrittenRepository(session)
+        record = await repo.get_by_id(item_id)
+        if not record:
+            raise HTTPException(status_code=404, detail="改写后数据项不存在")
+        if is_in_flight(item_id):
+            return DataItemRerunResponse(
+                enqueued=False,
+                message="该任务已在队列或执行中",
+            )
+        await repo.update_status(item_id, STATUS_INIT)
+        await session.commit()
+        enqueued = enqueue_one(item_id, record.batch_code or "")
+        if enqueued:
+            return DataItemRerunResponse(enqueued=True)
+        return DataItemRerunResponse(
+            enqueued=False,
+            message="该任务已在队列或执行中",
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        await session.rollback()
+        logger.error("再次运行入队失败: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
