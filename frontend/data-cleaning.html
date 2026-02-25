@@ -50,7 +50,6 @@
                     <el-menu-item index="step01-items-standalone"><el-icon><Document /></el-icon><span>Step01原始数据项管理</span></el-menu-item>
                     <el-menu-item index="rewritten-batches"><el-icon><Document /></el-icon><span>Step02清洗批次管理</span></el-menu-item>
                     <el-menu-item index="data-items-rewritten"><el-icon><Edit /></el-icon><span>Step02数据清洗管理</span></el-menu-item>
-                    <el-menu-item index="json-editors"><el-icon><Edit /></el-icon><span>JSON编辑器方案对比</span></el-menu-item>
                 </el-menu>
             </div>
         </div>
@@ -77,10 +76,8 @@
     <script src="https://unpkg.com/element-plus/dist/index.full.js"></script>
     <script src="https://unpkg.com/@element-plus/icons-vue/dist/index.iife.js"></script>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-    <!-- JSON 编辑器方案依赖 -->
+    <!-- JSON 编辑器依赖（Step01/Step02 等页内 Dialog 使用） -->
     <script src="https://cdn.jsdelivr.net/npm/jsoneditor@10.4.2/dist/jsoneditor.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/ace-builds@1.16.0/src-min-noconflict/ace.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
     <script src="js/pipeline_common.js"></script>
     <script src="js/pipeline_cleaning.js"></script>
     <script src="js/pipeline_import_manage.js"></script>
@@ -88,13 +85,12 @@
     <script src="js/pipeline_dataset_items.js"></script>
     <script src="js/pipeline_data_items_rewritten.js"></script>
     <script src="js/step01_data_items_standalone.js"></script>
-    <script src="js/pipeline_json_editors.js"></script>
     <script src="js/pipeline_rewritten_batches.js"></script>
     <script>
         const { createApp } = Vue;
         const icons = ElementPlusIconsVue;
         const app = createApp({
-            components: { PipelineImportManageComponent, PipelineSetViewComponent, PipelineDatasetItemsComponent, Step01DataItemsStandalone, PipelineRewrittenBatchesComponent, PipelineDataItemsRewrittenComponent, PipelineJsonEditorsComponent },
+            components: { PipelineImportManageComponent, PipelineSetViewComponent, PipelineDatasetItemsComponent, Step01DataItemsStandalone, PipelineRewrittenBatchesComponent, PipelineDataItemsRewrittenComponent },
             setup() { return usePipelineCleaning(); }
         });
         app.use(ElementPlus);
