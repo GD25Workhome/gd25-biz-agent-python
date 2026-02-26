@@ -158,7 +158,7 @@ package "模块2：原始数据改写" {
     **create_params** 创建参数
   }
 
-  entity "pipeline_data_items_rewritten（改写后数据项）" as e_data_items_rewritten {
+  entity "pipeline_data_items_rewritten （改写后数据项）" as e_data_items_rewritten {
     * **id** 主键
     --
     **rewritten_question** 改写后问题
