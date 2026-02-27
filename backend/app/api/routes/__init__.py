@@ -12,6 +12,7 @@ from backend.app.api.routes.flows import router as flows_router
 from backend.app.api.routes.articles import router as articles_router
 from backend.app.api.routes.knowledge_base import router as knowledge_base_router
 from backend.app.api.routes.data_cleaning import router as data_cleaning_router
+from backend.app.api.routes.batch_jobs import router as batch_jobs_router
 
 # 创建主路由
 router = APIRouter()
@@ -25,6 +26,7 @@ router.include_router(flows_router, prefix="/api/v1", tags=["流程管理"])
 router.include_router(articles_router, prefix="/api/v1", tags=["科普文章"])
 router.include_router(knowledge_base_router, prefix="/api/v1", tags=["知识库"])
 router.include_router(data_cleaning_router, prefix="/api/v1")
+router.include_router(batch_jobs_router, prefix="/api/v1")
 
 __all__ = ["router"]
 

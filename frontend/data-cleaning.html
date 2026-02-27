@@ -50,6 +50,7 @@
                     <el-menu-item index="step01-items-standalone"><el-icon><Document /></el-icon><span>Step01原始数据项管理</span></el-menu-item>
                     <el-menu-item index="rewritten-batches"><el-icon><Document /></el-icon><span>Step02清洗批次管理</span></el-menu-item>
                     <el-menu-item index="data-items-rewritten"><el-icon><Edit /></el-icon><span>Step02数据清洗管理</span></el-menu-item>
+                    <el-menu-item index="embedding-batches"><el-icon><Document /></el-icon><span>Step03批量创建Embedding</span></el-menu-item>
                 </el-menu>
             </div>
         </div>
@@ -86,11 +87,20 @@
     <script src="js/pipeline_data_items_rewritten.js"></script>
     <script src="js/step01_data_items_standalone.js"></script>
     <script src="js/pipeline_rewritten_batches.js"></script>
+    <script src="js/pipeline_embedding_batches.js"></script>
     <script>
         const { createApp } = Vue;
         const icons = ElementPlusIconsVue;
         const app = createApp({
-            components: { PipelineImportManageComponent, PipelineSetViewComponent, PipelineDatasetItemsComponent, Step01DataItemsStandalone, PipelineRewrittenBatchesComponent, PipelineDataItemsRewrittenComponent },
+            components: {
+                PipelineImportManageComponent,
+                PipelineSetViewComponent,
+                PipelineDatasetItemsComponent,
+                Step01DataItemsStandalone,
+                PipelineRewrittenBatchesComponent,
+                PipelineDataItemsRewrittenComponent,
+                PipelineEmbeddingBatchComponent,
+            },
             setup() { return usePipelineCleaning(); }
         });
         app.use(ElementPlus);

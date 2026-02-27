@@ -124,6 +124,91 @@ class DataItemsRewrittenRepository(BaseRepository[DataItemsRewrittenRecord]):
         items = list(result.scalars().all())
         return items, total
 
+    async def get_all_for_embedding(
+        self,
+        *,
+        source_dataset_id: str,
+        scenario_description: Optional[str] = None,
+        rewritten_question: Optional[str] = None,
+        rewritten_answer: Optional[str] = None,
+        rewritten_rule: Optional[str] = None,
+        source_item_id: Optional[str] = None,
+        scenario_type: Optional[str] = None,
+        sub_scenario_type: Optional[str] = None,
+        batch_code: Optional[str] = None,
+        trace_id: Optional[str] = None,
+        status: Optional[str] = None,
+    ) -> List[DataItemsRewrittenRecord]:
+        """
+        无分页查询，用于 Embedding 批次任务创建场景。
+
+        筛选条件语义与 get_list_with_total 一致，只是去掉了 limit/offset，
+        并按 created_at 升序返回全部命中的记录。
+        """
+        if not source_dataset_id or not source_dataset_id.strip():
+            # 由上层 Handler 保证必填，这里防御性返回空列表，避免误查全部数据。
+            return []
+
+        conditions = []
+        _add_ilike_condition(
+            conditions,
+            DataItemsRewrittenRecord.scenario_description,
+            scenario_description,
+        )
+        _add_ilike_condition(
+            conditions,
+            DataItemsRewrittenRecord.rewritten_question,
+            rewritten_question,
+        )
+        _add_ilike_condition(
+            conditions,
+            DataItemsRewrittenRecord.rewritten_answer,
+            rewritten_answer,
+        )
+        _add_ilike_condition(
+            conditions,
+            DataItemsRewrittenRecord.rewritten_rule,
+            rewritten_rule,
+        )
+        # 来源 dataSetsId、dataItemsId 使用精确匹配
+        conditions.append(
+            DataItemsRewrittenRecord.source_dataset_id == source_dataset_id.strip()
+        )
+        if source_item_id and source_item_id.strip():
+            conditions.append(
+                DataItemsRewrittenRecord.source_item_id == source_item_id.strip()
+            )
+        _add_ilike_condition(
+            conditions,
+            DataItemsRewrittenRecord.scenario_type,
+            scenario_type,
+        )
+        _add_ilike_condition(
+            conditions,
+            DataItemsRewrittenRecord.sub_scenario_type,
+            sub_scenario_type,
+        )
+        _add_ilike_condition(
+            conditions,
+            DataItemsRewrittenRecord.batch_code,
+            batch_code,
+        )
+        _add_ilike_condition(
+            conditions,
+            DataItemsRewrittenRecord.trace_id,
+            trace_id,
+        )
+        if status and status.strip():
+            conditions.append(DataItemsRewrittenRecord.status == status.strip())
+
+        stmt = (
+            select(DataItemsRewrittenRecord)
+            .where(and_(*conditions))
+            .order_by(DataItemsRewrittenRecord.created_at.asc())
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
     async def get_by_source_item_id(
         self,
         source_item_id: str,
