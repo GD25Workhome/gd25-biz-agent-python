@@ -1,0 +1,31 @@
+
+name: rewritten_data_service_agent
+version: "1.0"
+description: "数据清洗Step2流程"
+
+nodes:
+  - name: rewritten_agent_node
+    type: agent
+    config:
+      prompt: prompts/rewritten_agent.md
+      model:
+        provider: doubao
+        temperature: 0.7
+        thinking:
+          type: disabled
+
+  # 将提示词中的内容提取出来，更新到数据库中（记录已由批次创建阶段预写入）
+  - name: update_rewritten_data_node
+    type: function
+    config:
+      function_key: "update_rewritten_data_func"
+
+edges:
+  - from: rewritten_agent_node
+    to: update_rewritten_data_node
+    condition: always
+  - from: update_rewritten_data_node
+    to: END
+    condition: always
+
+entry_node: rewritten_agent_node

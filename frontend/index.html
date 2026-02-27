@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>动态流程系统 MVP</title>
+    <!-- Element Plus CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <!-- Markdown 解析器 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- HTML 安全过滤 -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        #app {
+            height: 100vh;
+            display: flex;
+        }
+        
+        /* 左侧菜单栏 */
+        .sidebar {
+            width: 240px;
+            background: #304156;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 6px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+        }
+        
+        .sidebar-header {
+            padding: 20px;
+            background: #2b3a4a;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .sidebar-header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+        }
+        
+        .sidebar-menu {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 0;
+        }
+        
+        /* 主内容区 */
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #f0f2f5;
+        }
+        
+        /* Tab页标签栏 */
+        .tabs-container {
+            background: #fff;
+            border-bottom: 1px solid #e4e7ed;
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .tabs-container::-webkit-scrollbar {
+            height: 4px;
+        }
+        
+        .tabs-container::-webkit-scrollbar-thumb {
+            background: #c0c4cc;
+            border-radius: 2px;
+        }
+        
+        .tab-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 16px;
+            margin: 4px 2px;
+            background: #f5f7fa;
+            border: 1px solid #e4e7ed;
+            border-bottom: none;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+            position: relative;
+            transition: all 0.2s;
+            min-width: 120px;
+            max-width: 200px;
+        }
+        
+        .tab-item:hover {
+            background: #ecf5ff;
+        }
+        
+        .tab-item.active {
+            background: #fff;
+            border-color: #409eff;
+            border-bottom-color: #fff;
+            color: #409eff;
+            z-index: 1;
+            margin-bottom: -1px;
+        }
+        
+        .tab-item-title {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 13px;
+        }
+        
+        .tab-item-close {
+            margin-left: 8px;
+            padding: 2px 4px;
+            border-radius: 2px;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+        
+        .tab-item-close:hover {
+            opacity: 1;
+            background: rgba(64, 158, 255, 0.1);
+        }
+        
+        .tab-content-area {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .tab-pane {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: none;
+            overflow: hidden;
+        }
+        
+        .tab-pane.active {
+            display: block;
+        }
+        
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #909399;
+        }
+        
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+        
+        .empty-state-text {
+            font-size: 14px;
+        }
+        
+        /* Markdown 内容样式 */
+        .markdown-content {
+            line-height: 1.6;
+        }
+        
+        .markdown-content h1,
+        .markdown-content h2,
+        .markdown-content h3,
+        .markdown-content h4,
+        .markdown-content h5,
+        .markdown-content h6 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            font-weight: 600;
+        }
+        
+        .markdown-content h1 {
+            font-size: 1.5em;
+        }
+        
+        .markdown-content h2 {
+            font-size: 1.3em;
+        }
+        
+        .markdown-content h3 {
+            font-size: 1.1em;
+        }
+        
+        .markdown-content p {
+            margin: 0.5em 0;
+        }
+        
+        .markdown-content ul,
+        .markdown-content ol {
+            margin: 0.5em 0;
+            padding-left: 1.5em;
+        }
+        
+        .markdown-content li {
+            margin: 0.25em 0;
+        }
+        
+        .markdown-content code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        .markdown-content pre {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 0.5em 0;
+        }
+        
+        .markdown-content pre code {
+            background: none;
+            padding: 0;
+        }
+        
+        .markdown-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 0.5em 0;
+        }
+        
+        .markdown-content table th,
+        .markdown-content table td {
+            border: 1px solid #e4e7ed;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .markdown-content table th {
+            background: #f5f7fa;
+            font-weight: 600;
+        }
+        
+        .markdown-content blockquote {
+            border-left: 4px solid #409eff;
+            padding-left: 1em;
+            margin: 0.5em 0;
+            color: #606266;
+        }
+        
+        .markdown-content a {
+            color: #409eff;
+            text-decoration: none;
+        }
+        
+        .markdown-content a:hover {
+            text-decoration: underline;
+        }
+        
+        .markdown-content strong {
+            font-weight: 600;
+        }
+        
+        .markdown-content em {
+            font-style: italic;
+        }
+        
+        .markdown-content hr {
+            border: none;
+            border-top: 1px solid #e4e7ed;
+            margin: 1em 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 左侧菜单栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h1>动态流程系统</h1>
+            </div>
+            <div class="sidebar-menu">
+                <el-menu
+                    :default-active="activeMenu"
+                    @select="handleMenuSelect"
+                    background-color="#304156"
+                    text-color="#bfcbd9"
+                    active-text-color="#409EFF"
+                >
+                    <el-menu-item index="chat">
+                        <el-icon><ChatDotRound /></el-icon>
+                        <span>聊天对话</span>
+                    </el-menu-item>
+                    <el-menu-item index="chat-v2">
+                        <el-icon><ChatDotRound /></el-icon>
+                        <span>聊天对话—V2</span>
+                    </el-menu-item>
+                    <el-menu-item index="blood-pressure">
+                        <el-icon><DataLine /></el-icon>
+                        <span>血压记录</span>
+                    </el-menu-item>
+                    <el-menu-item index="users">
+                        <el-icon><User /></el-icon>
+                        <span>用户管理</span>
+                    </el-menu-item>
+                    <el-menu-item index="flow-preview">
+                        <el-icon><Document /></el-icon>
+                        <span>流程预览</span>
+                    </el-menu-item>
+                    <el-menu-item index="blood-pressure-help">
+                        <el-icon><QuestionFilled /></el-icon>
+                        <span>帮助-血压范围情况</span>
+                    </el-menu-item>
+                </el-menu>
+            </div>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div class="main-container">
+            <!-- Tab页标签栏 -->
+            <div class="tabs-container" v-if="tabs.length > 0">
+                <div
+                    v-for="tab in tabs"
+                    :key="tab.id"
+                    :class="['tab-item', { active: tab.id === activeTabId }]"
+                    @click="switchTab(tab.id)"
+                >
+                    <span class="tab-item-title">{{ tab.title }}</span>
+                    <span 
+                        class="tab-item-close"
+                        @click.stop="closeTab(tab.id)"
+                        v-if="tabs.length > 1"
+                    >
+                        <el-icon><Close /></el-icon>
+                    </span>
+                </div>
+            </div>
+            
+            <!-- Tab内容区 -->
+            <div class="tab-content-area">
+                <!-- 空状态 -->
+                <div v-if="tabs.length === 0" class="empty-state">
+                    <div class="empty-state-icon">📋</div>
+                    <div class="empty-state-text">点击左侧菜单打开功能页面</div>
+                </div>
+                
+                <!-- 动态Tab内容 -->
+                <component
+                    v-for="tab in tabs"
+                    :key="tab.id"
+                    :is="tab.component"
+                    :tab-id="tab.id"
+                    :class="['tab-pane', { active: tab.id === activeTabId }]"
+                    v-show="tab.id === activeTabId"
+                ></component>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Element Plus -->
+    <script src="https://unpkg.com/element-plus/dist/index.full.js"></script>
+    <!-- Element Plus Icons -->
+    <script src="https://unpkg.com/@element-plus/icons-vue/dist/index.iife.js"></script>
+    <!-- Axios for HTTP requests -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    
+    <!-- 模块化组件 -->
+    <script src="js/framework.js"></script>
+    <script src="js/chat.js"></script>
+    <script src="js/chat-v2.js"></script>
+    <script src="js/blood-pressure.js"></script>
+    <script src="js/users.js"></script>
+    <script src="js/flow-preview.js"></script>
+    <script src="js/blood-pressure-help.js"></script>
+    
+    <script>
+        const { createApp } = Vue;
+        const icons = ElementPlusIconsVue;
+        
+        // 注册所有组件
+        const app = createApp({
+            components: {
+                ChatComponent,
+                ChatV2Component,
+                BloodPressureComponent,
+                UsersComponent,
+                FlowPreviewComponent,
+                BloodPressureHelpComponent
+            },
+            setup() {
+                return useFramework();
+            }
+        });
+        
+        app.use(ElementPlus);
+        // 注册全局图标组件
+        app.component('ChatDotRound', icons.ChatDotRound);
+        app.component('DataLine', icons.DataLine);
+        app.component('User', icons.User);
+        app.component('Close', icons.Close);
+        app.component('Promotion', icons.Promotion);
+        app.component('Search', icons.Search);
+        app.component('Refresh', icons.Refresh);
+        app.component('Plus', icons.Plus);
+        app.component('Edit', icons.Edit);
+        app.component('Delete', icons.Delete);
+        app.component('Document', icons.Document);
+        app.component('QuestionFilled', icons.QuestionFilled);
+        app.mount('#app');
+    </script>
+</body>
+</html>

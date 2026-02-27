@@ -1,0 +1,62 @@
+{
+  "title": "DataSetMetadata",
+  "description": "Langfuse DataSet Item 的 metadata 格式，query_ 前缀扁平 key + content_info 层级（020308）",
+  "type": "object",
+  "properties": {
+    "query_message_id": { "type": "string", "description": "消息 ID（标准化查询）" },
+    "query_session_id": { "type": "string", "description": "会话 ID（标准化查询）" },
+    "query_user_id": { "type": "string", "description": "用户 ID（标准化查询）" },
+    "query_flow_key": { "type": "string", "description": "流程 key（标准化查询）" },
+    "query_tags": { "type": "array", "items": { "type": "string" }, "description": "标签列表（标准化查询）" },
+    "content_info": {
+      "type": "object",
+      "description": "内容的信息（数据清洗）",
+      "properties": {
+        "user_info": {
+          "type": "object",
+          "description": "用户信息（原 input.context：age、disease、blood_pressure、symptom 等）",
+          "additionalProperties": true
+        },
+        "patient_info": {
+          "type": "object",
+          "description": "患者信息，可扩展属性",
+          "properties": {
+            "patient_id": { "type": "string", "description": "患者 ID" }
+          },
+          "additionalProperties": true
+        },
+        "doctor_info": {
+          "type": "object",
+          "description": "医生信息，可扩展属性",
+          "properties": {
+            "doctor_id": { "type": "string", "description": "医生 ID" }
+          },
+          "additionalProperties": true
+        },
+        "ext": { "type": "string", "description": "扩展信息（原 other_meta_data.ext）" }
+      },
+      "additionalProperties": true
+    },
+    "data_cleaning_tags": {
+      "type": "object",
+      "description": "标记信息（数据清洗）",
+      "properties": {
+        "ai_tags": { "type": "array", "items": { "type": "string" } },
+        "human_tags": { "type": "array", "items": { "type": "string" } },
+        "dedup_tags": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": true
+    },
+    "flow_info": {
+      "type": "object",
+      "description": "流程的信息（trace）",
+      "properties": {
+        "flow_key": { "type": "string" },
+        "flow_name": { "type": "string" },
+        "flow_version": { "type": "string" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

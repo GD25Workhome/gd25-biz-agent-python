@@ -3,10 +3,11 @@ fastapi>=0.100.0,<1.0.0
 uvicorn[standard]>=0.23.0,<1.0.0
 
 # LangGraph 和 LangChain
-langgraph>=0.2.0,<1.0.0
-langchain>=0.3.0,<1.0.0
-langchain-core>=0.3.0,<1.0.0
-langchain-openai>=0.2.0,<1.0.0
+langgraph>=1.0.0,<2.0.0
+langchain>=1.0.0,<2.0.0
+langchain-core>=1.0.0,<2.0.0
+langchain-openai>=1.0.0,<2.0.0
+langchain-text-splitters>=1.0.0,<2.0.0
 
 # 数据库
 sqlalchemy>=2.0.0,<3.0.0
@@ -39,3 +40,17 @@ aiosqlite>=0.19.0,<1.0.0
 # Langfuse 可观测性平台
 langfuse>=3.0.0,<4.0.0
 
+# ID 生成
+python-ulid>=1.1.0,<2.0.0
+
+# 表达式评估
+simpleeval>=0.9.13,<1.0.0
+
+# RAG数据导入
+pandas>=2.0.0,<3.0.0
+openpyxl>=3.1.0,<4.0.0
+sentence-transformers>=2.2.0,<3.0.0
+pgvector>=0.2.0,<1.0.0
+
+# 豆包 Embedding API
+volcengine-python-sdk[ark]>=5.0.0,<6.0.0

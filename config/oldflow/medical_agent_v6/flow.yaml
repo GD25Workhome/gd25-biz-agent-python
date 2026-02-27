@@ -1,0 +1,79 @@
+name: medical_agent_v6
+version: "6.0"
+description: "医疗分身Agent流程V6-血压专项处理"
+
+nodes:
+  # 节点1：词干提取，服务于rag检索
+  - name: intent_recognition
+    type: agent
+    config:
+      prompt: prompts/10-before-rag.md
+      model:
+        provider: doubao
+        name: doubao-seed-1-6-251015
+        temperature: 0.7
+        thinking:
+          type: disabled  # 关闭深度思考，加速响应
+
+  # 节点2：向量库检索与用户信息查询节点
+  - name: retrieval_node
+    type: function
+    config:
+      function_key: "retrieval_node_v2"
+
+
+  # 节点3：核心Agent节点
+  - name: core_agent
+    type: agent
+    config:
+      prompt: prompts/50-core_agent.md
+      model:
+        provider: doubao
+        name: doubao-seed-1-8-251228
+        temperature: 0.7
+        thinking:
+          type: enabled  # 开启深度思考
+        reasoning_effort: low  # 轻量思考，减少耗时
+        timeout: 1800  # 30分钟超时
+      # 支持所有工具（记录、查询）
+      tools:
+        # 记录工具
+        - record_blood_pressure
+        - update_blood_pressure
+        - record_medication
+        - record_symptom
+        - record_health_event
+        # 查询工具
+        - query_blood_pressure
+        - query_medication
+        - query_symptom
+        - query_health_event
+
+edges:
+  # 节点1（意图识别） -> 节点2（检索）
+  # 所有意图都需要经过检索节点（即使greeting也可以检索通用示例）
+  - from: intent_recognition
+    to: retrieval_node
+    condition: always
+
+  # 节点2（检索） -> 节点3（核心Agent）
+  # 检索完成后，统一进入核心Agent处理
+  - from: retrieval_node
+    to: core_agent
+    condition: always
+
+  # 节点3（核心Agent） -> END
+  # 处理完成后结束
+  - from: core_agent
+    to: END
+    condition: always
+
+entry_node: intent_recognition
+
+# 占位符替换说明
+# 节点3的提示词中包含以下占位符，需要在运行时动态替换：
+# - {retrieved_examples}: 格式化的检索示例文本
+# - {user_info}: 格式化的用户信息文本
+# - {llm_context_part}: 上下文信息（由系统自动填充）
+# - {llm_rule_part}: 核心原则（由系统自动填充）
+# - {end_llm_resopnse}: 输出格式要求（由系统自动填充）

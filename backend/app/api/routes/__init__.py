@@ -1,0 +1,32 @@
+"""
+API路由模块
+聚合所有子路由
+"""
+from fastapi import APIRouter
+
+from backend.app.api.routes.chat import router as chat_router
+from backend.app.api.routes.blood_pressure import router as blood_pressure_router
+from backend.app.api.routes.users import router as users_router
+from backend.app.api.routes.login import router as login_router
+from backend.app.api.routes.flows import router as flows_router
+from backend.app.api.routes.articles import router as articles_router
+from backend.app.api.routes.knowledge_base import router as knowledge_base_router
+from backend.app.api.routes.data_cleaning import router as data_cleaning_router
+from backend.app.api.routes.batch_jobs import router as batch_jobs_router
+
+# 创建主路由
+router = APIRouter()
+
+# 注册子路由（统一添加 /api/v1 前缀）
+router.include_router(chat_router, prefix="/api/v1", tags=["聊天"])
+router.include_router(blood_pressure_router, prefix="/api/v1", tags=["血压记录"])
+router.include_router(users_router, prefix="/api/v1", tags=["用户管理"])
+router.include_router(login_router, prefix="/api/v1", tags=["登录"])
+router.include_router(flows_router, prefix="/api/v1", tags=["流程管理"])
+router.include_router(articles_router, prefix="/api/v1", tags=["科普文章"])
+router.include_router(knowledge_base_router, prefix="/api/v1", tags=["知识库"])
+router.include_router(data_cleaning_router, prefix="/api/v1")
+router.include_router(batch_jobs_router, prefix="/api/v1")
+
+__all__ = ["router"]
+

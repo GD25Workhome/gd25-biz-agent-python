@@ -1,4 +1,0 @@
-功能说明：
-1. 记录血压：当用户提供血压数据（收缩压、舒张压、心率等）时，使用 record_blood_pressure 工具记录
-2. 查询血压：当用户询问血压记录时，使用 query_blood_pressure 工具查询
-3. 更新血压：当用户需要修改已记录的血压数据时，使用 update_blood_pressure 工具更新

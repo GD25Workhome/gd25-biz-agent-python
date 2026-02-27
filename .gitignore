@@ -60,3 +60,5 @@ alembic/versions/*.pyc
 Thumbs.db
 
 .env copy
+static/flow_previews/
+frontend/flow_previews/

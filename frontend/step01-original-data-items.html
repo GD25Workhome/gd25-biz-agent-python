@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Step01原始数据项管理</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsoneditor@10.4.2/dist/jsoneditor.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; height: 100vh; width: 100%; overflow: hidden; background: #f0f2f5; }
+        #app { height: 100vh; width: 100%; min-width: 0; display: flex; flex-direction: column; }
+        .page-header { padding: 16px 24px; background: #fff; border-bottom: 1px solid #e4e7ed; flex-shrink: 0; }
+        .page-header h1 { font-size: 20px; font-weight: 600; color: #303133; }
+        .page-body { flex: 1; min-width: 0; overflow: hidden; display: flex; flex-direction: column; background: #fff; margin: 16px; margin-top: 0; border-radius: 4px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+        .pipeline-json-editor-dialog .el-dialog__body { direction: ltr !important; }
+        .pipeline-json-editor-dialog .jsoneditor,
+        .pipeline-json-editor-dialog .jsoneditor-outer,
+        .pipeline-json-editor-dialog .jsoneditor-table,
+        .pipeline-json-editor-dialog .jsoneditor-tree,
+        .pipeline-json-editor-dialog .jsoneditor-value { direction: ltr !important; text-align: left !important; }
+        .pipeline-json-editor-dialog .pipeline-json-editor-test-wrap { min-width: 0; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="page-header">
+            <h1>Step01原始数据项管理</h1>
+        </div>
+        <div class="page-body">
+            <step01-data-items-standalone />
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus/dist/index.full.js"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue/dist/index.iife.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsoneditor@10.4.2/dist/jsoneditor.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ace-builds@1.16.0/src-min-noconflict/ace.js"></script>
+    <script src="js/pipeline_common.js"></script>
+    <script src="js/step01_data_items_standalone.js"></script>
+    <script>
+        const { createApp } = Vue;
+        const icons = ElementPlusIconsVue;
+        const app = createApp({
+            components: { Step01DataItemsStandalone }
+        });
+        app.use(ElementPlus);
+        app.component('Plus', icons.Plus);
+        app.component('Edit', icons.Edit);
+        app.component('Delete', icons.Delete);
+        app.component('Document', icons.Document);
+        app.component('Search', icons.Search);
+        app.component('Refresh', icons.Refresh);
+        app.component('ArrowDown', icons.ArrowDown);
+        app.component('ArrowUp', icons.ArrowUp);
+        app.component('Brush', icons.Brush || icons.Refresh);
+        app.mount('#app');
+    </script>
+</body>
+</html>

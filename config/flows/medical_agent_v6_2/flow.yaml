@@ -1,0 +1,63 @@
+name: medical_agent_v6.2
+version: "6.2"
+description: "医疗分身Agent流程V6.2-QA"
+
+nodes:
+    # 节点0：user_context构建节点，目的是查询当前用户的所有基础信息，为下一个节点的上下文构建提供数据
+    # 这里的主要是查询血压，暂时先保留吧
+  - name: builder_prompt_context_node
+    type: function
+    config:
+      function_key: "query_user_info_node_func"
+      query_list:
+        - blood_pressure
+
+  # 节点1：词干提取，服务于rag检索
+  - name: optimization_agent
+    type: agent
+    config:
+      prompt: prompts/10-optimization-agent.md
+      model:
+        provider: doubao
+        temperature: 0.7
+        thinking:
+          type: disabled  # 关闭深度思考，加速响应
+
+  # 提取前一个节点的数据进行数据召回处理
+  - name: rag_node
+    type: rag_agent
+    config:
+      model:
+        provider: doubao-embedding
+      top_k: 5
+      similarity_threshold: 0.7
+      output_field: retrieved_examples
+
+# 节点3：核心Agent节点
+  - name: core_agent
+    type: agent
+    config:
+      prompt: prompts/50-QA_agent.md
+      model:
+        provider: doubao
+        temperature: 0.7
+        thinking:
+          type: disabled  # 开启深度思考
+        # reasoning_effort: low  # 轻量思考，减少耗时
+        # timeout: 1800  # 30分钟超时
+
+edges:
+
+  - from: builder_prompt_context_node
+    to: optimization_agent
+    condition: always
+
+  - from: optimization_agent
+    to: rag_node
+    condition: always
+
+  - from: rag_node
+    to: core_agent
+    condition: always
+
+entry_node: builder_prompt_context_node

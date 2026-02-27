@@ -1,0 +1,71 @@
+{
+  "title": "DataSetOutput",
+  "description": "Langfuse DataSet 的 output 数据格式，用于对话数据归档与评估",
+  "type": "object",
+  "properties": {
+    "response_message": {
+      "type": "string",
+      "description": "返回给用户的消息（必填），流程最终回复的文本内容"
+    },
+    "flow_msgs": {
+      "type": "array",
+      "description": "过程消息列表，对应 FlowState 中的 flow_msgs，元素为 BaseMessage 格式",
+      "items": {
+        "$ref": "#/$defs/BaseMessage"
+      }
+    },
+    "other_meta_data": {
+      "type": "object",
+      "description": "其它冗余信息，不限制具体格式",
+      "additionalProperties": true
+    }
+  },
+  "required": ["response_message"],
+  "$defs": {
+    "BaseMessage": {
+      "type": "object",
+      "description": "LangChain BaseMessage 的 JSON 序列化格式（HumanMessage、AIMessage、SystemMessage 等）",
+      "required": ["type", "content"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "消息类型标识，用于反序列化。常见值：human、ai、system、generic、chat"
+        },
+        "content": {
+          "description": "消息内容，可为字符串或复杂内容列表",
+          "oneOf": [
+            { "type": "string" },
+            {
+              "type": "array",
+              "items": {
+                "oneOf": [
+                  { "type": "string" },
+                  { "type": "object" }
+                ]
+              }
+            }
+          ]
+        },
+        "additional_kwargs": {
+          "type": "object",
+          "description": "附加数据，如 tool_calls 等",
+          "additionalProperties": true
+        },
+        "name": {
+          "type": "string",
+          "description": "消息的可读名称"
+        },
+        "id": {
+          "type": "string",
+          "description": "消息唯一标识"
+        },
+        "response_metadata": {
+          "type": "object",
+          "description": "响应元数据，如 token 计数、模型名等",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

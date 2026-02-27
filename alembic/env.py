@@ -1,9 +1,9 @@
 """
 Alembic 环境配置
+适配 backend 模块
 """
 from logging.config import fileConfig
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import engine_from_config, pool
 from alembic import context
 import asyncio
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
@@ -12,23 +12,24 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 import sys
 import os
 
-# 添加项目根目录到路径
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+# 添加项目根目录到路径（01_Agent目录）
+project_root = os.path.dirname(os.path.dirname(__file__))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
-from app.core.config import settings
-from infrastructure.database.base import Base
-from infrastructure.database import models  # noqa: F401
-from infrastructure.database.models import (
-    User,
-    BloodPressureRecord,
-    Appointment,
-    AppointmentStatus,
-    LlmCallLog,
-    LlmCallMessage,
-    HealthEventRecord,
-    MedicationRecord,
-    SymptomRecord,
-)
+# 导入backend模块的配置和模型
+from backend.app.config import settings
+from backend.infrastructure.database.base import Base
+from backend.infrastructure.database import models  # noqa: F401 导入所有模型
+
+# 导入pgvector类型支持（用于Alembic迁移）
+try:
+    import pgvector
+    from pgvector.sqlalchemy import Vector
+    HAS_PGVECTOR = True
+except ImportError:
+    HAS_PGVECTOR = False
+    Vector = None
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -37,7 +38,6 @@ config = context.config
 # 设置数据库 URL
 # 注意：保持 postgresql+psycopg:// 格式以使用 psycopg3 驱动
 # 对于 Alembic 的同步操作，psycopg3 也支持同步模式
-# 将异步 URL 转换为同步 URL（移除 async 相关参数，但保留驱动前缀）
 sync_db_url = settings.ASYNC_DB_URI
 # 确保使用 psycopg3 驱动（postgresql+psycopg://）
 if sync_db_url.startswith("postgresql+psycopg://"):
@@ -46,7 +46,8 @@ if sync_db_url.startswith("postgresql+psycopg://"):
 elif sync_db_url.startswith("postgresql://"):
     # 如果没有驱动前缀，添加 psycopg3 驱动
     sync_db_url = sync_db_url.replace("postgresql://", "postgresql+psycopg://", 1)
-config.set_main_option("sqlalchemy.url", sync_db_url)
+# 直接设置到config.attributes，避免ConfigParser的插值问题
+config.attributes["sqlalchemy.url"] = sync_db_url
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -88,6 +89,11 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection):
+    # 注册pgvector类型到SQLAlchemy dialect（避免类型识别警告）
+    # 这允许Alembic正确识别和处理vector类型
+    if HAS_PGVECTOR and Vector is not None:
+        connection.dialect.ischema_names['vector'] = Vector
+    
     context.configure(connection=connection, target_metadata=target_metadata)
 
     with context.begin_transaction():
@@ -119,4 +125,3 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     asyncio.run(run_migrations_online())
-
