@@ -43,13 +43,15 @@ class BatchJobRepository(AuditBaseRepository[BatchJobRecord]):
 
     async def create(
         self,
+        job_type: str,
         code: str,
         total_count: int,
         query_params: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> BatchJobRecord:
-        """创建批次记录。审计字段由 AuditBaseRepository.create 自动填充。"""
+        """创建批次记录。需要显式指定 job_type。审计字段由 AuditBaseRepository.create 自动填充。"""
         return await super().create(
+            job_type=job_type,
             code=code,
             total_count=total_count,
             query_params=query_params,

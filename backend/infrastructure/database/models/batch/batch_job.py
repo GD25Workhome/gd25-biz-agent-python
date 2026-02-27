@@ -13,8 +13,13 @@ from backend.infrastructure.database.base import (
 
 
 class BatchJobBusinessMixin:
-    """batch_job 业务字段：code、total_count、query_params。"""
+    """batch_job 业务字段：job_type、code、total_count、query_params。"""
 
+    job_type = Column(
+        String(64),
+        nullable=False,
+        comment="批次任务类型（如 embedding、data_clean 等）",
+    )
     code = Column(
         String(64),
         nullable=False,
