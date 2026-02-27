@@ -132,3 +132,13 @@
 5. **状态枚举**：`batch_task.status` 建议在文档或代码中约定枚举值（如 0=pending, 1=running, 2=success, -1=failed）。
 
 请 Check 表名、字段名与类型是否符合项目规范与后续扩展需求。
+
+---
+
+## 实现完成情况
+
+- **base.py**：已添加 `UlidIdMixin`、`AuditFieldsMixin`（`backend/infrastructure/database/base.py`）。
+- **models 层**：已新建 `backend/infrastructure/database/models/batch/`，内含 `batch_job.py`（BatchJobBusinessMixin、BatchJobRecord）、`batch_task.py`（BatchTaskBusinessMixin、BatchTaskRecord）、`__init__.py`；已由 `models/__init__.py` 导出。
+- **repository 层**：已在 `repository/base.py` 中新增 `AuditBaseRepository`（含 create/update/delete/get_by_id/get_all 及 `_not_deleted_criterion()`）；已新建 `repository/batch/`，内含 `batch_job_repository.py`（BatchJobRepository）、`batch_task_repository.py`（BatchTaskRepository）、`__init__.py`；已由 `repository/__init__.py` 导出。
+- **Alembic**：已生成迁移 `alembic/versions/92b2c1042946_add_batch_job_and_batch_task_tables.py`，仅包含 batch_job、batch_task 的建表与索引（已剔除 autogenerate 产生的无关变更）。执行 `alembic upgrade head` 可建表。
+- **测试**：已新增 `cursor_test/test_batch_models_and_repository.py`（表名与列校验、AuditBaseRepository 及 batch 仓储继承关系），运行 `pytest cursor_test/test_batch_models_and_repository.py -v` 已通过。

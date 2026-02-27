@@ -23,6 +23,10 @@ from backend.infrastructure.database.models.data_sets_items import DataSetsItems
 from backend.infrastructure.database.models.data_items_rewritten import DataItemsRewrittenRecord
 from backend.infrastructure.database.models.rewritten_batch import RewrittenBatchRecord
 from backend.infrastructure.database.models.import_config import ImportConfigRecord
+from backend.infrastructure.database.models.batch import (
+    BatchJobRecord,
+    BatchTaskRecord,
+)
 
 __all__ = [
     "BloodPressureRecord",
@@ -45,5 +49,7 @@ __all__ = [
     "DataItemsRewrittenRecord",
     "RewrittenBatchRecord",
     "ImportConfigRecord",
+    "BatchJobRecord",
+    "BatchTaskRecord",
 ]
 
