@@ -307,9 +307,10 @@
                 <div v-show="queryExpanded" style="padding:0 12px 12px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
                     <!-- 数据集选择（来源 DataSetsId，精确） -->
                     <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="font-size:12px;color:#606266;">数据集：</span>
                         <el-input
                             v-model="querySourceDatasetId"
-                            placeholder="来源 dataSetsId（精确）"
+                            placeholder="dataSetsId（精确）"
                             clearable
                             style="width:180px;"
                             size="small"
@@ -325,21 +326,51 @@
                             {{ selectedDataset.name }}（{{ selectedDataset.id }}）
                         </el-tag>
                     </div>
-                    <el-input v-model="queryScenarioType" placeholder="场景类型（包含）" clearable style="width:140px;" size="small" />
-                    <el-input v-model="querySubScenarioType" placeholder="子场景类型（包含）" clearable style="width:140px;" size="small" />
-                    <el-select v-model="queryStatus" placeholder="执行状态" clearable style="width:120px;" size="small">
-                        <el-option label="待处理" value="init" />
-                        <el-option label="执行中" value="processing" />
-                        <el-option label="成功" value="success" />
-                        <el-option label="失败" value="failed" />
-                    </el-select>
-                    <el-input v-model="queryScenarioDescription" placeholder="场景描述（包含）" clearable style="width:160px;" size="small" />
-                    <el-input v-model="queryRewrittenQuestion" placeholder="改写后的问题（包含）" clearable style="width:160px;" size="small" />
-                    <el-input v-model="queryRewrittenAnswer" placeholder="改写后的回答（包含）" clearable style="width:160px;" size="small" />
-                    <el-input v-model="queryRewrittenRule" placeholder="改写后的规则（包含）" clearable style="width:160px;" size="small" />
-                    <el-input v-model="querySourceItemId" placeholder="来源 dataItemsId（精确）" clearable style="width:160px;" size="small" />
-                    <el-input v-model="queryBatchCode" placeholder="批次code（包含）" clearable style="width:140px;" size="small" />
-                    <el-input v-model="queryTraceId" placeholder="traceId（包含）" clearable style="width:140px;" size="small" />
+                    <div style="display:flex;align-items:center;gap:4px;">
+                        <span style="font-size:12px;color:#606266;">场景类型：</span>
+                        <el-input v-model="queryScenarioType" placeholder="包含" clearable style="width:140px;" size="small" />
+                    </div>
+                    <div style="display:flex;align-items:center;gap:4px;">
+                        <span style="font-size:12px;color:#606266;">子场景类型：</span>
+                        <el-input v-model="querySubScenarioType" placeholder="包含" clearable style="width:140px;" size="small" />
+                    </div>
+                    <div style="display:flex;align-items:center;gap:4px;">
+                        <span style="font-size:12px;color:#606266;">执行状态：</span>
+                        <el-select v-model="queryStatus" placeholder="全部" clearable style="width:120px;" size="small">
+                            <el-option label="待处理" value="init" />
+                            <el-option label="执行中" value="processing" />
+                            <el-option label="成功" value="success" />
+                            <el-option label="失败" value="failed" />
+                        </el-select>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:4px;">
+                        <span style="font-size:12px;color:#606266;">场景描述：</span>
+                        <el-input v-model="queryScenarioDescription" placeholder="包含" clearable style="width:160px;" size="small" />
+                    </div>
+                    <div style="display:flex;align-items:center;gap:4px;">
+                        <span style="font-size:12px;color:#606266;">改写问题：</span>
+                        <el-input v-model="queryRewrittenQuestion" placeholder="包含" clearable style="width:160px;" size="small" />
+                    </div>
+                    <div style="display:flex;align-items:center;gap:4px;">
+                        <span style="font-size:12px;color:#606266;">改写回答：</span>
+                        <el-input v-model="queryRewrittenAnswer" placeholder="包含" clearable style="width:160px;" size="small" />
+                    </div>
+                    <div style="display:flex;align-items:center;gap:4px;">
+                        <span style="font-size:12px;color:#606266;">改写规则：</span>
+                        <el-input v-model="queryRewrittenRule" placeholder="包含" clearable style="width:160px;" size="small" />
+                    </div>
+                    <div style="display:flex;align-items:center;gap:4px;">
+                        <span style="font-size:12px;color:#606266;">来源 dataItemsId：</span>
+                        <el-input v-model="querySourceItemId" placeholder="精确" clearable style="width:160px;" size="small" />
+                    </div>
+                    <div style="display:flex;align-items:center;gap:4px;">
+                        <span style="font-size:12px;color:#606266;">批次 code：</span>
+                        <el-input v-model="queryBatchCode" placeholder="包含" clearable style="width:140px;" size="small" />
+                    </div>
+                    <div style="display:flex;align-items:center;gap:4px;">
+                        <span style="font-size:12px;color:#606266;">traceId：</span>
+                        <el-input v-model="queryTraceId" placeholder="包含" clearable style="width:140px;" size="small" />
+                    </div>
                 </div>
             </div>
             <div style="flex:1;min-width:0;overflow:auto;padding:12px;">
