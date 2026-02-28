@@ -21,6 +21,21 @@
 - 子类、业务实现类
     1. 继承模版类后，实现查询接口
 
+### 批次任务执行
+- （模版类）
+    - 核心入参： BatchTaskRecord
+    - 运行时：
+        1. check task的状态是否为pending；然后尝试用乐观锁的方式更新状态为running。更新失败则打印error日志，并跳出任务执行
+        2. 调用业务的实现方法执行，如果正常返回结果则任务执行成功，否则执行失败。并将结果记录到BatchTaskRecord中
+            - 这里业务的实现方法应该是由模版类提供的模版方法
+- embedding实现类
+    - 核心入参：BatchTaskRecord的runtime_params，实际内容应该是pipeline_embedding_impl的runtime_params
+    - 核心方法：对模版类的方法的实现。
+        - 运行逻辑：
+            1. 先根据pipeline_data_items_rewritten_id查询记录，
+            2. 再根据embedding_type的类型拼接embedding的字符串，
+            3. 然后调用embedding模型。这里的模型调用方式可以参考BeforeEmbeddingFuncNode._format_embedding_str中的逻辑。但是要区分embedding_type为Q和QA时的不同组装方案
+            4. 调用成功后创建一条pipeline_embedding_records
 
 ## embedding 模块
 
@@ -36,11 +51,7 @@
 - embedding_value Embedding向量值（2048维）
 - embedding_type 类型：Q（只有提问）、QA（提问+回答）
 - is_published 是否发布
+- type 主分类
+- sub_type 子分类（不为空，如果子为空，业务上要拿主分类填充上）
+- metadata 扩展元数据
 
-## 流程设计
-- 原始数据读取
-- 流程运行
-- 。。。。
-- 
-- 前面有一个批次设计的代码，是否可以拿来复用呢？
-  - [ ] 整理一下前面的流程的代码设计，考虑如何抄过来

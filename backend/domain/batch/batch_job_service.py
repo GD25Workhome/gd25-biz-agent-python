@@ -16,13 +16,13 @@ from backend.infrastructure.database.repository.batch.batch_job_repository impor
 from backend.infrastructure.database.repository.batch.batch_task_repository import (
     BatchTaskRepository,
 )
-from backend.domain.batch.create_template import BatchCreateTemplate
+from backend.domain.batch.batch_template import CreateTemplate
 from backend.domain.batch.exceptions import InvalidJobParamsError, UnknownJobTypeError
-from backend.domain.batch.pipeline_embedding_batch_handler import (
-    PipelineEmbeddingBatchHandler,
+from backend.domain.batch.impl.pipeline_embedding_impl import (
+    PipelineEmbeddingCreateHandler,
 )
 
-HandlerFactory = Callable[[AsyncSession], BatchCreateTemplate]
+HandlerFactory = Callable[[AsyncSession], CreateTemplate]
 
 # 目前仅定义 Embedding 批次 job_type，后续可在此处扩展更多类型
 JOB_TYPE_PIPELINE_EMBEDDING = "pipeline_embedding"
@@ -78,14 +78,14 @@ class BatchJobCreateService:
     def _create_pipeline_embedding_handler(
         self,
         session: AsyncSession,
-    ) -> BatchCreateTemplate:
+    ) -> CreateTemplate:
         """
-        创建 PipelineEmbeddingBatchHandler 实例。
+        创建 PipelineEmbeddingCreateHandler 实例。
 
         :param session: SQLAlchemy 异步会话对象。
         :return: 批次创建模版子类实例。
         """
         job_repo = BatchJobRepository(session)
         task_repo = BatchTaskRepository(session)
-        return PipelineEmbeddingBatchHandler(job_repo=job_repo, task_repo=task_repo)
+        return PipelineEmbeddingCreateHandler(job_repo=job_repo, task_repo=task_repo)
 

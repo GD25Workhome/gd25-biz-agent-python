@@ -27,6 +27,9 @@ from backend.infrastructure.database.models.batch import (
     BatchJobRecord,
     BatchTaskRecord,
 )
+from backend.infrastructure.database.models.pipeline import (
+    PipelineEmbeddingRecordRecord,
+)
 
 __all__ = [
     "BloodPressureRecord",
@@ -51,5 +54,6 @@ __all__ = [
     "ImportConfigRecord",
     "BatchJobRecord",
     "BatchTaskRecord",
+    "PipelineEmbeddingRecordRecord",
 ]
 

@@ -18,7 +18,7 @@ from backend.infrastructure.database.models.batch.batch_job import BatchJobRecor
 from backend.domain.batch.dto import TaskPreCreateItem
 
 
-class BatchCreateTemplate(ABC):
+class CreateTemplate(ABC):
     """创建批次任务模版：定义「查询 → 生成 code → 组装落库」流程，子类实现查询接口。"""
 
     def __init__(

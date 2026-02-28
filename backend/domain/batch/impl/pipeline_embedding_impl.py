@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.domain.batch.create_template import BatchCreateTemplate
+from backend.domain.batch.batch_template import CreateTemplate
 from backend.domain.batch.dto import TaskPreCreateItem
 from backend.domain.batch.exceptions import InvalidJobParamsError
 from backend.infrastructure.database.repository.data_items_rewritten_repository import (
@@ -21,7 +21,7 @@ from backend.infrastructure.database.repository.data_items_rewritten_repository 
 )
 
 
-class PipelineEmbeddingBatchHandler(BatchCreateTemplate):
+class PipelineEmbeddingCreateHandler(CreateTemplate):
     """基于改写后数据项创建 Embedding 批次任务的 Handler。"""
 
     JOB_TYPE: str = "pipeline_embedding"
@@ -124,4 +124,3 @@ class PipelineEmbeddingBatchHandler(BatchCreateTemplate):
             )
 
         return items
-

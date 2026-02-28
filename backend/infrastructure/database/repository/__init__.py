@@ -20,6 +20,9 @@ from backend.infrastructure.database.repository.batch import (
     BatchJobRepository,
     BatchTaskRepository,
 )
+from backend.infrastructure.database.repository.pipeline import (
+    PipelineEmbeddingRecordRepository,
+)
 
 __all__ = [
     "BaseRepository",
@@ -33,5 +36,6 @@ __all__ = [
     "RewrittenBatchRepository",
     "BatchJobRepository",
     "BatchTaskRepository",
+    "PipelineEmbeddingRecordRepository",
 ]
 
