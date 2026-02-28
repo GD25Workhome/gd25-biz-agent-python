@@ -1,14 +1,19 @@
 """
 子任务表仓储（batch_task）
-设计文档：cursor_docs/022603-数据embedding批次表字段设计.md
+设计文档：cursor_docs/022603-数据embedding批次表字段设计.md、022803-批次任务执行模版与队列对接技术设计.md
 """
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.infrastructure.database.repository.base import AuditBaseRepository
 from backend.infrastructure.database.models.batch.batch_task import BatchTaskRecord
+
+STATUS_PENDING = "pending"
+STATUS_RUNNING = "running"
+STATUS_SUCCESS = "success"
+STATUS_FAILED = "failed"
 
 
 class BatchTaskRepository(AuditBaseRepository[BatchTaskRecord]):
@@ -94,3 +99,18 @@ class BatchTaskRepository(AuditBaseRepository[BatchTaskRecord]):
         if execution_return_key is not None:
             kwargs["execution_return_key"] = execution_return_key
         return await self.update(task_id, **kwargs)
+
+    async def update_status_to_running_if_pending(self, task_id: str) -> bool:
+        """
+        仅当 status=pending 时更新为 running，用于执行模版乐观锁。
+        设计文档：cursor_docs/022803-批次任务执行模版与队列对接技术设计.md
+        :return: 是否更新到行（rowcount > 0）。
+        """
+        stmt = (
+            update(BatchTaskRecord)
+            .where(BatchTaskRecord.id == task_id)
+            .where(BatchTaskRecord.status == STATUS_PENDING)
+            .values(status=STATUS_RUNNING)
+        )
+        result = await self.session.execute(stmt)
+        return (result.rowcount or 0) > 0

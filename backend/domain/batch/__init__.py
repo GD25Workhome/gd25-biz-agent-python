@@ -1,11 +1,18 @@
 """
 批次任务领域层
-设计文档：cursor_docs/022701-批次任务创建模版设计方案.md
+设计文档：cursor_docs/022701、022803-批次任务执行模版与队列对接技术设计.md
 """
-from backend.domain.batch.dto import TaskPreCreateItem
-from backend.domain.batch.batch_template import CreateTemplate
+from backend.domain.batch.batch_template import CreateTemplate, ExecuteTemplate
+from backend.domain.batch.dto import (
+    BatchTaskExecutionResult,
+    BatchTaskQueueItem,
+    TaskPreCreateItem,
+)
 
 __all__ = [
     "TaskPreCreateItem",
+    "BatchTaskQueueItem",
+    "BatchTaskExecutionResult",
     "CreateTemplate",
+    "ExecuteTemplate",
 ]

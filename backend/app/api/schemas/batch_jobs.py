@@ -30,3 +30,9 @@ class BatchJobCreateResponse(BaseModel):
     batch_code: str = Field(..., description="批次编码（batch_job.code）")
     total: int = Field(..., description="本批次创建的子任务总数（batch_job.total_count）")
 
+
+class BatchJobRunResponse(BaseModel):
+    """批次任务运行（入队）响应模型。设计文档：022803。"""
+
+    enqueued: int = Field(..., description="本次入队的子任务数量")
+

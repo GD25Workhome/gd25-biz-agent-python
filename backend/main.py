@@ -144,8 +144,14 @@ async def lifespan(app: FastAPI):
         # 6. 启动 Rewritten 任务队列消费者（021105，替代原 worker_loop）
         logger.info("6. 启动 Rewritten 任务队列消费者...")
         from backend.pipeline.rewritten_queue_service import start_consumers
-        consumer_tasks = start_consumers()
+        consumer_tasks = list(start_consumers())
         logger.info("   ✓ Rewritten 队列消费者已启动")
+
+        # 7. 启动 BatchTask 任务队列消费者（022803）
+        logger.info("7. 启动 BatchTask 任务队列消费者...")
+        from backend.pipeline.batch_task_queue_service import start_consumers as start_batch_task_consumers
+        consumer_tasks.extend(start_batch_task_consumers())
+        logger.info("   ✓ BatchTask 队列消费者已启动")
 
         logger.info("=" * 60)
         logger.info("系统启动完成！")
@@ -157,7 +163,7 @@ async def lifespan(app: FastAPI):
 
     yield  # 应用运行期间
 
-    # 关闭时取消消费者任务
+    # 关闭时取消消费者任务（Rewritten + BatchTask）
     if consumer_tasks:
         for t in consumer_tasks:
             t.cancel()
@@ -165,7 +171,7 @@ async def lifespan(app: FastAPI):
             await asyncio.gather(*consumer_tasks, return_exceptions=True)
         except Exception:
             pass
-        logger.info("Rewritten 队列消费者已停止")
+        logger.info("队列消费者已停止")
 
     logger.info("系统正在关闭...")
 
