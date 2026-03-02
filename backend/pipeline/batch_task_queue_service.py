@@ -1,7 +1,7 @@
 """
 批次任务（batch_task）内存队列服务
-支持按 job_id 入队、消费者按 task_version 校验后调用 BatchTaskExecuteService.run_one_batch_task。
-设计文档：cursor_docs/022803-批次任务执行模版与队列对接技术设计.md
+支持按 job_id 入队、消费者调用 BatchTaskExecuteService.run_one_batch_task(session_factory, item)。
+设计文档：cursor_docs/022803-批次任务执行模版与队列对接技术设计.md、030203-批次任务执行Session拆分改造技术方案.md
 """
 from __future__ import annotations
 
@@ -78,10 +78,55 @@ def get_queue_stats() -> dict:
     }
 
 
+def clear_all_queue() -> int:
+    """
+    清空队列中所有任务，返回移除数量。正在执行中的任务不中断。
+    设计文档：cursor_docs/030202-批次任务batch_jobs与Step02清洗批次管理功能对比与缺口分析.md
+    """
+    _ensure_queue()
+    n = 0
+    while True:
+        try:
+            item: BatchTaskQueueItem = _queue.get_nowait()
+            _in_flight_ids.discard(item.task_id)
+            n += 1
+        except asyncio.QueueEmpty:
+            break
+    return n
+
+
+async def remove_batch_by_job_id(job_id: str, session: AsyncSession) -> int:
+    """
+    从队列中移除指定 job 下的所有任务（仅尚未被消费的），返回移除数量。
+    设计文档：cursor_docs/030202。
+    """
+    _ensure_queue()
+    task_repo = BatchTaskRepository(session)
+    tasks = await task_repo.get_list(job_id=job_id, limit=100000)
+    job_task_ids = {t.id for t in tasks}
+    if not job_task_ids:
+        return 0
+    to_put_back: list[BatchTaskQueueItem] = []
+    n = 0
+    while True:
+        try:
+            item = _queue.get_nowait()
+            if item.task_id in job_task_ids:
+                _in_flight_ids.discard(item.task_id)
+                n += 1
+            else:
+                to_put_back.append(item)
+        except asyncio.QueueEmpty:
+            break
+    for item in to_put_back:
+        _queue.put_nowait(item)
+    return n
+
+
 async def _consumer_loop() -> None:
     """
-    单消费者协程：取 BatchTaskQueueItem → 查 task → 若 task.version != item.task_version 则舍弃；
-    否则调用 BatchTaskExecuteService.run_one_batch_task(session, item)。
+    单消费者协程：取 BatchTaskQueueItem → 调用 run_one_batch_task(session_factory, item)。
+    模版内部使用两段短 session（加载/乐观锁、业务、回写），不再为单次执行持长 session。设计文档：030203。
     """
     _ensure_queue()
     session_factory = get_session_factory()
@@ -89,21 +134,7 @@ async def _consumer_loop() -> None:
     while True:
         item: BatchTaskQueueItem = await _queue.get()
         try:
-            async with session_factory() as session:
-                task_repo = BatchTaskRepository(session)
-                task = await task_repo.get_by_id(item.task_id)
-            if not task:
-                logger.warning("批次任务消费者: task 不存在 task_id=%s", item.task_id)
-            else:
-                if getattr(task, "version", None) != item.task_version:
-                    logger.info(
-                        "批次任务消费者: task.version 与队列元素不一致，舍弃 task_id=%s",
-                        item.task_id,
-                    )
-                else:
-                    async with session_factory() as session:
-                        await execute_service.run_one_batch_task(session, item)
-                        await session.commit()
+            await execute_service.run_one_batch_task(session_factory, item)
         except Exception as e:
             logger.exception(
                 "批次任务消费者执行失败 task_id=%s: %s",

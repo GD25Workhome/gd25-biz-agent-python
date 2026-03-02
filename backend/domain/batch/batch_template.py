@@ -1,6 +1,6 @@
 """
 批次任务模版：创建模版（CreateTemplate）与执行模版（ExecuteTemplate）。
-设计文档：cursor_docs/022701-批次任务创建模版设计方案.md、022803-批次任务执行模版与队列对接技术设计.md
+设计文档：cursor_docs/022701-批次任务创建模版设计方案.md、022803-批次任务执行模版与队列对接技术设计.md、030203-批次任务执行Session拆分改造技术方案.md
 """
 import json
 import logging
@@ -28,6 +28,9 @@ from backend.infrastructure.database.repository.batch.batch_task_repository impo
 )
 
 logger = logging.getLogger(__name__)
+
+# 单次传给 create_many 的 task 列表上限，控制单批与事务内数据量。设计文档：030201
+TASK_LIST_BATCH_SIZE = 10_000
 
 
 class CreateTemplate(ABC):
@@ -108,7 +111,8 @@ class CreateTemplate(ABC):
         query_params: Optional[Dict[str, Any]] = None,
     ) -> BatchJobRecord:
         """
-        模版内部实现：先创建 batch_job（含 job_type），再逐条创建 batch_task。
+        模版内部实现：先创建 batch_job，再按批（每批最多 TASK_LIST_BATCH_SIZE 条）调用 create_many 写入 batch_task。
+        设计文档：cursor_docs/030201-Base批量插入与批次任务创建详细技术设计方案.md
         """
         job = await self._job_repo.create(
             job_type=job_type,
@@ -116,14 +120,12 @@ class CreateTemplate(ABC):
             total_count=len(task_items),
             query_params=query_params,
         )
-        for item in task_items:
-            await self._task_repo.create(
+        for i in range(0, len(task_items), TASK_LIST_BATCH_SIZE):
+            batch = task_items[i : i + TASK_LIST_BATCH_SIZE]
+            await self._task_repo.create_many(
                 job_id=job.id,
-                source_table_id=item.source_table_id,
-                source_table_name=item.source_table_name,
-                status="pending",
-                runtime_params=item.runtime_params,
-                redundant_key=item.redundant_key,
+                items=batch,
+                chunk_size=1000,
             )
         return job
 
@@ -131,80 +133,95 @@ class CreateTemplate(ABC):
 class ExecuteTemplate(ABC):
     """
     执行批次任务模版：定义「加载 task → 乐观锁 → 业务执行 → 回写结果」流程，子类实现 execute_task_impl。
-    任务执行入口统一为 BatchTaskQueueItem。
+    任务执行入口统一为 BatchTaskQueueItem。设计文档：030203，两段短 session 不贯穿长时间业务。
     """
-
-    def __init__(self, task_repo: BatchTaskRepository) -> None:
-        self._task_repo = task_repo
 
     async def run_one_task(
         self,
-        session: AsyncSession,
+        session_factory: Any,
         item: BatchTaskQueueItem,
     ) -> None:
         """
-        模版方法：执行单条任务。入参为队列元素 BatchTaskQueueItem。
-        步骤：加载 task → 可选 version 校验 → 乐观锁 pending→running → execute_task_impl → 回写 execution_result/execution_return_key/status 或 execution_error_message/status。
+        模版方法：执行单条任务。使用两段短 session，中间执行业务不持 session。
+        步骤：Session1 加载 task、version 校验、pending→running 并 commit；
+             execute_task_impl(task_record)（无 session）；
+             Session2 根据结果 update_status(success/failed) 并 commit。
         """
-        task_record = await self._task_repo.get_by_id(item.task_id)
-        if not task_record:
-            logger.error("run_one_task: task 不存在 task_id=%s", item.task_id)
-            return
-
-        if getattr(task_record, "version", None) is not None and item.task_version is not None:
-            if task_record.version != item.task_version:
-                logger.info(
-                    "run_one_task: task.version 与队列元素不一致，舍弃 task_id=%s queue_version=%s db_version=%s",
-                    item.task_id,
-                    item.task_version,
-                    task_record.version,
-                )
+        # Session 1：加载、校验、乐观锁更新，commit 后关闭
+        async with session_factory() as session:
+            task_repo = BatchTaskRepository(session)
+            task_record = await task_repo.get_by_id(item.task_id)
+            if not task_record:
+                logger.error("run_one_task: task 不存在 task_id=%s", item.task_id)
                 return
 
-        ok = await self._task_repo.update_status_to_running_if_pending(item.task_id)
-        if not ok:
-            logger.error(
-                "run_one_task: 乐观锁更新 pending→running 失败，跳过执行 task_id=%s",
-                item.task_id,
-            )
-            return
+            if getattr(task_record, "version", None) is not None and item.task_version is not None:
+                if task_record.version != item.task_version:
+                    logger.info(
+                        "run_one_task: task.version 与队列元素不一致，舍弃 task_id=%s queue_version=%s db_version=%s",
+                        item.task_id,
+                        item.task_version,
+                        task_record.version,
+                    )
+                    return
 
+            ok = await task_repo.update_status_to_running_if_pending(item.task_id)
+            if not ok:
+                logger.error(
+                    "run_one_task: 乐观锁更新 pending→running 失败，跳过执行 task_id=%s",
+                    item.task_id,
+                )
+                return
+            await session.commit()
+
+        # 阶段 2：业务执行（不持 session）
+        result: Optional[BatchTaskExecutionResult] = None
+        exc: Optional[Exception] = None
         try:
-            result = await self.execute_task_impl(session, task_record)
-            execution_return_key = getattr(result, "execution_return_key", None) or ""
-            if is_dataclass(result):
-                execution_result_str = json.dumps(
-                    asdict(result), ensure_ascii=False
+            result = await self.execute_task_impl(task_record)
+        except Exception as e:
+            exc = e
+
+        # Session 2：回写最终状态，commit 后关闭
+        async with session_factory() as session:
+            task_repo = BatchTaskRepository(session)
+            if exc is not None:
+                import traceback
+
+                err_msg = traceback.format_exc()
+                logger.exception("run_one_task: 业务执行失败 task_id=%s", item.task_id)
+                await task_repo.update_status(
+                    item.task_id,
+                    status=STATUS_FAILED,
+                    execution_error_message=err_msg[: 64 * 1024],
                 )
             else:
-                execution_result_str = json.dumps(
-                    {"execution_return_key": execution_return_key},
-                    ensure_ascii=False,
+                execution_return_key = getattr(result, "execution_return_key", None) or ""
+                if result is not None and is_dataclass(result):
+                    execution_result_str = json.dumps(
+                        asdict(result), ensure_ascii=False
+                    )
+                else:
+                    execution_result_str = json.dumps(
+                        {"execution_return_key": execution_return_key},
+                        ensure_ascii=False,
+                    )
+                await task_repo.update_status(
+                    item.task_id,
+                    status=STATUS_SUCCESS,
+                    execution_result=execution_result_str,
+                    execution_return_key=execution_return_key,
                 )
-            await self._task_repo.update_status(
-                item.task_id,
-                status=STATUS_SUCCESS,
-                execution_result=execution_result_str,
-                execution_return_key=execution_return_key,
-            )
-        except Exception:
-            import traceback
-
-            err_msg = traceback.format_exc()
-            logger.exception("run_one_task: 业务执行失败 task_id=%s", item.task_id)
-            await self._task_repo.update_status(
-                item.task_id,
-                status=STATUS_FAILED,
-                execution_error_message=err_msg[: 64 * 1024],
-            )
+            await session.commit()
 
     @abstractmethod
     async def execute_task_impl(
         self,
-        session: AsyncSession,
         task_record: BatchTaskRecord,
     ) -> BatchTaskExecutionResult:
         """
-        子类实现：当前任务的业务逻辑。成功时返回标准结果（至少含 execution_return_key），失败时抛出异常。
+        子类实现：当前任务的业务逻辑（不传入 session；需 DB 时在实现内开短 session）。
+        成功时返回标准结果（至少含 execution_return_key），失败时抛出异常。
+        设计文档：030203。
         """
         ...

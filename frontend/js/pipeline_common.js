@@ -10,9 +10,12 @@
         ? window.location.origin
         : 'http://localhost:8000';
     const API_PREFIX = `${API_BASE}/api/v1/data-cleaning`;
+    /** 批次任务管理 API 前缀（设计文档：030202） */
+    const BATCH_JOBS_API_PREFIX = `${API_BASE}/api/v1/batch-jobs`;
 
     window.PipelineCommon = {
         API_PREFIX,
+        BATCH_JOBS_API_PREFIX,
         PAGE_SIZE_OPTIONS: [10, 20, 50, 100],
 
         /** 格式化日期时间 */

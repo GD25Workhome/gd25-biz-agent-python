@@ -2,13 +2,18 @@
 子任务表仓储（batch_task）
 设计文档：cursor_docs/022603-数据embedding批次表字段设计.md、022803-批次任务执行模版与队列对接技术设计.md
 """
-from typing import Any, Dict, List, Optional
+from __future__ import annotations
 
-from sqlalchemy import select, update
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.infrastructure.database.repository.base import AuditBaseRepository
 from backend.infrastructure.database.models.batch.batch_task import BatchTaskRecord
+from backend.infrastructure.database.repository.base import AuditBaseRepository
+
+if TYPE_CHECKING:
+    from backend.domain.batch.dto import TaskPreCreateItem
 
 STATUS_PENDING = "pending"
 STATUS_RUNNING = "running"
@@ -61,6 +66,20 @@ class BatchTaskRepository(AuditBaseRepository[BatchTaskRecord]):
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
+    async def count_by_job(
+        self,
+        job_id: str,
+        status: Optional[str] = None,
+    ) -> int:
+        """统计指定 job 下子任务数量（仅未删）；可选 status 筛选。"""
+        stmt = select(func.count()).select_from(BatchTaskRecord).where(
+            BatchTaskRecord.job_id == job_id.strip()
+        ).where(self._not_deleted_criterion())
+        if status is not None and status.strip():
+            stmt = stmt.where(BatchTaskRecord.status == status.strip())
+        result = await self.session.execute(stmt)
+        return result.scalar_one() or 0
+
     async def create(
         self,
         job_id: str,
@@ -81,6 +100,39 @@ class BatchTaskRepository(AuditBaseRepository[BatchTaskRecord]):
             redundant_key=redundant_key,
             **kwargs,
         )
+
+    async def create_many(
+        self,
+        job_id: str,
+        items: List[TaskPreCreateItem],
+        chunk_size: int = 1000,
+    ) -> int:
+        """
+        批量创建子任务。将 TaskPreCreateItem 转为 kwargs 列表后调用 Base 的 create_many。
+        设计文档：cursor_docs/030201-Base批量插入与批次任务创建详细技术设计方案.md
+
+        Args:
+            job_id: 批次 job 的 id。
+            items: 预创建项列表（来自 CreateTemplate.query_tasks_for_pre_create）。
+            chunk_size: 每多少条一组 flush，默认 1000。
+
+        Returns:
+            插入条数。
+        """
+        from backend.domain.batch.dto import TaskPreCreateItem
+
+        dict_list: List[Dict[str, Any]] = [
+            {
+                "job_id": job_id,
+                "source_table_id": item.source_table_id,
+                "source_table_name": item.source_table_name,
+                "status": STATUS_PENDING,
+                "runtime_params": item.runtime_params,
+                "redundant_key": item.redundant_key,
+            }
+            for item in items
+        ]
+        return await super().create_many(items=dict_list, chunk_size=chunk_size)
 
     async def update_status(
         self,
@@ -103,14 +155,13 @@ class BatchTaskRepository(AuditBaseRepository[BatchTaskRecord]):
     async def update_status_to_running_if_pending(self, task_id: str) -> bool:
         """
         仅当 status=pending 时更新为 running，用于执行模版乐观锁。
+        复用基类 update(extra_where=...)，保证 version+1、update_time 与乐观锁在同一 UPDATE 中完成。
         设计文档：cursor_docs/022803-批次任务执行模版与队列对接技术设计.md
-        :return: 是否更新到行（rowcount > 0）。
+        :return: 是否更新到行。
         """
-        stmt = (
-            update(BatchTaskRecord)
-            .where(BatchTaskRecord.id == task_id)
-            .where(BatchTaskRecord.status == STATUS_PENDING)
-            .values(status=STATUS_RUNNING)
+        result = await self.update(
+            task_id,
+            extra_where={"status": STATUS_PENDING},
+            status=STATUS_RUNNING,
         )
-        result = await self.session.execute(stmt)
-        return (result.rowcount or 0) > 0
+        return result is not None

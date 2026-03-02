@@ -51,6 +51,7 @@
                     <el-menu-item index="rewritten-batches"><el-icon><Document /></el-icon><span>Step02清洗批次管理</span></el-menu-item>
                     <el-menu-item index="data-items-rewritten"><el-icon><Edit /></el-icon><span>Step02数据清洗管理</span></el-menu-item>
                     <el-menu-item index="embedding-batches"><el-icon><Document /></el-icon><span>Step03批量创建Embedding</span></el-menu-item>
+                    <el-menu-item index="batch-jobs"><el-icon><Document /></el-icon><span>Step03-1批次任务管理</span></el-menu-item>
                 </el-menu>
             </div>
         </div>
@@ -67,7 +68,7 @@
                     <div class="empty-state-text">点击左侧菜单打开功能页面</div>
                 </div>
                 <div v-for="tab in tabs" :key="tab.id" :class="['tab-pane', { active: tab.id === activeTabId }]" v-show="tab.id === activeTabId">
-                    <component :is="tab.component" :tab-id="tab.id" :dataset-id="tab.datasetId" :dataset-name="tab.datasetName" style="height:100%;width:100%;min-width:0;" />
+                    <component :is="tab.component" :tab-id="tab.id" :dataset-id="tab.datasetId" :dataset-name="tab.datasetName" :job-id="tab.jobId" :job-code="tab.jobCode" style="height:100%;width:100%;min-width:0;" />
                 </div>
             </div>
         </div>
@@ -88,6 +89,8 @@
     <script src="js/step01_data_items_standalone.js"></script>
     <script src="js/pipeline_rewritten_batches.js"></script>
     <script src="js/pipeline_embedding_batches.js"></script>
+    <script src="js/pipeline_batch_jobs.js"></script>
+    <script src="js/pipeline_batch_job_tasks.js"></script>
     <script>
         const { createApp } = Vue;
         const icons = ElementPlusIconsVue;
@@ -98,6 +101,8 @@
                 PipelineDatasetItemsComponent,
                 Step01DataItemsStandalone,
                 PipelineRewrittenBatchesComponent,
+                PipelineBatchJobsComponent,
+                PipelineBatchJobTasksComponent,
                 PipelineDataItemsRewrittenComponent,
                 PipelineEmbeddingBatchComponent,
             },

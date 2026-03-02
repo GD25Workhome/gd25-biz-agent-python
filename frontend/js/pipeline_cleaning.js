@@ -20,7 +20,8 @@
             'step01-items-standalone': { title: 'Step01原始数据项管理', component: 'Step01DataItemsStandalone', icon: 'Document' },
             'rewritten-batches': { title: 'Step02清洗批次管理', component: 'PipelineRewrittenBatchesComponent', icon: 'Document' },
             'data-items-rewritten': { title: 'Step02数据清洗管理', component: 'PipelineDataItemsRewrittenComponent', icon: 'Edit' },
-            'embedding-batches': { title: 'Step03批量创建Embedding', component: 'PipelineEmbeddingBatchComponent', icon: 'Document' }
+            'embedding-batches': { title: 'Step03批量创建Embedding', component: 'PipelineEmbeddingBatchComponent', icon: 'Document' },
+            'batch-jobs': { title: 'Step03-1批次任务管理', component: 'PipelineBatchJobsComponent', icon: 'Document' }
         };
 
         const generateTabId = (type) => `${type}_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
@@ -62,6 +63,27 @@
             activeTabId.value = tabId;
         };
 
+        /** 打开批次 job 下任务列表 Tab，标题为「批次编码-任务列表」（风格参考 Step01 数据项） */
+        const openTabForJobTasks = (jobId, jobCode) => {
+            const tabTitle = `${jobCode || jobId || '批次'}-任务列表`;
+            const existingTab = tabs.value.find(tab => tab.type === 'job-tasks' && tab.jobId === jobId);
+            if (existingTab) {
+                activeTabId.value = existingTab.id;
+                return;
+            }
+            const tabId = generateTabId('job-tasks');
+            tabs.value.push({
+                id: tabId,
+                type: 'job-tasks',
+                title: tabTitle,
+                component: 'PipelineBatchJobTasksComponent',
+                icon: 'Document',
+                jobId,
+                jobCode
+            });
+            activeTabId.value = tabId;
+        };
+
         const switchTab = (tabId) => { activeTabId.value = tabId; };
 
         const closeTab = (tabId) => {
@@ -78,7 +100,7 @@
             openTab(index);
         };
 
-        provide('pipelineTabManager', { closeTab, getActiveTabId: () => activeTabId.value, openTabForDatasetItems });
+        provide('pipelineTabManager', { closeTab, getActiveTabId: () => activeTabId.value, openTabForDatasetItems, openTabForJobTasks });
 
         onMounted(() => {
             if (tabs.value.length === 0) {

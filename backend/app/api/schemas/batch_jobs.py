@@ -1,11 +1,61 @@
 """
-批次任务创建接口相关 Schema。
+批次任务创建与批次管理接口相关 Schema。
 
-设计文档：cursor_docs/022703-批次任务通用创建接口技术设计.md
+设计文档：cursor_docs/022703-批次任务通用创建接口技术设计.md、030202-批次任务batch_jobs与Step02清洗批次管理功能对比与缺口分析.md
 """
-from typing import Any, Dict, Optional
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
+
+
+class BatchJobStatsResponse(BaseModel):
+    """批次列表单项（含子任务统计）。设计文档：030202。"""
+
+    id: str = Field(..., description="批次 job id（batch_job.id）")
+    job_type: str = Field(..., description="批次任务类型")
+    code: str = Field(..., description="批次编码（batch_job.code）")
+    total_count: int = Field(..., description="创建时预期子任务总数")
+    query_params: Optional[Dict[str, Any]] = Field(None, description="创建时的查询参数")
+    create_time: Optional[datetime] = Field(None, description="创建时间")
+    update_time: Optional[datetime] = Field(None, description="更新时间")
+    tasks_total: int = Field(0, description="实际子任务数量")
+    status_pending_count: int = Field(0, description="待处理数量")
+    status_running_count: int = Field(0, description="执行中数量")
+    status_success_count: int = Field(0, description="成功数量")
+    status_failed_count: int = Field(0, description="失败数量")
+
+
+class BatchJobListResponse(BaseModel):
+    """批次列表（含统计）响应。设计文档：030202。"""
+
+    total: int = Field(..., description="满足条件的批次数")
+    items: List[BatchJobStatsResponse] = Field(default_factory=list, description="批次列表")
+
+
+class QueueStatsResponse(BaseModel):
+    """队列统计响应。设计文档：030202。"""
+
+    queue_size: int = Field(..., description="排队中任务数")
+    in_flight_count: int = Field(..., description="队列中+执行中的任务 id 总数")
+
+
+class BatchJobClearQueueResponse(BaseModel):
+    """清空队列响应。设计文档：030202。"""
+
+    removed: int = Field(..., description="从队列中移除的任务数")
+
+
+class BatchJobRemoveBatchRequest(BaseModel):
+    """按 job 移除队列请求。设计文档：030202。"""
+
+    job_id: str = Field(..., description="批次 job id（batch_job.id）")
+
+
+class BatchJobRemoveBatchResponse(BaseModel):
+    """按 job 移除队列响应。设计文档：030202。"""
+
+    removed: int = Field(..., description="从队列中移除的该批次任务数")
 
 
 class BatchJobCreateRequest(BaseModel):
@@ -35,4 +85,25 @@ class BatchJobRunResponse(BaseModel):
     """批次任务运行（入队）响应模型。设计文档：022803。"""
 
     enqueued: int = Field(..., description="本次入队的子任务数量")
+
+
+class BatchTaskItemResponse(BaseModel):
+    """单个 batch_task 列表项（供 job 下任务列表接口返回）。"""
+
+    id: str = Field(..., description="任务 id")
+    job_id: str = Field(..., description="所属批次 job id")
+    source_table_id: Optional[str] = Field(None, description="来源表 ID")
+    source_table_name: Optional[str] = Field(None, description="来源表名")
+    status: Optional[str] = Field(None, description="状态 pending/running/success/failed")
+    create_time: Optional[datetime] = Field(None, description="创建时间")
+    update_time: Optional[datetime] = Field(None, description="更新时间")
+    execution_error_message: Optional[str] = Field(None, description="执行失败信息")
+    execution_return_key: Optional[str] = Field(None, description="执行返回 key")
+
+
+class BatchTaskListResponse(BaseModel):
+    """按 job 分页查询子任务列表响应。"""
+
+    total: int = Field(..., description="该 job 下满足条件的任务总数")
+    items: List[BatchTaskItemResponse] = Field(default_factory=list, description="任务列表")
 

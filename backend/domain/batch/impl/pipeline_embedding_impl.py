@@ -4,9 +4,10 @@ Pipeline Embedding 批次任务：创建 Handler 与执行器。
 - PipelineEmbeddingCreateHandler：基于 pipeline_data_items_rewritten 创建 Embedding 批次任务。
 - PipelineEmbeddingExecutor：根据 task 的 runtime_params 查改写记录，按 embedding_type（Q/QA）拼串并调 embedding 模型，写入 pipeline_embedding_records。
 
-设计文档：cursor_docs/022703、022803；doc/总体设计规划/数据归档-schema/step3-数据embedding.md
+设计文档：cursor_docs/022703、022803、030203-批次任务执行Session拆分改造技术方案.md
 """
 from typing import Any, Dict, List, Optional
+
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,9 +15,6 @@ from backend.domain.batch.batch_template import CreateTemplate, ExecuteTemplate
 from backend.domain.batch.dto import BatchTaskExecutionResult, TaskPreCreateItem
 from backend.domain.batch.exceptions import InvalidJobParamsError
 from backend.infrastructure.database.models.batch.batch_task import BatchTaskRecord
-from backend.infrastructure.database.repository.batch.batch_task_repository import (
-    BatchTaskRepository,
-)
 from backend.infrastructure.database.repository.data_items_rewritten_repository import (
     DataItemsRewrittenRepository,
     STATUS_FAILED,
@@ -168,10 +166,16 @@ def _format_embedding_str(
 
 
 class PipelineEmbeddingExecutor(ExecuteTemplate):
-    """Pipeline Embedding 执行器：查改写记录 → 拼串 → 调 embedding 模型 → 写 pipeline_embedding_records。"""
+    """
+    Pipeline Embedding 执行器：查改写记录 → 拼串 → 调 embedding 模型 → 写 pipeline_embedding_records。
+    设计文档：030203，execute_task_impl 内开短 session 做 DB 读写。
+    """
 
-    def __init__(self, task_repo: BatchTaskRepository) -> None:
-        super().__init__(task_repo)
+    def __init__(self, session_factory: Any) -> None:
+        """
+        :param session_factory: 会话工厂（如 get_session_factory()），供 execute_task_impl 内开短 session 使用。
+        """
+        self._session_factory = session_factory
 
     def _get_embedding_client(self) -> EmbeddingClient:
         """获取豆包 embedding 客户端（与 flow 中 embedding 节点配置一致）。"""
@@ -182,7 +186,6 @@ class PipelineEmbeddingExecutor(ExecuteTemplate):
 
     async def execute_task_impl(
         self,
-        session: AsyncSession,
         task_record: BatchTaskRecord,
     ) -> BatchTaskExecutionResult:
         runtime_params: Dict[str, Any] = (task_record.runtime_params or {}) or {}
@@ -194,36 +197,37 @@ class PipelineEmbeddingExecutor(ExecuteTemplate):
         if not rewritten_id:
             raise ValueError("runtime_params 中缺少 pipeline_data_items_rewritten_id")
 
-        rewritten_repo = DataItemsRewrittenRepository(session)
-        rewritten = await rewritten_repo.get_by_id(rewritten_id)
-        if not rewritten:
-            raise ValueError(f"改写记录不存在: pipeline_data_items_rewritten_id={rewritten_id}")
+        async with self._session_factory() as session:
+            rewritten_repo = DataItemsRewrittenRepository(session)
+            rewritten = await rewritten_repo.get_by_id(rewritten_id)
+            if not rewritten:
+                raise ValueError(f"改写记录不存在: pipeline_data_items_rewritten_id={rewritten_id}")
 
-        embedding_str = _format_embedding_str(
-            embedding_type=embedding_type,
-            scenario_description=rewritten.scenario_description or "",
-            rewritten_question=rewritten.rewritten_question or "",
-            rewritten_answer=rewritten.rewritten_answer or "",
-            rewritten_rule=rewritten.rewritten_rule or "",
-        )
-        if not embedding_str.strip():
-            raise ValueError("拼接后的 embedding 字符串为空")
+            embedding_str = _format_embedding_str(
+                embedding_type=embedding_type,
+                scenario_description=rewritten.scenario_description or "",
+                rewritten_question=rewritten.rewritten_question or "",
+                rewritten_answer=rewritten.rewritten_answer or "",
+                rewritten_rule=rewritten.rewritten_rule or "",
+            )
+            if not embedding_str.strip():
+                raise ValueError("拼接后的 embedding 字符串为空")
 
-        client = self._get_embedding_client()
-        vectors = client.embed_documents([embedding_str])
-        embedding_value = vectors[0] if vectors else None
-        if not embedding_value:
-            raise ValueError("embedding 模型返回为空")
+            client = self._get_embedding_client()
+            vectors = client.embed_documents([embedding_str])
+            embedding_value = vectors[0] if vectors else None
+            if not embedding_value:
+                raise ValueError("embedding 模型返回为空")
 
-        embed_repo = PipelineEmbeddingRecordRepository(session)
-        record = await embed_repo.create(
-            embedding_str=embedding_str,
-            embedding_value=embedding_value,
-            embedding_type=embedding_type,
-            is_published=False,
-            type_=getattr(rewritten, "scenario_type", None) or None,
-            sub_type=getattr(rewritten, "sub_scenario_type", None) or None,
-            metadata_=None,
-        )
-        await session.flush()
-        return BatchTaskExecutionResult(execution_return_key=record.id)
+            embed_repo = PipelineEmbeddingRecordRepository(session)
+            record = await embed_repo.create(
+                embedding_str=embedding_str,
+                embedding_value=embedding_value,
+                embedding_type=embedding_type,
+                is_published=False,
+                type_=getattr(rewritten, "scenario_type", None) or None,
+                sub_type=getattr(rewritten, "sub_scenario_type", None) or None,
+                metadata_=None,
+            )
+            await session.commit()
+            return BatchTaskExecutionResult(execution_return_key=record.id)
