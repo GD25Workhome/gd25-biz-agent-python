@@ -20,6 +20,8 @@ from backend.app.api.schemas.batch_jobs import (
     BatchJobRemoveBatchResponse,
     BatchJobRunResponse,
     BatchJobStatsResponse,
+    BatchTaskExecuteRequest,
+    BatchTaskExecuteResponse,
     BatchTaskItemResponse,
     BatchTaskListResponse,
     QueueStatsResponse,
@@ -36,6 +38,7 @@ from backend.infrastructure.database.repository.batch.batch_task_repository impo
 from backend.pipeline.batch_task_queue_service import (
     clear_all_queue,
     enqueue_batch_by_job_id,
+    enqueue_task_by_id,
     get_queue_stats,
     remove_batch_by_job_id,
 )
@@ -170,26 +173,71 @@ async def create_batch_job_endpoint(
         raise HTTPException(status_code=500, detail="批次任务创建失败，请稍后重试")
 
 
+@router.post("/tasks/execute", response_model=BatchTaskExecuteResponse)
+async def execute_batch_task_endpoint(
+    data: BatchTaskExecuteRequest,
+    session: AsyncSession = Depends(get_async_session),
+) -> BatchTaskExecuteResponse:
+    """
+    单行任务执行：将指定 task 置为 pending 并入队，入参仅 task_id。
+    设计文档：cursor_docs/030204-Step03-1任务子界面类数据清洗能力技术设计.md
+    """
+    task_id = (data.task_id or "").strip()
+    if not task_id:
+        raise HTTPException(status_code=400, detail="task_id 不能为空")
+    try:
+        task_repo = BatchTaskRepository(session)
+        task = await task_repo.get_by_id(task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="任务不存在")
+        await task_repo.update_status_to_pending(task_id)
+        await session.commit()
+        enqueued = await enqueue_task_by_id(task_id, session)
+        return BatchTaskExecuteResponse(
+            success=True,
+            message="已入队执行",
+            enqueued=enqueued,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        await session.rollback()
+        logger.error("单行任务执行失败: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="单行任务执行失败，请稍后重试")
+
+
 @router.get("/{job_id}/tasks", response_model=BatchTaskListResponse)
 async def list_batch_tasks(
     job_id: str,
+    id: Optional[str] = Query(None, description="任务 id（精确匹配）"),
     status: Optional[str] = Query(None, description="状态筛选：pending/running/success/failed"),
+    source_table_id: Optional[str] = Query(None, description="来源表 ID（包含）"),
+    source_table_name: Optional[str] = Query(None, description="来源表名（包含）"),
     limit: int = Query(20, ge=1, le=500),
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_async_session),
 ) -> BatchTaskListResponse:
     """
-    按 job 分页查询子任务列表，界面风格参考 Step01 数据项管理。
+    按 job 分页查询子任务列表，支持 id、status、source_table_id、source_table_name 筛选。
     """
     job_id = (job_id or "").strip()
     if not job_id:
         raise HTTPException(status_code=400, detail="job_id 不能为空")
     try:
         task_repo = BatchTaskRepository(session)
-        total = await task_repo.count_by_job(job_id=job_id, status=status)
+        total = await task_repo.count_by_job(
+            job_id=job_id,
+            status=status,
+            task_id=id,
+            source_table_id=source_table_id,
+            source_table_name=source_table_name,
+        )
         tasks = await task_repo.get_list(
             job_id=job_id,
             status=status,
+            task_id=id,
+            source_table_id=source_table_id,
+            source_table_name=source_table_name,
             limit=limit,
             offset=offset,
         )
@@ -200,10 +248,13 @@ async def list_batch_tasks(
                 source_table_id=t.source_table_id,
                 source_table_name=t.source_table_name,
                 status=t.status,
-                create_time=getattr(t, "create_time", None),
-                update_time=getattr(t, "update_time", None),
+                runtime_params=t.runtime_params,
+                redundant_key=t.redundant_key,
+                execution_result=t.execution_result,
                 execution_error_message=t.execution_error_message,
                 execution_return_key=t.execution_return_key,
+                create_time=getattr(t, "create_time", None),
+                update_time=getattr(t, "update_time", None),
             )
             for t in tasks
         ]

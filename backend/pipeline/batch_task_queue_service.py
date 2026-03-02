@@ -37,6 +37,33 @@ def _ensure_queue() -> None:
         _in_flight_ids = set()
 
 
+async def enqueue_task_by_id(task_id: str, session: AsyncSession) -> int:
+    """
+    根据 task_id 查询 task（含 job_type 需从 job 取），构造 BatchTaskQueueItem 入队。
+    设计文档：cursor_docs/030204-Step03-1任务子界面类数据清洗能力技术设计.md
+    返回 1 表示入队成功，0 表示 task 不存在或入队失败。
+    """
+    _ensure_queue()
+    task_id = (task_id or "").strip()
+    if not task_id:
+        return 0
+    task_repo = BatchTaskRepository(session)
+    task = await task_repo.get_by_id(task_id)
+    if not task:
+        return 0
+    job_repo = BatchJobRepository(session)
+    job = await job_repo.get_by_id(task.job_id or "")
+    job_type = (job.job_type or "") if job else ""
+    item = BatchTaskQueueItem(
+        job_type=job_type,
+        task_id=task.id,
+        task_version=getattr(task, "version", 0) or 0,
+    )
+    _in_flight_ids.add(task.id)
+    _queue.put_nowait(item)
+    return 1
+
+
 async def enqueue_batch_by_job_id(job_id: str, session: AsyncSession) -> int:
     """
     将指定批次（job_id 为 BatchJobRecord.id）下 status=pending 的 batch_task 入队。

@@ -88,17 +88,20 @@ class BatchJobRunResponse(BaseModel):
 
 
 class BatchTaskItemResponse(BaseModel):
-    """单个 batch_task 列表项（供 job 下任务列表接口返回）。"""
+    """单个 batch_task 列表项（供 job 下任务列表接口返回），含表内全部业务字段。"""
 
     id: str = Field(..., description="任务 id")
     job_id: str = Field(..., description="所属批次 job id")
     source_table_id: Optional[str] = Field(None, description="来源表 ID")
     source_table_name: Optional[str] = Field(None, description="来源表名")
     status: Optional[str] = Field(None, description="状态 pending/running/success/failed")
-    create_time: Optional[datetime] = Field(None, description="创建时间")
-    update_time: Optional[datetime] = Field(None, description="更新时间")
+    runtime_params: Optional[Dict[str, Any]] = Field(None, description="运行时参数")
+    redundant_key: Optional[str] = Field(None, description="冗余 key（去重/幂等用）")
+    execution_result: Optional[str] = Field(None, description="执行返回结果")
     execution_error_message: Optional[str] = Field(None, description="执行失败信息")
     execution_return_key: Optional[str] = Field(None, description="执行返回 key")
+    create_time: Optional[datetime] = Field(None, description="创建时间")
+    update_time: Optional[datetime] = Field(None, description="更新时间")
 
 
 class BatchTaskListResponse(BaseModel):
@@ -106,4 +109,18 @@ class BatchTaskListResponse(BaseModel):
 
     total: int = Field(..., description="该 job 下满足条件的任务总数")
     items: List[BatchTaskItemResponse] = Field(default_factory=list, description="任务列表")
+
+
+class BatchTaskExecuteRequest(BaseModel):
+    """单行任务执行请求。设计文档：030204。"""
+
+    task_id: str = Field(..., description="要执行的任务 id")
+
+
+class BatchTaskExecuteResponse(BaseModel):
+    """单行任务执行响应。设计文档：030204。"""
+
+    success: bool = Field(..., description="是否成功")
+    message: str = Field(..., description="提示信息")
+    enqueued: int = Field(..., description="本次入队数量（1 表示成功入队）")
 

@@ -37,9 +37,13 @@
             const total = ref(0);
             const loading = ref(false);
             const queryExpanded = ref(true);
+            const queryId = ref('');
             const queryStatus = ref('');
+            const querySourceTableId = ref('');
+            const querySourceTableName = ref('');
             const limit = ref(20);
             const offset = ref(0);
+            const executingTaskId = ref('');
             const currentPage = computed(() =>
                 limit.value > 0 ? Math.floor(offset.value / limit.value) + 1 : 1
             );
@@ -49,7 +53,10 @@
                 loading.value = true;
                 try {
                     const params = {
+                        id: queryId.value?.trim() || undefined,
                         status: queryStatus.value?.trim() || undefined,
+                        source_table_id: querySourceTableId.value?.trim() || undefined,
+                        source_table_name: querySourceTableName.value?.trim() || undefined,
                         limit: limit.value,
                         offset: offset.value
                     };
@@ -75,7 +82,10 @@
             }
 
             function onResetQuery() {
+                queryId.value = '';
                 queryStatus.value = '';
+                querySourceTableId.value = '';
+                querySourceTableName.value = '';
                 offset.value = 0;
                 loadList();
             }
@@ -97,6 +107,32 @@
                 return 'info';
             }
 
+            /** 展开行中 JSON 或文本的展示用 */
+            function displayJsonOrText(val) {
+                if (val == null || val === '') return '—';
+                if (typeof val === 'object') return JSON.stringify(val, null, 2);
+                return String(val);
+            }
+
+            async function executeTask(row) {
+                executingTaskId.value = row.id;
+                try {
+                    const res = await axios.post(`${BATCH_JOBS_API_PREFIX}/tasks/execute`, { task_id: row.id });
+                    const ok = res.data?.success === true;
+                    if (ok) {
+                        ElMessage.success(res.data?.message || '已入队执行');
+                        loadList();
+                    } else {
+                        ElMessage.warning(res.data?.message || '执行未成功');
+                    }
+                } catch (err) {
+                    const msg = err?.response?.data?.detail || err?.message || '执行失败';
+                    ElMessage.error(msg);
+                } finally {
+                    executingTaskId.value = '';
+                }
+            }
+
             watch(
                 () => props.jobId,
                 () => {
@@ -110,8 +146,12 @@
                 list,
                 total,
                 loading,
+                executingTaskId,
                 queryExpanded,
+                queryId,
                 queryStatus,
+                querySourceTableId,
+                querySourceTableName,
                 limit,
                 offset,
                 currentPage,
@@ -123,6 +163,8 @@
                 onSizeChange,
                 formatDateTime: fmtDateTime,
                 statusType,
+                displayJsonOrText,
+                executeTask,
                 Search: icons.Search,
                 ArrowDown: icons.ArrowDown,
                 ArrowUp: icons.ArrowUp,
@@ -144,6 +186,9 @@
                     <el-button size="small" @click.stop="onResetQuery">重置</el-button>
                 </div>
                 <div v-show="queryExpanded" style="padding:0 12px 12px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+                    <el-input v-model="queryId" placeholder="任务ID（精确）" clearable style="width:200px;" size="small" />
+                    <el-input v-model="querySourceTableId" placeholder="来源表ID（包含）" clearable style="width:160px;" size="small" />
+                    <el-input v-model="querySourceTableName" placeholder="来源表名（包含）" clearable style="width:200px;" size="small" />
                     <el-select v-model="queryStatus" placeholder="状态" clearable style="width:140px;" size="small">
                         <el-option label="待处理" value="pending" />
                         <el-option label="执行中" value="running" />
@@ -156,9 +201,12 @@
                 <el-table :data="list" v-loading="loading" stripe border size="small" style="width:100%;">
                     <el-table-column type="expand" width="48">
                         <template #default="props">
-                            <div style="padding:12px 24px;background:#fafafa;">
-                                <div v-if="props.row.execution_error_message"><strong>执行失败信息：</strong><pre style="margin:4px 0;font-size:12px;white-space:pre-wrap;word-break:break-all;">{{ props.row.execution_error_message }}</pre></div>
-                                <p v-else style="color:#909399;">无失败信息</p>
+                            <div style="padding:12px 24px;background:#fafafa;font-size:12px;">
+                                <div style="margin-bottom:8px;"><strong>job_id：</strong><span>{{ props.row.job_id }}</span></div>
+                                <div v-if="props.row.redundant_key" style="margin-bottom:8px;"><strong>redundant_key：</strong><span style="word-break:break-all;">{{ props.row.redundant_key }}</span></div>
+                                <div v-if="props.row.runtime_params != null" style="margin-top:8px;"><strong>runtime_params：</strong><pre style="margin:4px 0;font-size:12px;white-space:pre-wrap;word-break:break-all;">{{ displayJsonOrText(props.row.runtime_params) }}</pre></div>
+                                <div v-if="props.row.execution_result != null && props.row.execution_result !== ''" style="margin-top:8px;"><strong>execution_result：</strong><pre style="margin:4px 0;font-size:12px;white-space:pre-wrap;word-break:break-all;">{{ displayJsonOrText(props.row.execution_result) }}</pre></div>
+                                <div v-if="props.row.execution_error_message != null && props.row.execution_error_message !== ''" style="margin-top:8px;"><strong>execution_error_message：</strong><pre style="margin:4px 0;font-size:12px;white-space:pre-wrap;word-break:break-all;">{{ props.row.execution_error_message }}</pre></div>
                             </div>
                         </template>
                     </el-table-column>
@@ -173,6 +221,11 @@
                     <el-table-column prop="execution_return_key" label="返回key" min-width="120" show-overflow-tooltip />
                     <el-table-column label="创建时间" width="180"><template #default="scope">{{ formatDateTime(scope.row.create_time) }}</template></el-table-column>
                     <el-table-column label="更新时间" width="180"><template #default="scope">{{ formatDateTime(scope.row.update_time) }}</template></el-table-column>
+                    <el-table-column label="操作" width="100" fixed="right">
+                        <template #default="scope">
+                            <el-button link type="primary" size="small" :loading="executingTaskId===scope.row.id" @click="executeTask(scope.row)">执行</el-button>
+                        </template>
+                    </el-table-column>
                 </el-table>
             </div>
             <div style="padding:12px 20px;border-top:1px solid #e4e7ed;display:flex;align-items:center;justify-content:space-between;">

@@ -48,10 +48,13 @@ class BatchTaskRepository(AuditBaseRepository[BatchTaskRecord]):
         self,
         job_id: Optional[str] = None,
         status: Optional[str] = None,
+        task_id: Optional[str] = None,
+        source_table_id: Optional[str] = None,
+        source_table_name: Optional[str] = None,
         limit: int = 100,
         offset: int = 0,
     ) -> List[BatchTaskRecord]:
-        """分页查询子任务（仅未删）；可选 job_id、status 筛选。"""
+        """分页查询子任务（仅未删）；可选 job_id、status、task_id、source_table_id、source_table_name 筛选。"""
         stmt = (
             select(BatchTaskRecord)
             .where(self._not_deleted_criterion())
@@ -63,6 +66,16 @@ class BatchTaskRepository(AuditBaseRepository[BatchTaskRecord]):
             stmt = stmt.where(BatchTaskRecord.job_id == job_id.strip())
         if status is not None and status.strip():
             stmt = stmt.where(BatchTaskRecord.status == status.strip())
+        if task_id is not None and task_id.strip():
+            stmt = stmt.where(BatchTaskRecord.id == task_id.strip())
+        if source_table_id is not None and source_table_id.strip():
+            stmt = stmt.where(
+                BatchTaskRecord.source_table_id.ilike(f"%{source_table_id.strip()}%")
+            )
+        if source_table_name is not None and source_table_name.strip():
+            stmt = stmt.where(
+                BatchTaskRecord.source_table_name.ilike(f"%{source_table_name.strip()}%")
+            )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
@@ -70,13 +83,29 @@ class BatchTaskRepository(AuditBaseRepository[BatchTaskRecord]):
         self,
         job_id: str,
         status: Optional[str] = None,
+        task_id: Optional[str] = None,
+        source_table_id: Optional[str] = None,
+        source_table_name: Optional[str] = None,
     ) -> int:
-        """统计指定 job 下子任务数量（仅未删）；可选 status 筛选。"""
-        stmt = select(func.count()).select_from(BatchTaskRecord).where(
-            BatchTaskRecord.job_id == job_id.strip()
-        ).where(self._not_deleted_criterion())
+        """统计指定 job 下子任务数量（仅未删）；与 get_list 筛选条件一致。"""
+        stmt = (
+            select(func.count())
+            .select_from(BatchTaskRecord)
+            .where(BatchTaskRecord.job_id == job_id.strip())
+            .where(self._not_deleted_criterion())
+        )
         if status is not None and status.strip():
             stmt = stmt.where(BatchTaskRecord.status == status.strip())
+        if task_id is not None and task_id.strip():
+            stmt = stmt.where(BatchTaskRecord.id == task_id.strip())
+        if source_table_id is not None and source_table_id.strip():
+            stmt = stmt.where(
+                BatchTaskRecord.source_table_id.ilike(f"%{source_table_id.strip()}%")
+            )
+        if source_table_name is not None and source_table_name.strip():
+            stmt = stmt.where(
+                BatchTaskRecord.source_table_name.ilike(f"%{source_table_name.strip()}%")
+            )
         result = await self.session.execute(stmt)
         return result.scalar_one() or 0
 
@@ -151,6 +180,14 @@ class BatchTaskRepository(AuditBaseRepository[BatchTaskRecord]):
         if execution_return_key is not None:
             kwargs["execution_return_key"] = execution_return_key
         return await self.update(task_id, **kwargs)
+
+    async def update_status_to_pending(self, task_id: str) -> bool:
+        """
+        根据 task_id 将该 task 的 status 更新为 pending（与当前 status 无关）。
+        设计文档：cursor_docs/030204-Step03-1任务子界面类数据清洗能力技术设计.md
+        """
+        result = await self.update(task_id.strip(), status=STATUS_PENDING)
+        return result is not None
 
     async def update_status_to_running_if_pending(self, task_id: str) -> bool:
         """
