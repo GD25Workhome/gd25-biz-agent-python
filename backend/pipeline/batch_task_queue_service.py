@@ -64,6 +64,22 @@ async def enqueue_task_by_id(task_id: str, session: AsyncSession) -> int:
     return 1
 
 
+async def rerun_batch_by_job_id(job_id: str, session: AsyncSession) -> int:
+    """
+    重跑指定批次：先将该 job 下所有子任务状态改为 pending，再按 enqueue_batch_by_job_id 入队。
+    设计文档：Step03-1 重跑功能。
+    返回本次入队数量。
+    """
+    _ensure_queue()
+    job_repo = BatchJobRepository(session)
+    job = await job_repo.get_by_id(job_id)
+    if not job:
+        return 0
+    task_repo = BatchTaskRepository(session)
+    await task_repo.update_all_status_to_pending_by_job_id(job_id)
+    return await enqueue_batch_by_job_id(job_id, session)
+
+
 async def enqueue_batch_by_job_id(job_id: str, session: AsyncSession) -> int:
     """
     将指定批次（job_id 为 BatchJobRecord.id）下 status=pending 的 batch_task 入队。

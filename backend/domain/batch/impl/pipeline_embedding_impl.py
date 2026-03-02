@@ -3,11 +3,11 @@ Pipeline Embedding 批次任务：创建 Handler 与执行器。
 
 - PipelineEmbeddingCreateHandler：基于 pipeline_data_items_rewritten 创建 Embedding 批次任务。
 - PipelineEmbeddingExecutor：根据 task 的 runtime_params 查改写记录，按 embedding_type（Q/QA）拼串并调 embedding 模型，写入 pipeline_embedding_records。
+  版本与溯源：cursor_docs/030206-pipeline_embedding_record版本与溯源技术设计.md
 
 设计文档：cursor_docs/022703、022803、030203-批次任务执行Session拆分改造技术方案.md
 """
 from typing import Any, Dict, List, Optional
-
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +15,10 @@ from backend.domain.batch.batch_template import CreateTemplate, ExecuteTemplate
 from backend.domain.batch.dto import BatchTaskExecutionResult, TaskPreCreateItem
 from backend.domain.batch.exceptions import InvalidJobParamsError
 from backend.infrastructure.database.models.batch.batch_task import BatchTaskRecord
+from backend.infrastructure.database.models.pipeline.pipeline_embedding_record import (
+    METADATA_KEY_BATCH_JOB_ID,
+    METADATA_KEY_BATCH_TASK_ID,
+)
 from backend.infrastructure.database.repository.data_items_rewritten_repository import (
     DataItemsRewrittenRepository,
     STATUS_FAILED,
@@ -220,6 +224,21 @@ class PipelineEmbeddingExecutor(ExecuteTemplate):
                 raise ValueError("embedding 模型返回为空")
 
             embed_repo = PipelineEmbeddingRecordRepository(session)
+            # 版本与溯源（设计文档 030206）：business_key、snapshot_id、data_version、metadata 溯源
+            source_table_name = (task_record.source_table_name or "").strip() or "pipeline_data_items_rewritten"
+            source_table_id = (task_record.source_table_id or "").strip() or str(rewritten_id)
+            business_key = f"{source_table_name}:{source_table_id}:{embedding_type}"
+            snapshot_id = (task_record.job_id or "").strip() or None
+            max_ver = await embed_repo.get_max_data_version_by_business_key(
+                business_key=business_key,
+                snapshot_id=snapshot_id,
+            )
+            data_version = (max_ver or 0) + 1
+            base_meta: Dict[str, Any] = {
+                METADATA_KEY_BATCH_JOB_ID: task_record.job_id or "",
+                METADATA_KEY_BATCH_TASK_ID: task_record.id or "",
+            }
+
             record = await embed_repo.create(
                 embedding_str=embedding_str,
                 embedding_value=embedding_value,
@@ -227,7 +246,10 @@ class PipelineEmbeddingExecutor(ExecuteTemplate):
                 is_published=False,
                 type_=getattr(rewritten, "scenario_type", None) or None,
                 sub_type=getattr(rewritten, "sub_scenario_type", None) or None,
-                metadata_=None,
+                metadata_=base_meta,
+                data_version=data_version,
+                snapshot_id=snapshot_id,
+                business_key=business_key,
             )
             await session.commit()
             return BatchTaskExecutionResult(execution_return_key=record.id)

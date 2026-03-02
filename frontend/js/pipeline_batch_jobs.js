@@ -7,7 +7,7 @@
     'use strict';
 
     const { defineComponent, ref, computed, onMounted, inject } = Vue;
-    const { ElMessage } = ElementPlus;
+    const { ElMessage, ElMessageBox } = ElementPlus;
     const icons = ElementPlusIconsVue;
     const { BATCH_JOBS_API_PREFIX, formatDateTime, PAGE_SIZE_OPTIONS } = window.PipelineCommon || {};
 
@@ -152,6 +152,31 @@
                 }
             }
 
+            async function onRerunBatch(row) {
+                try {
+                    await ElMessageBox.confirm(
+                        '即将将该批次下所有任务都重新执行，请慎重！',
+                        '重跑确认',
+                        { type: 'warning' }
+                    );
+                } catch (_) {
+                    return;
+                }
+                actionLoading.value = true;
+                try {
+                    const res = await axios.post(`${BATCH_JOBS_API_PREFIX}/${row.id}/rerun`);
+                    const n = res.data?.enqueued ?? 0;
+                    ElMessage.success(`重跑已入队，共 ${n} 条`);
+                    loadList();
+                    loadQueueStats();
+                } catch (err) {
+                    const msg = err?.response?.data?.detail || err?.message || '操作失败';
+                    ElMessage.error(`重跑失败：${msg}`);
+                } finally {
+                    actionLoading.value = false;
+                }
+            }
+
             function openJobTasks(row) {
                 openTabForJobTasks(row.id, row.code);
             }
@@ -182,6 +207,7 @@
                 onSizeChange,
                 onClearQueue,
                 onRunBatch,
+                onRerunBatch,
                 onRemoveBatch,
                 formatDateTime: fmtDateTime,
                 Search: icons.Search,
@@ -226,6 +252,7 @@
                             <span style="white-space:nowrap;">
                                 <el-button link type="primary" size="small" @click="openJobTasks(scope.row)" :icon="Document">任务</el-button>
                                 <el-button link type="primary" size="small" :loading="actionLoading" @click="onRunBatch(scope.row)">运行</el-button>
+                                <el-button link type="danger" size="small" :loading="actionLoading" @click="onRerunBatch(scope.row)">重跑</el-button>
                                 <el-button link type="warning" size="small" :loading="actionLoading" @click="onRemoveBatch(scope.row)">移除队列</el-button>
                             </span>
                         </template>

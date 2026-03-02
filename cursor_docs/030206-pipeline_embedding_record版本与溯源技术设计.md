@@ -151,7 +151,7 @@
 6. max_ver = await embed_repo.get_max_data_version_by_business_key(snapshot_id, business_key)
 7. data_version = (max_ver or 0) + 1
 8. base_meta = {METADATA_KEY_BATCH_JOB_ID: job_id, METADATA_KEY_BATCH_TASK_ID: task_record.id}
-11. record = await embed_repo.create(
+9. record = await embed_repo.create(
        embedding_str=...,
        embedding_value=...,
        embedding_type=...,
@@ -163,7 +163,7 @@
        business_key=business_key,
        metadata_=base_meta,  # 仅溯源 key，见 6.5
     )
-12. commit；return BatchTaskExecutionResult(execution_return_key=record.id)
+10. commit；return BatchTaskExecutionResult(execution_return_key=record.id)
 ```
 
 ### 6.8 Model 变更（字段定义补充）
@@ -211,3 +211,14 @@ METADATA_KEY_BATCH_TASK_ID = "batch_task_id"
 | 版本控制 | 三列参与版本逻辑；data_version 按 business_key（及 snapshot_id）递增 |
 | 运行溯源 | `batch_job_id`、`batch_task_id` 冗余存入现有 `metadata`，不参与版本 |
 | 实现位置 | Model/Repository：见 5、6.6、6.8；执行逻辑：`pipeline_embedding_impl.py` 中 `PipelineEmbeddingExecutor.execute_task_impl`（6.1～6.7） |
+
+---
+
+## 10. 开发进度
+
+| 项目 | 状态 | 说明 |
+|------|------|------|
+| Model 新增三列及 metadata 常量 | 已完成 | `pipeline_embedding_record.py`：data_version、snapshot_id、business_key；METADATA_KEY_BATCH_JOB_ID、METADATA_KEY_BATCH_TASK_ID |
+| Repository create 与 get_max_data_version_by_business_key | 已完成 | `pipeline_embedding_record_repository.py`：create 增加三参；新增 get_max_data_version_by_business_key |
+| PipelineEmbeddingExecutor 版本与溯源写入 | 已完成 | `pipeline_embedding_impl.py`：execute_task_impl 内计算 business_key、snapshot_id、data_version，构造 metadata 并传入 create |
+| Alembic 迁移 | 已完成 | `alembic/versions/20260302_add_embedding_version_fields.py`：新增三列及 snapshot_id、business_key 索引 |

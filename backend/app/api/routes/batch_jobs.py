@@ -41,6 +41,7 @@ from backend.pipeline.batch_task_queue_service import (
     enqueue_task_by_id,
     get_queue_stats,
     remove_batch_by_job_id,
+    rerun_batch_by_job_id,
 )
 
 logger = logging.getLogger(__name__)
@@ -285,4 +286,27 @@ async def run_batch_job_endpoint(
         await session.rollback()
         logger.error("批次任务入队失败: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="批次任务入队失败，请稍后重试")
+
+
+@router.post("/{job_id}/rerun", response_model=BatchJobRunResponse)
+async def rerun_batch_job_endpoint(
+    job_id: str,
+    session: AsyncSession = Depends(get_async_session),
+) -> BatchJobRunResponse:
+    """
+    重跑指定批次：先将该 job 下所有子任务状态改为 pending，再全部入队执行。
+    与 run 的区别是：run 仅入队当前已是 pending 的任务；rerun 会重置所有任务为 pending 后再入队。
+    设计文档：Step03-1 重跑功能。
+    """
+    job_id = (job_id or "").strip()
+    if not job_id:
+        raise HTTPException(status_code=400, detail="job_id 不能为空")
+    try:
+        enqueued = await rerun_batch_by_job_id(job_id, session)
+        await session.commit()
+        return BatchJobRunResponse(enqueued=enqueued)
+    except Exception as e:
+        await session.rollback()
+        logger.error("批次任务重跑失败: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="批次任务重跑失败，请稍后重试")
 

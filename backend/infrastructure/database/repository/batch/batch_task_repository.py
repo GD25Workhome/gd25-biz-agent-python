@@ -4,9 +4,10 @@
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.infrastructure.database.models.batch.batch_task import BatchTaskRecord
@@ -202,3 +203,25 @@ class BatchTaskRepository(AuditBaseRepository[BatchTaskRecord]):
             status=STATUS_RUNNING,
         )
         return result is not None
+
+    async def update_all_status_to_pending_by_job_id(self, job_id: str) -> int:
+        """
+        将指定 job 下所有子任务的 status 更新为 pending（与当前状态无关），用于重跑全量。
+        设计文档：cursor_docs/030206、Step03-1 重跑功能。
+        :return: 被更新的行数。
+        """
+        job_id = (job_id or "").strip()
+        if not job_id:
+            return 0
+        stmt = (
+            update(BatchTaskRecord)
+            .where(BatchTaskRecord.job_id == job_id)
+            .where(self._not_deleted_criterion())
+            .values(
+                status=STATUS_PENDING,
+                version=BatchTaskRecord.version + 1,
+                update_time=datetime.now(timezone.utc),
+            )
+        )
+        result = await self.session.execute(stmt)
+        return result.rowcount or 0
