@@ -191,6 +191,26 @@ class ContextManager:
             int: Token上下文数量
         """
         return len(self._token_contexts)
+
+    def restore_token_context(self, token_id: str, context: Any) -> None:
+        """
+        从持久化存储恢复 Token 上下文（启动时批量加载使用）
+
+        Args:
+            token_id: Token ID
+            context: 已反序列化的上下文对象
+        """
+        self._token_contexts[token_id] = context
+
+    def restore_session_context(self, session_id: str, context: Any) -> None:
+        """
+        从持久化存储恢复 Session 上下文（启动时批量加载使用）
+
+        Args:
+            session_id: 会话 ID
+            context: 会话上下文字典
+        """
+        self._session_contexts[session_id] = context
     
     def __repr__(self) -> str:
         """返回对象的字符串表示"""
