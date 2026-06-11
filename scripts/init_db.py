@@ -435,7 +435,7 @@ def main():
     print()
     print("下一步：")
     print("  1. 运行数据库迁移: alembic upgrade head")
-    print("  2. 启动应用: uvicorn app.main:app --reload")
+    print("  2. 启动应用（开发环境）: uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000")
 
 
 if __name__ == "__main__":

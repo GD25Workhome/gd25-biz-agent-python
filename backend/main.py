@@ -1,11 +1,14 @@
 """
 FastAPI应用入口
 
-运行方式：
-    方式1（推荐）：直接运行
+开发环境运行方式（均启用 reload，代码变更自动重启）：
+    方式1：直接运行
         python backend/main.py
-    
-    方式2：使用 uvicorn 命令
+
+    方式2：模块方式运行
+        python -m backend.main
+
+    方式3：uvicorn 命令行
         uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 
 访问地址：
@@ -13,8 +16,8 @@ FastAPI应用入口
 
 说明：
     FastAPI 应用需要通过 ASGI 服务器（如 uvicorn）运行。
-    直接运行 main.py 时，会自动启动 uvicorn 服务器。
-    使用 uvicorn 命令可以更好地控制配置，适合生产环境。
+    以上方式均为开发模式，生产环境请去掉 --reload 并配置多 worker，
+    例如：uvicorn backend.main:app --host 0.0.0.0 --port 8000 --workers 4
 """
 import sys
 import os
@@ -205,21 +208,19 @@ async def health():
 
 if __name__ == "__main__":
     """
-    直接运行此文件时启动开发服务器
-    
-    使用方式：
-        方式1（推荐）：从项目根目录运行
+    直接运行此文件时启动开发服务器（自动启用 reload）
+
+    开发环境启动方式：
+        方式1：从项目根目录运行
             python backend/main.py
-        
-        方式2：使用模块方式运行
+
+        方式2：模块方式运行
             python -m backend.main
-        
-        方式3：继续使用 uvicorn 命令（生产环境推荐）
+
+        方式3：uvicorn 命令行（开发环境）
             uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
-    
-    注意：
-        - 直接运行时会自动启用 reload 模式（开发模式）
-        - 生产环境建议使用 uvicorn 命令，可以更好地控制配置
+
+    生产环境请参考模块顶部文档字符串，使用无 reload 的多 worker 配置。
     """
     import uvicorn
     

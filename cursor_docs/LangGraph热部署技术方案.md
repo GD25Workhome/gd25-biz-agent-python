@@ -486,20 +486,17 @@ add_routes(
 
 ```python
 """
-生产环境热部署配置
+生产环境部署配置（无热重载，多 worker）
+注意：reload 与 workers 不能同时使用
 """
 import uvicorn
-from multiprocessing import Manager
 
-# 使用多进程 + 热重载
 if __name__ == "__main__":
     uvicorn.run(
-        "app.main:app",
+        "backend.main:app",
         host="0.0.0.0",
         port=8000,
-        reload=True,  # 开发环境
-        workers=4,    # 生产环境使用多进程
-        reload_dirs=["domain", "app"],  # 指定监听目录
+        workers=4,  # 生产环境使用多进程
     )
 ```
 
