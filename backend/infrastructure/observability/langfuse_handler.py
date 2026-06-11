@@ -244,10 +244,10 @@ def _get_langfuse_client() -> Optional["Langfuse"]:
         return _langfuse_client
     
     try:
-        # 从统一配置读取配置
+        # 从统一配置读取配置（支持 LANGFUSE_HOST 或 LANGFUSE_BASE_URL）
         public_key = settings.LANGFUSE_PUBLIC_KEY
         secret_key = settings.LANGFUSE_SECRET_KEY
-        host = settings.LANGFUSE_HOST
+        host = settings.langfuse_host_resolved
         
         if not public_key or not secret_key:
             logger.warning(
@@ -257,9 +257,12 @@ def _get_langfuse_client() -> Optional["Langfuse"]:
             return None
         
         # 创建Langfuse客户端
-        # 如果host为None，Langfuse会使用默认值，但为了明确，我们记录警告
+        # 如果 host 为 None，Langfuse 会使用默认值（云端），本地不会收到数据
         if host is None:
-            logger.warning("LANGFUSE_HOST未设置，Langfuse将使用默认host")
+            logger.warning(
+                "LANGFUSE_HOST 与 LANGFUSE_BASE_URL 均未设置，Langfuse 将使用默认 host，"
+                "数据会发往云端而非本地。请在 .env 中设置 LANGFUSE_HOST 或 LANGFUSE_BASE_URL"
+            )
         
         langfuse_kwargs = {
             "public_key": public_key,

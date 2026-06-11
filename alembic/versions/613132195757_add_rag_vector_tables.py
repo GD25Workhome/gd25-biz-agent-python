@@ -144,14 +144,9 @@ def upgrade() -> None:
         USING hnsw (embedding vector_cosine_ops)
     """)
     
-    # 6. 删除测试表（如果存在）
-    try:
-        op.drop_index(op.f('test_knowledge_base_embedding_idx'), table_name='test_knowledge_base', 
-                     postgresql_ops={'embedding': 'vector_cosine_ops'}, postgresql_using='hnsw')
-        op.drop_table('test_knowledge_base')
-    except Exception:
-        # 如果表不存在，忽略错误
-        pass
+    # 6. 删除测试表（如果存在）- 使用 IF EXISTS 避免不存在时令事务失败
+    op.execute("DROP INDEX IF EXISTS test_knowledge_base_embedding_idx")
+    op.execute("DROP TABLE IF EXISTS test_knowledge_base")
 
 
 def downgrade() -> None:
