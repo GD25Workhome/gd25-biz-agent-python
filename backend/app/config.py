@@ -91,6 +91,16 @@ class Settings(BaseSettings):
         default=None,
         description="Langfuse服务器地址（可选，默认使用cloud.langfuse.com）"
     )
+    # 兼容 .env 中使用的变量名（与 LANGFUSE_HOST 二选一即可）
+    LANGFUSE_BASE_URL: Optional[str] = Field(
+        default=None,
+        description="Langfuse服务器地址，与LANGFUSE_HOST等价，优先使用LANGFUSE_HOST"
+    )
+
+    @property
+    def langfuse_host_resolved(self) -> Optional[str]:
+        """解析后的 Langfuse 服务地址：优先 LANGFUSE_HOST，否则使用 LANGFUSE_BASE_URL"""
+        return self.LANGFUSE_HOST or self.LANGFUSE_BASE_URL
 
 
 # 创建全局配置实例
