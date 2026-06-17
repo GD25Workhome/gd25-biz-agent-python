@@ -5,6 +5,8 @@ RAG Agent节点创建器
 import logging
 from typing import Callable, List, Dict, Optional
 
+from typing_extensions import override
+
 import numpy as np
 import psycopg
 from pgvector.psycopg import register_vector
@@ -28,18 +30,23 @@ ARTICLE_BASE_URL = "http://localhost:8000/api/v1/articles"
 
 
 class RagAgentNodeCreator(NodeCreator):
-    """RAG Agent节点创建器"""
-    
+    """
+        将 flow.yaml 的 rag_agent 节点编译为 RAG 检索闭包函数。
+
+        运行期：embedding 查询文本 → pgvector 案例召回 → 可选科普文章 → 写入 edges_prompt_vars。
+    """
+
+    @override
     def create(self, node_def: NodeDefinition, flow_def: FlowDefinition) -> Callable:
         """
-        创建 RAG Agent 节点函数
-        
-        Args:
-            node_def: 节点定义
-            flow_def: 流程定义
-            
-        Returns:
-            Callable: 节点函数（异步函数，接收 FlowState，返回 FlowState）
+            实现 NodeCreator.create：解析 rag_agent 配置并返回 rag_node_action。
+
+            Args:
+                node_def: flow.yaml 中的 rag_agent 节点（model、top_k、similarity_threshold 等）
+                flow_def: 所属流程定义（保留以符合基类契约）
+
+            Returns:
+                Callable: 异步节点函数 rag_node_action(state) -> state
         """
         # 解析节点配置
         config_dict = node_def.config
@@ -91,7 +98,9 @@ class RagAgentNodeCreator(NodeCreator):
         
         # 创建节点函数
         async def rag_node_action(state: FlowState) -> FlowState:
-            """RAG Agent 节点函数"""
+            """
+                单次 RAG 节点执行：格式化查询 → embedding → 向量检索 → 写 edges_prompt_vars。
+            """
             # 1. 从 edges_var 读取输入数据并格式化
             edges_var = state.get("edges_var", {})
             query_text = self._extract_and_format_query_text(edges_var, node_name)

@@ -36,6 +36,7 @@ env/
 # Environment variables
 .env
 .env.local
+docker/deps.env
 
 # Database
 *.db

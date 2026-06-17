@@ -1,8 +1,12 @@
 """
-Embedding节点创建器
+Embedding 节点创建器
+
+将 flow.yaml 中 type=em_agent 的节点编译为：从 edges_var 读文本 → 调 Embedding 模型 → 写回向量。
 """
 import logging
-from typing import Callable
+from typing import Callable, List
+
+from typing_extensions import override
 
 from backend.domain.state import FlowState
 from backend.domain.flows.nodes.base import NodeCreator
@@ -13,46 +17,50 @@ logger = logging.getLogger(__name__)
 
 
 class EmbeddingNodeCreator(NodeCreator):
-    """Embedding节点创建器"""
-    
+    """
+        将 flow.yaml 的 em_agent 节点编译为闭包形式的异步 embedding 节点函数。
+
+        编译期创建 EmbeddingExecutor；运行期从 edges_var 指定字段读取文本并写回向量。
+    """
+
+    @override
     def create(self, node_def: NodeDefinition, flow_def: FlowDefinition) -> Callable:
         """
-        创建Embedding节点函数
-        
-        Args:
-            node_def: 节点定义
-            flow_def: 流程定义
-            
-        Returns:
-            Callable: Embedding节点函数（异步函数）
+            实现 NodeCreator.create：解析 em_agent 配置并返回 embedding_node_action。
+
+            Args:
+                node_def: flow.yaml 中的 em_agent 节点（config.model/input/output）
+                flow_def: 所属流程定义（保留以符合基类契约）
+
+            Returns:
+                Callable: 异步节点函数 embedding_node_action(state) -> state
         """
-        # 解析节点配置
         config_dict = node_def.config
         model_config = ModelConfig(**config_dict["model"])
         embedding_config = EmbeddingNodeConfig(
             model=model_config,
             input=config_dict["input"],
-            output=config_dict["output"]
+            output=config_dict["output"],
         )
-        
-        # 创建 Embedding 执行器（使用工厂模式，与 AgentNodeCreator 保持一致）
+
+        # EmbeddingFactory.create_embedding_executor：按 provider 创建向量模型执行器
         embedding_executor = EmbeddingFactory.create_embedding_executor(
-            config=embedding_config
+            config=embedding_config,
         )
-        
-        # 提取配置
+
         input_field = embedding_config.input["filed"]
         output_field = embedding_config.output["filed"]
         node_name = node_def.name
-        
-        # 创建节点函数
+
         async def embedding_node_action(state: FlowState) -> FlowState:
-            """Embedding节点函数"""
-            # 从 state.edges_var 读取输入数据
+            """
+                单次 Embedding 节点执行：读 edges_var → 调模型 → 写 edges_var 向量字段。
+
+                edges_var 每轮重置，避免污染下游条件边。
+            """
             edges_var = state.get("edges_var", {})
             input_text = edges_var.get(input_field)
-            
-            # 输入数据缺失：抛出异常，中断流程执行
+
             if input_text is None:
                 error_msg = (
                     f"[节点 {node_name}] 输入字段 '{input_field}' 不存在于 edges_var 中，"
@@ -60,23 +68,19 @@ class EmbeddingNodeCreator(NodeCreator):
                 )
                 logger.error(error_msg)
                 raise ValueError(error_msg)
-            
-            # 处理输入：支持字符串和列表
+
             if isinstance(input_text, str):
-                texts = [input_text]
+                texts: List[str] = [input_text]
             elif isinstance(input_text, list):
                 texts = input_text
             else:
-                # 输入数据类型错误：抛出异常，中断流程执行
                 error_msg = (
                     f"[节点 {node_name}] 输入数据类型不支持: {type(input_text)}, "
                     f"期望 str 或 List[str]，实际值: {input_text}"
                 )
                 logger.error(error_msg)
                 raise TypeError(error_msg)
-            
-            # 调用 embedding 执行器
-            # API 调用失败：抛出异常，中断流程执行
+
             try:
                 embeddings = await embedding_executor.ainvoke(texts)
                 logger.debug(
@@ -87,27 +91,20 @@ class EmbeddingNodeCreator(NodeCreator):
                 error_msg = f"[节点 {node_name}] 调用 embedding 模型失败: {e}"
                 logger.error(error_msg)
                 raise RuntimeError(error_msg) from e
-            
-            # 处理输出：如果输入是单个字符串，返回单个向量；否则返回向量列表
+
             if isinstance(input_text, str):
                 embedding_value = embeddings[0] if embeddings else []
             else:
                 embedding_value = embeddings
-            
-            # 更新状态
+
             new_state = state.copy()
-            
-            # 关键：每次创建新 state 时，edges_var 使用新字典，不继承原始值
-            # 确保上游节点的数据不会污染下游节点的条件判断
             new_state["edges_var"] = {}
-            
-            # 将结果保存到 edges_var
             new_state["edges_var"][output_field] = embedding_value
-            
+
             logger.debug(
                 f"[节点 {node_name}] 将 embedding 结果保存到 edges_var['{output_field}']"
             )
-            
+
             return new_state
-        
+
         return embedding_node_action

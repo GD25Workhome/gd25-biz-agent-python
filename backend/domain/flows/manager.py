@@ -79,32 +79,34 @@ class FlowManager:
     @classmethod
     def get_flow(cls, flow_name: str) -> CompiledGraph:
         """
-        获取流程图（按需加载）
-        
-        Args:
-            flow_name: 流程名称
-            
-        Returns:
-            CompiledGraph: 编译后的图
-            
-        Raises:
-            ValueError: 流程不存在或加载失败
+            获取指定流程的 LangGraph 编译图（缓存命中直接返回，否则按需加载）。
+
+            优先读 _compiled_graphs（含启动预加载结果）；未命中时尝试扫描流程目录，
+            再构建并编译后写入缓存。
+
+            Args:
+                flow_name: 流程名称，与 flow.yaml 中 name 字段一致
+
+            Returns:
+                CompiledGraph: 可 invoke/ainvoke 的 LangGraph 编译图
+
+            Raises:
+                ValueError: 扫描后仍找不到流程定义，或编译失败
         """
-        # 如果已编译，直接返回
+        # 1. 命中编译缓存则直接返回（含 bootstrap 预加载）
         if flow_name in cls._compiled_graphs:
             return cls._compiled_graphs[flow_name]
-        
-        # 如果流程定义不存在，先扫描
+
+        # 2. 定义未缓存时触发全量扫描
         if flow_name not in cls._flow_definitions:
             cls.scan_flows()
-        
-        # 如果仍然不存在，报错
+
+        # 3. 扫描后仍不存在则拒绝请求
         if flow_name not in cls._flow_definitions:
             raise ValueError(f"流程定义不存在: {flow_name}")
-        
-        # 加载并编译流程
+
+        # 4. 构建、编译并写入缓存
         cls._load_and_compile_flow(flow_name)
-        
         return cls._compiled_graphs[flow_name]
     
     @classmethod

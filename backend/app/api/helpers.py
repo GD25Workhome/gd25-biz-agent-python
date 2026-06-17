@@ -3,7 +3,7 @@ API层辅助工具方法
 提供请求数据转换、状态构建等通用功能
 """
 import logging
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime
 from dateutil import parser as date_parser
 from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
@@ -125,123 +125,126 @@ def _format_doctor_info(doctor_info: Dict[str, Any]) -> str:
     return "\n".join(parts)
 
 
-def build_initial_state(request: ChatRequest, current_message: HumanMessage, 
-                       history_messages: List[BaseMessage]) -> FlowState:
+def build_initial_state(
+    request: ChatRequest,
+    current_message: HumanMessage,
+    history_messages: List[BaseMessage],
+) -> FlowState:
     """
-    构建流程初始状态
-    
-    Args:
-        request: 聊天请求对象
-        current_message: 当前用户消息
-        history_messages: 历史消息列表
-        
-    Returns:
-        FlowState: 流程初始状态字典
+        构建 LangGraph 流程初始状态，并填充提示词占位符 prompt_vars。
+
+        prompt_vars 供各 Agent 节点的 sys_prompt_builder 替换系统提示词中的
+        {current_date}、{user_info}、{doctor_info} 等变量。
+
+        Args:
+            request: 聊天请求（含 token_id、session_id、可选 current_date）
+            current_message: 本轮用户消息
+            history_messages: 历史对话消息列表
+
+        Returns:
+            FlowState 初始字典，含消息、会话标识与 prompt_vars
     """
-    # 获取上下文管理器
     context_manager = get_context_manager()
-    
-    # 构建 prompt_vars 字典，用于替换系统提示词中的占位符
     prompt_vars: Dict[str, Any] = {}
-    
-    # 设置 current_date（从请求中获取，如果未提供则使用系统当前时间）
+
+    # 1. 填充 current_date：请求未带则取服务端当前时间
     if request.current_date:
         prompt_vars["current_date"] = request.current_date
     else:
-        from datetime import datetime
         prompt_vars["current_date"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-    # 设置 user_info（从 token 缓存中获取）
+
+    # 2. 从 Token 缓存加载 user_info（格式化留给 sys_prompt_builder）
+    # get_token_context：按 token_id 读取 login 阶段写入的 UserInfo
     token_context = context_manager.get_token_context(request.token_id)
     if token_context and isinstance(token_context, UserInfo):
-        # 从 UserInfo 对象中获取用户信息字典（直接赋值，格式化由 sys_prompt_builder 统一处理）
-        user_info_dict = token_context.get_user_info()
-        prompt_vars["user_info"] = user_info_dict  # 可能是字典或 None
+        prompt_vars["user_info"] = token_context.get_user_info()
     else:
-        # 如果 token_context 不存在或不是 UserInfo 对象，设置为 None（由 sys_prompt_builder 统一处理）
         prompt_vars["user_info"] = None
         if token_context is None:
             logger.warning(f"Token上下文不存在: token_id={request.token_id}")
         else:
-            logger.warning(f"Token上下文不是UserInfo对象: token_id={request.token_id}, type={type(token_context)}")
-    
-    # 设置 doctor_info（从 session_context 中获取）
+            logger.warning(
+                f"Token上下文不是UserInfo对象: token_id={request.token_id}, "
+                f"type={type(token_context)}"
+            )
+
+    # 3. 从 Session 缓存加载并格式化 doctor_info
     session_context = context_manager.get_session_context(request.session_id)
     if session_context:
         doctor_info = session_context.get("doctor_info")
         if doctor_info:
-            formatted_doctor_info = _format_doctor_info(doctor_info)
-            prompt_vars["doctor_info"] = formatted_doctor_info
+            # _format_doctor_info：将排班字典转为提示词可读的文本
+            prompt_vars["doctor_info"] = _format_doctor_info(doctor_info)
         else:
             prompt_vars["doctor_info"] = ""
     else:
         prompt_vars["doctor_info"] = ""
-    
+
+    # 4. 组装 FlowState 并返回
     return {
         "current_message": current_message,
         "history_messages": history_messages,
-        "flow_msgs": [],  # 流程运行中的中间消息（初始化为空列表）
+        "flow_msgs": [],
         "session_id": request.session_id,
         "intent": None,
         "token_id": request.token_id,
         "trace_id": request.trace_id,
-        "prompt_vars": prompt_vars
+        "prompt_vars": prompt_vars,
     }
 
 
-def get_flow_graph(session_id: str):
+def get_flow_graph(session_id: str) -> Tuple[Any, str, str]:
     """
-    根据session_id获取流程图及流程信息
-    
-    从ContextManager中获取session_context，提取flow_info，然后通过FlowManager获取对应的流程图。
-    
-    Args:
-        session_id: 会话ID
-        
-    Returns:
-        tuple: (graph, flow_key, flow_name)
-            - graph: 编译后的流程图
-            - flow_key: 流程键（与 login 中 flow_def.name 一致）
-            - flow_name: 流程名称（与 login 中 flow_def.description or flow_def.name 一致）
-        
-    Raises:
-        HTTPException: 当session不存在或flow_key不存在时抛出异常
+        根据 session_id 解析会话绑定的流程，并返回可执行的 LangGraph 编译图。
+
+        从 ContextManager 读取 session_context 中的 flow_info，再经 FlowManager
+        取编译图（启动预加载或首次调用时按需编译）。
+
+        Args:
+            session_id: 会话 ID（login 阶段创建 Session 时写入）
+
+        Returns:
+            (graph, flow_key, flow_name)：
+            - graph: LangGraph 编译后的流程图
+            - flow_key: 流程键，与 login 时 flow_def.name 一致
+            - flow_name: 展示用流程名，与 login 时 description or name 一致
+
+        Raises:
+            HTTPException: Session 不存在（404）、Session 数据缺字段（500）或流程加载失败（500）
     """
-    # 获取上下文管理器
+    # 1. 获取上下文管理器并加载 Session
     context_manager = get_context_manager()
-    
-    # 获取session上下文
     session_context = context_manager.get_session_context(session_id)
     if session_context is None:
         raise HTTPException(
             status_code=404,
-            detail=f"Session不存在: {session_id}。请先创建Session。"
+            detail=f"Session不存在: {session_id}。请先创建Session。",
         )
-    
-    # 从session_context中提取flow_info
+
+    # 2. 校验并解析 flow_info
     flow_info = session_context.get("flow_info")
     if flow_info is None:
         raise HTTPException(
             status_code=500,
-            detail=f"Session数据格式错误：缺少flow_info。session_id={session_id}"
+            detail=f"Session数据格式错误：缺少flow_info。session_id={session_id}",
         )
-    
-    # 从flow_info中提取flow_key和flow_name
+
     flow_key = flow_info.get("flow_key")
     if flow_key is None:
         raise HTTPException(
             status_code=500,
-            detail=f"Session数据格式错误：flow_info中缺少flow_key。session_id={session_id}"
+            detail=f"Session数据格式错误：flow_info中缺少flow_key。session_id={session_id}",
         )
     flow_name = flow_info.get("flow_name") or flow_key
-    
-    # 通过FlowManager获取流程图（按需加载）
+
+    # 3. 获取编译图并返回三元组
     try:
+        # FlowManager.get_flow：命中预加载缓存，否则扫描并编译流程
         graph = FlowManager.get_flow(flow_key)
         return graph, flow_key, flow_name
     except ValueError as e:
         raise HTTPException(
             status_code=500,
-            detail=f"获取流程图失败: {str(e)}。flow_key={flow_key}, session_id={session_id}"
+            detail=f"获取流程图失败: {str(e)}。flow_key={flow_key}, session_id={session_id}",
         )
 

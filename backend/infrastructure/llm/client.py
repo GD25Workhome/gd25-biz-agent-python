@@ -1,18 +1,18 @@
 """
-LLM 客户端封装
-支持多厂商、多模型的 LLM 客户端创建
-集成Langfuse可观测性
+LLM 客户端工厂
+
+根据 provider 名称与 flow.yaml 中的 model 配置，创建 LangChain BaseChatModel 实例。
+豆包在需要 thinking / reasoning_effort 时使用 DoubaoChatOpenAI 包装类；其余走 ChatOpenAI 兼容接口。
+Langfuse 回调由外层 LangGraph config 注入，本模块不在此层挂载 callbacks。
 """
 import logging
-from typing import Optional, List, Dict, Any
-from langchain_openai import ChatOpenAI
-from langchain_core.language_models import BaseChatModel
-from langchain_core.callbacks import BaseCallbackHandler
+from typing import Any, Dict, Optional
 
-from backend.infrastructure.llm.providers.manager import ProviderManager
-from backend.infrastructure.llm.providers.registry import ProviderConfig
+from langchain_core.language_models import BaseChatModel
+from langchain_openai import ChatOpenAI
+
 from backend.app.config import settings
-from backend.infrastructure.observability.langfuse_handler import create_langfuse_handler
+from backend.infrastructure.llm.providers.manager import ProviderManager
 
 logger = logging.getLogger(__name__)
 
@@ -24,49 +24,45 @@ def get_llm(
     thinking: Optional[Dict[str, str]] = None,
     reasoning_effort: Optional[str] = None,
     timeout: Optional[int] = None,
-    # callbacks: Optional[List[BaseCallbackHandler]] = None,
-    **kwargs
+    **kwargs: Any,
 ) -> BaseChatModel:
     """
-    获取 LLM 客户端实例
-    
-    Args:
-        provider: 模型供应商名称（如 "doubao", "openai", "deepseek"）
-        model: 模型名称（如 "doubao-seed-1-6-251015"）
-        temperature: 温度参数，默认使用配置中的温度
-        thinking: 思考模式配置
-        reasoning_effort: 推理努力程度
-        timeout: 超时时间（秒）
-        callbacks: 回调处理器列表（可选，如果未提供则自动添加Langfuse回调）
-        **kwargs: 其他参数（可以覆盖默认的 api_key 和 base_url）
-        
-    Returns:
-        BaseChatModel: LLM 客户端实例
-        
-    Raises:
-        RuntimeError: 如果供应商配置未加载
-        ValueError: 如果供应商不存在或配置无效
+        按供应商配置创建 LLM 客户端（AgentFactory、Embedding 等调用入口）。
+
+        Args:
+            provider: 供应商名称，与 model_providers.yaml 中 key 一致（如 doubao）
+            model: 模型名（如 doubao-seed-1-6-251015）
+            temperature: 采样温度；None 时使用 settings.LLM_TEMPERATURE
+            thinking: 豆包思考模式，如 {"type": "enabled"} / {"type": "disabled"}
+            reasoning_effort: 豆包推理力度 minimal/low/medium/high
+            timeout: 请求超时秒数；None 且 thinking.enabled 时默认 1800
+            **kwargs: 可覆盖 api_key、base_url 等 ChatOpenAI 构造参数
+
+        Returns:
+            BaseChatModel: 可直接传入 langchain create_agent 的聊天模型
+
+        Raises:
+            ValueError: provider 未在 ProviderManager 中注册
     """
-    # 获取供应商配置
+    # 1. 读取供应商 api_key / base_url
     provider_config = ProviderManager.get_provider(provider)
     if provider_config is None:
         raise ValueError(f"模型供应商 '{provider}' 未注册，请检查配置文件")
-    
-    # 使用传入的参数或供应商配置
+
     api_key = kwargs.get("api_key", provider_config.api_key)
     base_url = kwargs.get("base_url", provider_config.base_url)
-    
-    # 温度参数
+    extra_kwargs = {k: v for k, v in kwargs.items() if k not in ["api_key", "base_url"]}
+
+    # 2. 填充默认 temperature 与 timeout
     if temperature is None:
         temperature = settings.LLM_TEMPERATURE
-    
-    # 超时参数（深度思考时建议设置为 1800 秒）
     if timeout is None:
         timeout = 1800 if thinking and thinking.get("type") == "enabled" else None
-    
-    # 如果是豆包供应商且设置了 thinking 或 reasoning_effort，使用包装类
+
+    # 3. 豆包 + thinking/reasoning 参数：使用 DoubaoChatOpenAI 注入厂商扩展字段
     if provider == "doubao" and (thinking is not None or reasoning_effort is not None):
         from backend.infrastructure.llm.doubao_chat import DoubaoChatOpenAI
+
         llm = DoubaoChatOpenAI(
             model=model,
             temperature=temperature,
@@ -75,27 +71,25 @@ def get_llm(
             timeout=timeout,
             thinking=thinking,
             reasoning_effort=reasoning_effort,
-            **{k: v for k, v in kwargs.items() if k not in ["api_key", "base_url"]}
+            **extra_kwargs,
         )
         logger.debug(
             f"创建豆包 LLM 包装类: provider={provider}, model={model}, "
             f"thinking={thinking}, reasoning_effort={reasoning_effort}, timeout={timeout}"
         )
-    else:
-        # 创建普通 ChatOpenAI 实例
-        llm = ChatOpenAI(
-            model=model,
-            temperature=temperature,
-            openai_api_key=api_key,
-            openai_api_base=base_url,
-            timeout=timeout,
-            # callbacks=callbacks if callbacks else None,
-            **{k: v for k, v in kwargs.items() if k not in ["api_key", "base_url"]}
-        )
-        logger.debug(
-            f"创建 LLM 客户端: provider={provider}, model={model}, "
-            f"temperature={temperature}, base_url={base_url}"
-        )
-    
-    return llm
+        return llm
 
+    # 4. 默认路径：OpenAI 兼容 ChatOpenAI
+    llm = ChatOpenAI(
+        model=model,
+        temperature=temperature,
+        openai_api_key=api_key,
+        openai_api_base=base_url,
+        timeout=timeout,
+        **extra_kwargs,
+    )
+    logger.debug(
+        f"创建 LLM 客户端: provider={provider}, model={model}, "
+        f"temperature={temperature}, base_url={base_url}"
+    )
+    return llm

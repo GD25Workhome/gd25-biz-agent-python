@@ -110,81 +110,70 @@ def get_current_trace_id() -> Optional[str]:
 
 
 def create_langfuse_handler(
-    context: Optional[Dict[str, Any]] = None
+    context: Optional[Dict[str, Any]] = None,
 ) -> Optional["LangfuseCallbackHandler"]:
     """
-    创建Langfuse CallbackHandler
-    
-    用于在LLM调用时自动记录到Langfuse。
-    
-    Args:
-        context: 上下文信息（可选，用于记录元数据）
-                如果包含 trace_id 键，将用于关联到已存在的 Trace
-        
-    Returns:
-        LangfuseCallbackHandler: Langfuse回调处理器，如果Langfuse未启用或配置不完整则返回None
-        
-    Raises:
-        ValueError: Langfuse未启用或配置不完整
+        创建 Langfuse CallbackHandler，供 LangGraph / LLM 调用链自动上报观测数据。
+
+        Handler 通过 trace_context 将本次 LLM 调用挂到已有 Trace（chat 路由传入的
+        trace_id 或 set_langfuse_trace_context 写入的 ContextVar）。
+
+        Args:
+            context: 可选上下文字典；含 trace_id 时优先用于关联 Trace
+
+        Returns:
+            Langfuse CallbackHandler；未启用、配置缺失或创建失败时返回 None
     """
-    # 检查是否启用（从统一配置读取）
+    # 1. 校验 Langfuse 开关与密钥配置
     if not settings.LANGFUSE_ENABLED:
         logger.debug("[Langfuse] CallbackHandler: Langfuse未启用")
         return None
-    
-    # 从统一配置读取
+
     public_key = settings.LANGFUSE_PUBLIC_KEY
     secret_key = settings.LANGFUSE_SECRET_KEY
-    
     if not public_key or not secret_key:
         logger.warning(
             "[Langfuse] CallbackHandler: 配置不完整，缺少PUBLIC_KEY或SECRET_KEY。"
             "请检查.env文件配置。"
         )
         return None
-    
-    # 确保全局 Langfuse 客户端已初始化（用于 secret_key 和 host 配置）
-    # langfuse 3.x 的 CallbackHandler 会使用全局客户端配置
+
+    # 2. 初始化全局客户端（langfuse 3.x CallbackHandler 复用其 host / secret_key）
+    # _get_langfuse_client：单例初始化 Langfuse 客户端
     _get_langfuse_client()
-    
-    # 构建 trace_context（用于分布式追踪）
-    trace_context = None
-    trace_id = None
-    
-    # 优先从 context 参数中获取 trace_id
+
+    # 3. 解析 trace_id：context 参数优先，否则回退 ContextVar
+    trace_context: Optional[Dict[str, str]] = None
+    trace_id: Optional[str] = None
     if context and isinstance(context, dict) and context.get("trace_id"):
         trace_id = context.get("trace_id")
         logger.debug(f"[Langfuse] CallbackHandler: 从 context 参数获取 trace_id={trace_id}")
     else:
-        # 如果没有从 context 中获取到，尝试从 ContextVar 获取（补丁方案）
         trace_id = get_current_trace_id()
         if trace_id:
             logger.debug(f"[Langfuse] CallbackHandler: 从 ContextVar 获取 trace_id={trace_id}")
         else:
             logger.warning("[Langfuse] CallbackHandler: 无法获取 trace_id，将创建新的 trace")
-    
-    # 如果获取到了 trace_id，构建 trace_context
+
+    # 4. 规范化 trace_id 并构建 trace_context
     if trace_id:
-        # 将 trace_id 转换为 Langfuse 要求的格式
+        # normalize_langfuse_trace_id：转为 Langfuse 要求的 32 位小写十六进制
         normalized_trace_id = normalize_langfuse_trace_id(trace_id)
         trace_context = {"trace_id": normalized_trace_id}
-    
+
+    # 5. 实例化 CallbackHandler（secret_key 经全局客户端传递，此处仅传 public_key）
     try:
-        # 创建 Langfuse Callback Handler
-        # 注意：langfuse.langchain.CallbackHandler 只需要 public_key，不需要 secret_key
-        # secret_key 通过全局客户端配置传递
         handler = LangfuseCallbackHandler(
             public_key=public_key,
-            update_trace=True,  # 更新 trace 信息
-            trace_context=trace_context,  # 关联到已存在的 trace
+            update_trace=True,
+            trace_context=trace_context,
         )
-        
         logger.debug(
             f"[Langfuse] CallbackHandler创建成功: "
             f"trace_context={trace_context}, context={context}"
         )
         return handler
-    
+
     except Exception as e:
         logger.error(f"[Langfuse] CallbackHandler创建失败: {e}", exc_info=True)
         return None
