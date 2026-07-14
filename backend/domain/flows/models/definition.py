@@ -2,7 +2,7 @@
 流程定义类
 定义流程的结构和配置
 """
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Literal
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
@@ -70,6 +70,28 @@ class AgentNodeConfig(BaseModel):
     prompt: str = Field(description="提示词路径（相对于流程目录）")
     model: ModelConfig = Field(description="模型配置")
     tools: Optional[List[str]] = Field(default=None, description="工具列表")
+
+
+class PlanNodeConfig(BaseModel):
+    """Planner / Replanner 节点配置"""
+
+    prompt: str = Field(description="提示词路径（相对于流程目录）")
+    model: ModelConfig = Field(description="模型配置")
+    max_steps: int = Field(default=8, description="计划最大步骤数")
+    max_iterations: int = Field(default=20, description="Executor-Replanner 最大循环次数")
+
+
+class PlanExecutorNodeConfig(BaseModel):
+    """Plan Executor 节点配置"""
+
+    prompt: str = Field(description="提示词路径（相对于流程目录）")
+    model: ModelConfig = Field(description="模型配置")
+    tools: Optional[List[str]] = Field(default=None, description="工具列表")
+    execution_mode: Literal["agent_react", "tool_direct"] = Field(
+        default="agent_react",
+        description="执行模式：agent_react 使用 ReAct Agent，tool_direct 直接调工具",
+    )
+    result_max_chars: int = Field(default=2000, description="单步结果摘要最大字符数")
 
 
 class EmbeddingNodeConfig(BaseModel):

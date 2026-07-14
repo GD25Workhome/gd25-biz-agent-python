@@ -90,32 +90,28 @@ async def chat(
             # 执行流程图
             result = await graph.ainvoke(initial_state, config)
         
-        # 提取最后一条AI消息作为回复
-        # 从 flow_msgs 中提取最后一条 AI 消息（流程中间消息）
-        flow_msgs = result.get("flow_msgs", [])
-        
-        # 从后往前查找最后一条AI消息
-        ai_messages = [msg for msg in flow_msgs if isinstance(msg, AIMessage)]
-        if ai_messages:
-            last_message = ai_messages[-1]
-            raw_content = last_message.content if hasattr(last_message, "content") else str(last_message)
-            
-            # 尝试解析为 JSON 对象，提取 response_content
-            response_text = raw_content
-            try:
-                # 尝试解析为 JSON
-                parsed_content = json.loads(raw_content)
-                # 如果是字典类型，尝试读取 response_content
-                if isinstance(parsed_content, dict) and "response_content" in parsed_content:
-                    response_content_value = parsed_content.get("response_content")
-                    # 如果 response_content 存在且不为空，则使用它
-                    if response_content_value is not None and str(response_content_value).strip():
-                        response_text = str(response_content_value)
-            except (json.JSONDecodeError, TypeError, AttributeError):
-                # 解析失败或不是 JSON 格式，使用原始字符串
-                pass
+        # 提取回复：优先 plan_response（Plan-and-Execute），其次 flow_msgs 最后一条 AI 消息
+        plan_response = result.get("plan_response")
+        if plan_response and str(plan_response).strip():
+            response_text = str(plan_response).strip()
         else:
-            response_text = "抱歉，我没有收到回复。"
+            flow_msgs = result.get("flow_msgs", [])
+            ai_messages = [msg for msg in flow_msgs if isinstance(msg, AIMessage)]
+            if ai_messages:
+                last_message = ai_messages[-1]
+                raw_content = last_message.content if hasattr(last_message, "content") else str(last_message)
+
+                response_text = raw_content
+                try:
+                    parsed_content = json.loads(raw_content)
+                    if isinstance(parsed_content, dict) and "response_content" in parsed_content:
+                        response_content_value = parsed_content.get("response_content")
+                        if response_content_value is not None and str(response_content_value).strip():
+                            response_text = str(response_content_value)
+                except (json.JSONDecodeError, TypeError, AttributeError):
+                    pass
+            else:
+                response_text = "抱歉，我没有收到回复。"
         
         logger.info(
             f"[Chat请求完成] session_id={request.session_id}, "

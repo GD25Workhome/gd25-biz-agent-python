@@ -185,7 +185,13 @@ def build_initial_state(request: ChatRequest, current_message: HumanMessage,
         "intent": None,
         "token_id": request.token_id,
         "trace_id": request.trace_id,
-        "prompt_vars": prompt_vars
+        "prompt_vars": prompt_vars,
+        # Plan-and-Execute 初始状态
+        "objective": request.message,
+        "plan": [],
+        "past_steps": [],
+        "plan_iteration": 0,
+        "plan_finished": False,
     }
 
 

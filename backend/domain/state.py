@@ -2,9 +2,30 @@
 流程状态定义
 定义流程执行过程中的状态数据结构
 """
-from typing import TypedDict, List, Optional, Dict, Any, Annotated
+import operator
+from typing import TypedDict, List, Optional, Dict, Any, Annotated, Literal
 from langchain_core.messages import BaseMessage, HumanMessage
 from langgraph.graph.message import add_messages
+
+
+class PlanStep(TypedDict, total=False):
+    """Plan-and-Execute 单步计划项"""
+
+    step_id: str
+    description: str
+    tool_name: Optional[str]
+    expected_output: Optional[str]
+    status: Literal["pending", "in_progress", "completed", "failed", "skipped"]
+
+
+class PastStepRecord(TypedDict, total=False):
+    """Plan-and-Execute 已执行步骤记录"""
+
+    step_id: str
+    description: str
+    result_summary: str
+    success: bool
+    error: Optional[str]
 
 
 # ========== 对外 Input Schema ==========
@@ -44,4 +65,13 @@ class FlowState(TypedDict, total=False):
     prompt_vars: Optional[Dict[str, Any]]  # 字典类型，用于存储提示词中的变量
     edges_var: Optional[Dict[str, Any]]  # 边条件判断变量存储（通用化设计）
     persistence_edges_var: Optional[Dict[str, Any]]  # 持久化边变量通道，透传到任意下级节点，边条件合并时 edges_var 优先
+
+    # ========== Plan-and-Execute 扩展 ==========
+    objective: str  # 用户目标（通常取自 current_message）
+    plan: List[PlanStep]  # 当前待执行计划（Replanner 可整体替换）
+    past_steps: Annotated[List[PastStepRecord], operator.add]  # 历史执行记录（追加型 reducer）
+    plan_response: Optional[str]  # Replanner 判定完成时的最终回复
+    plan_finished: bool  # 是否结束（供条件边路由）
+    plan_iteration: int  # Executor-Replanner 循环次数（熔断用）
+    plan_metadata: Optional[Dict[str, Any]]  # 规划元数据（模型、步骤数等）
 

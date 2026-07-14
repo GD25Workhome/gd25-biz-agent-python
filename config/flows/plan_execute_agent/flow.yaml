@@ -1,0 +1,95 @@
+name: plan_execute_agent
+version: "1.0"
+description: "Plan-and-Execute 试点流程 - 动态规划与重规划"
+
+nodes:
+  - name: planner
+    type: planner
+    config:
+      prompt: prompts/planner.md
+      max_steps: 8
+      max_iterations: 20
+      model:
+        provider: doubao
+        name: doubao-seed-1-6-251015
+        temperature: 0.3
+        thinking:
+          type: disabled
+      tools:
+        - query_blood_pressure
+        - query_medication
+        - query_symptom
+        - query_health_event
+        - record_blood_pressure
+        - record_medication
+        - record_symptom
+        - record_health_event
+
+  - name: plan_executor
+    type: plan_executor
+    config:
+      prompt: prompts/executor.md
+      execution_mode: agent_react
+      result_max_chars: 2000
+      model:
+        provider: doubao
+        name: doubao-seed-1-8-251228
+        temperature: 0.5
+        thinking:
+          type: enabled
+        reasoning_effort: low
+        timeout: 1800
+      tools:
+        - query_blood_pressure
+        - query_medication
+        - query_symptom
+        - query_health_event
+        - record_blood_pressure
+        - record_medication
+        - record_symptom
+        - record_health_event
+
+  - name: replanner
+    type: replanner
+    config:
+      prompt: prompts/replanner.md
+      max_iterations: 20
+      max_steps: 8
+      model:
+        provider: doubao
+        name: doubao-seed-1-6-251015
+        temperature: 0.3
+        thinking:
+          type: disabled
+      tools:
+        - query_blood_pressure
+        - query_medication
+        - query_symptom
+        - query_health_event
+        - record_blood_pressure
+        - record_medication
+        - record_symptom
+        - record_health_event
+
+edges:
+  - from: planner
+    to: plan_executor
+    condition: has_plan == true
+
+  - from: planner
+    to: END
+    condition: has_plan != true
+
+  - from: plan_executor
+    to: replanner
+    condition: always
+
+  - from: replanner
+    to: plan_executor
+    condition: plan_finished != true && should_abort != true
+
+  - from: replanner
+    to: END
+    condition: plan_finished == true || should_abort == true
+
+entry_node: planner
