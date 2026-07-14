@@ -28,6 +28,27 @@ class PastStepRecord(TypedDict, total=False):
     error: Optional[str]
 
 
+class TeamTranscriptItem(TypedDict, total=False):
+    """Team 单条发言摘要（供调试 / 限长落库）"""
+
+    source: str
+    content: str
+    type: str
+
+
+class TeamResult(TypedDict, total=False):
+    """autogen_team 节点结构化结果"""
+
+    team_mode: Literal["round_robin", "selector", "swarm"]
+    stop_reason: Optional[str]
+    message_count: int
+    final_content: str
+    approved: bool
+    error: Optional[str]
+    timed_out: bool
+    hit_max_messages: bool
+
+
 # ========== 对外 Input Schema ==========
 # 图接收的输入：只包含调用方需要传入的字段
 class FlowInputSchema(TypedDict, total=False):
@@ -74,4 +95,8 @@ class FlowState(TypedDict, total=False):
     plan_finished: bool  # 是否结束（供条件边路由）
     plan_iteration: int  # Executor-Replanner 循环次数（熔断用）
     plan_metadata: Optional[Dict[str, Any]]  # 规划元数据（模型、步骤数等）
+
+    # ========== AutoGen Team 扩展 ==========
+    team_result: Optional[TeamResult]  # autogen_team 结构化结果
+    team_transcript: Optional[List[TeamTranscriptItem]]  # 限长 transcript（默认不写）
 

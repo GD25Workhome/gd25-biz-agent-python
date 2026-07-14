@@ -1,0 +1,39 @@
+name: autogen_review_agent
+description: AutoGen RoundRobin 作者-批评者评审试点（形态 A）
+version: "1.0"
+entry_node: review_team
+
+nodes:
+  - name: review_team
+    type: autogen_team
+    config:
+      team_mode: round_robin
+      model:
+        provider: doubao
+        name: doubao-seed-1-8-251228
+        temperature: 0.3
+      agents:
+        - name: writer
+          system_prompt: prompts/writer.md
+          tools: []
+        - name: critic
+          system_prompt: prompts/critic.md
+          tools: []
+      termination:
+        text_mention: APPROVE
+        max_messages: 8
+      timeout_seconds: 120
+      task:
+        template: null
+        include_prompt_vars_keys: null
+      output:
+        write_to_flow_msgs: true
+        edges_var_key: review_approved
+        persist_transcript: false
+        max_transcript_messages: 20
+        content_max_chars: 8000
+
+edges:
+  - from: review_team
+    to: END
+    condition: always

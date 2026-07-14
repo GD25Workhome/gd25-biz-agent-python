@@ -2,6 +2,9 @@
 FastAPI应用入口
 
 运行方式：
+conda activate py311_GD25_autoGen
+conda activate py311_GD25_base
+
     方式1（推荐）：直接运行
         python backend/main.py
     

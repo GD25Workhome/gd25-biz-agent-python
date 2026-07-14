@@ -8,3 +8,4 @@ flows:
   lazy_load:  # 按需加载的流程（首次使用时编译）
     - medical_agent_v3
     - plan_execute_agent
+    - autogen_review_agent

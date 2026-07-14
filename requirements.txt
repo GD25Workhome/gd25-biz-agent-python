@@ -9,6 +9,11 @@ langchain-core>=1.0.0,<2.0.0
 langchain-openai>=1.0.0,<2.0.0
 langchain-text-splitters>=1.0.0,<2.0.0
 
+# AutoGen AgentChat（多 Agent Team，与 LangGraph 外层编排融合）
+autogen-agentchat>=0.7.0,<1.0.0
+autogen-core>=0.7.0,<1.0.0
+autogen-ext[openai]>=0.7.0,<1.0.0
+
 # 数据库
 sqlalchemy>=2.0.0,<3.0.0
 psycopg[binary]>=3.1.0,<4.0.0

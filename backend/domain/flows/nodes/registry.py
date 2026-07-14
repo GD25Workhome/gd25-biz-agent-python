@@ -90,6 +90,7 @@ def _init_default_creators():
     from backend.domain.flows.nodes.planner_creator import PlannerNodeCreator
     from backend.domain.flows.nodes.plan_executor_creator import PlanExecutorNodeCreator
     from backend.domain.flows.nodes.replanner_creator import ReplannerNodeCreator
+    from backend.domain.flows.nodes.autogen_team_creator import AutogenTeamNodeCreator
     
     node_creator_registry.register("agent", AgentNodeCreator())
     node_creator_registry.register("function", FunctionNodeCreator())
@@ -98,9 +99,10 @@ def _init_default_creators():
     node_creator_registry.register("planner", PlannerNodeCreator())
     node_creator_registry.register("plan_executor", PlanExecutorNodeCreator())
     node_creator_registry.register("replanner", ReplannerNodeCreator())
+    node_creator_registry.register("autogen_team", AutogenTeamNodeCreator())
     logger.info(
         "已注册默认节点创建器: agent, function, em_agent, rag_agent, "
-        "planner, plan_executor, replanner"
+        "planner, plan_executor, replanner, autogen_team"
     )
 
 
