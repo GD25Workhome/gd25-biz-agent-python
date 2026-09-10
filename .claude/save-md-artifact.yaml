@@ -1,0 +1,18 @@
+# save-md-artifact 用户级配置
+#
+# 位置：~/.claude/skills/save-md-artifact/config.yaml
+# 作用：所有项目的全局默认（项目级 <project_root>/.claude/save-md-artifact.yaml 可覆盖）
+# 优先级：项目级 > 用户级（这份） > skill 内置默认
+# 任何字段都可以省略，省略的字段用下一级兜底
+
+# 相对项目根的输出目录
+output_dir: ai-docs
+
+# 子目录（可选）；支持多级如 "2026/Q3"，但禁止 .. 和绝对路径
+subdir: ""
+
+# slug 最大字符数；超长截断
+slug_max_length: 200
+
+# slug 为空 / 全是特殊字符时的兜底名
+slug_fallback: untitled

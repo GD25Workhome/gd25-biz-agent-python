@@ -1,0 +1,22 @@
+# 华院联通 V1：单节点简单对话（无 Session / 无工具）
+name: huayuan_simple_agent
+version: "1.0"
+description: "华院联通V1：单节点简单对话"
+
+nodes:
+  - name: simple_reply_node
+    type: agent
+    config:
+      prompt: prompts/simple_reply.md
+      model:
+        provider: doubao
+        temperature: 0.7
+        thinking:
+          type: disabled
+
+edges:
+  - from: simple_reply_node
+    to: END
+    condition: always
+
+entry_node: simple_reply_node

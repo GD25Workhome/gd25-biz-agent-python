@@ -1,0 +1,24 @@
+# 华院画像 V2：ReAct + 证据按需加载 + 五维档位输出
+name: huayuan_react_agent
+version: "1.0"
+description: "华院画像V2：ReAct + 按file_id加载证据 + 五维候选档位"
+
+nodes:
+  - name: portrait_react_node
+    type: agent
+    config:
+      prompt: prompts/portrait_react.md
+      model:
+        provider: doubao
+        temperature: 0.2
+        thinking:
+          type: disabled
+      tools:
+        - load_document_by_file_id
+
+edges:
+  - from: portrait_react_node
+    to: END
+    condition: always
+
+entry_node: portrait_react_node

@@ -9,3 +9,6 @@ flows:
     - medical_agent_v3
     - plan_execute_agent
     - autogen_review_agent
+    - huayuan_simple_agent
+    - huayuan_react_agent
+    - huayuan_radar_event_agent

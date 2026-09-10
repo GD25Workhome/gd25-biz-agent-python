@@ -63,6 +63,16 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = None
     DOUBAO_API_KEY: Optional[str] = None
     DEEPSEEK_API_KEY: Optional[str] = None
+
+    # AnySearch 联网检索（华院规则二）；双名兼容官方 ANYSEARCH_API_KEY
+    ANY_SEARCH_API_KEY: Optional[str] = Field(
+        default=None,
+        description="AnySearch API Key（本仓库约定名）",
+    )
+    ANYSEARCH_API_KEY: Optional[str] = Field(
+        default=None,
+        description="AnySearch API Key（官方文档变量名）",
+    )
     
     # 默认模型配置（可选）
     LLM_MODEL: str = Field(default="doubao-seed-1-6-251015", description="默认模型名称")

@@ -59,7 +59,11 @@ class AgentExecutor:
         # 添加传入的消息列表
         messages.extend(msgs)
         
-        config = {"configurable": {"thread_id": "default"}}
+        # recursion_limit：多工具轮次（如规则二最多约 20 次搜索 + 抽取）需高于默认 25
+        config = {
+            "configurable": {"thread_id": "default"},
+            "recursion_limit": 80,
+        }
         
         # 如果提供了callbacks，添加到config中（用于运行时传递callbacks）
         if callbacks:
