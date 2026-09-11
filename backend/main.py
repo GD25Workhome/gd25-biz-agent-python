@@ -43,7 +43,7 @@ from backend.app.api.routes import router
 from backend.infrastructure.llm.providers.manager import ProviderManager
 from backend.domain.flows.manager import FlowManager
 from backend.domain.tools import init_tools
-from backend.app.config import find_project_root
+from backend.app.config import find_project_root, settings
 
 # 配置日志
 logging.basicConfig(
@@ -139,16 +139,25 @@ async def lifespan(app: FastAPI):
         else:
             logger.info("   ✓ 没有需要预加载的流程")
 
-        # 5. 加载Token和Session缓存（新增）
-        logger.info("5. 加载Token和Session缓存...")
-        await load_context_cache()
-        logger.info("   ✓ 缓存加载完成")
+        # 5/6. 仅在启用数据库时加载缓存并启动 Rewritten 消费者
+        if settings.is_database_enabled:
+            # 5. 加载 Token 和 Session 缓存
+            logger.info("5. 加载Token和Session缓存...")
+            await load_context_cache()
+            logger.info("   ✓ 缓存加载完成")
 
-        # 6. 启动 Rewritten 任务队列消费者（021105，替代原 worker_loop）
-        logger.info("6. 启动 Rewritten 任务队列消费者...")
-        from backend.pipeline.rewritten_queue_service import start_consumers
-        consumer_tasks = start_consumers()
-        logger.info("   ✓ Rewritten 队列消费者已启动")
+            # 6. 启动 Rewritten 任务队列消费者（021105，替代原 worker_loop）
+            logger.info("6. 启动 Rewritten 任务队列消费者...")
+            from backend.pipeline.rewritten_queue_service import start_consumers
+            consumer_tasks = start_consumers()
+            logger.info("   ✓ Rewritten 队列消费者已启动")
+        else:
+            logger.info(
+                "5. 跳过Token/Session缓存加载（ENABLE_DATABASE=false 或未配置 DATABASE_URL）"
+            )
+            logger.info(
+                "6. 跳过 Rewritten 队列消费者（无数据库模式下不启动）"
+            )
 
         logger.info("=" * 60)
         logger.info("系统启动完成！")

@@ -244,34 +244,35 @@ def _get_langfuse_client() -> Optional["Langfuse"]:
         return _langfuse_client
     
     try:
-        # 从统一配置读取配置
+        # 从统一配置读取配置（HOST / BASE_URL 已在 Settings 中归一）
         public_key = settings.LANGFUSE_PUBLIC_KEY
         secret_key = settings.LANGFUSE_SECRET_KEY
-        host = settings.LANGFUSE_HOST
-        
+        base_url = settings.LANGFUSE_HOST or settings.LANGFUSE_BASE_URL
+
         if not public_key or not secret_key:
             logger.warning(
                 "Langfuse配置不完整：缺少LANGFUSE_PUBLIC_KEY或LANGFUSE_SECRET_KEY，"
                 "Langfuse功能将不可用。请检查.env文件配置。"
             )
             return None
-        
-        # 创建Langfuse客户端
-        # 如果host为None，Langfuse会使用默认值，但为了明确，我们记录警告
-        if host is None:
-            logger.warning("LANGFUSE_HOST未设置，Langfuse将使用默认host")
-        
+
+        # 创建Langfuse客户端；显式传 base_url，避免 SDK 误用 shell 残留的 localhost
+        if base_url is None:
+            logger.warning(
+                "LANGFUSE_HOST/LANGFUSE_BASE_URL 未设置，Langfuse 将使用默认 cloud host"
+            )
+
         langfuse_kwargs = {
             "public_key": public_key,
             "secret_key": secret_key,
         }
-        if host:
-            langfuse_kwargs["host"] = host
-        
+        if base_url:
+            langfuse_kwargs["base_url"] = base_url
+
         _langfuse_client = Langfuse(**langfuse_kwargs)
-        
+
         logger.info(
-            f"Langfuse客户端初始化成功: host={host or 'default'}, "
+            f"Langfuse客户端初始化成功: host={base_url or 'default'}, "
             f"public_key_prefix={public_key[:8] if public_key else 'None'}..."
         )
         return _langfuse_client

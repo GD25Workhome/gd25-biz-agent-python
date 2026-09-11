@@ -43,16 +43,20 @@ def parse_database_url(database_url: str) -> dict:
 
 def get_vector_db_connection() -> psycopg.Connection:
     """
-    获取向量库数据库连接（同步，用于pgvector操作）
-    
-    注意：
-    - 使用psycopg同步连接，因为pgvector的向量操作（<=>操作符）需要原生支持
-    - 业务数据库操作应使用异步连接（get_async_session）
-    
-    Returns:
-        psycopg.Connection: 数据库连接对象（已注册vector类型）
+        获取向量库数据库连接（同步，用于 pgvector 操作）。
+
+        注意：
+        - 使用 psycopg 同步连接，因为 pgvector 的向量操作（<=> 操作符）需要原生支持
+        - 业务数据库操作应使用异步连接（get_async_session）
+
+        Returns:
+            psycopg.Connection: 数据库连接对象（已注册 vector 类型）
+
+        Raises:
+            RuntimeError: 数据库未启用或未配置 DATABASE_URL
     """
-    database_url = settings.DATABASE_URL
+    # 与业务库共用同一开关，无库模式禁止建连
+    database_url = settings.require_database_url()
     db_config = parse_database_url(database_url)
     
     # 构建连接字符串
