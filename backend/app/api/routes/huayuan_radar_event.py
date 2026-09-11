@@ -17,6 +17,8 @@ from fastapi import APIRouter, HTTPException
 from langchain_core.messages import AIMessage, HumanMessage
 
 from backend.app.api.schemas.huayuan_radar_event import (
+    DEFAULT_MAX_ANYSEARCH,
+    DEFAULT_MAX_BOCHA,
     DEFAULT_MAX_EXTRACT_TIMES,
     DEFAULT_MAX_RESULTS_PER_SEARCH,
     DEFAULT_MAX_SEARCH_TIMES,
@@ -58,6 +60,49 @@ def _dumps_prompt_var(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, default=str)
 
 
+def resolve_radar_tool_quotas(
+    ctx_body: Any,
+) -> tuple[int, int, int, int]:
+    """
+        解析分工具搜索/抽取配额。
+
+        优先 max_bocha / max_anysearch；若未传则回退 max_search_times（两工具各自使用该值）；
+        再回退默认常量。
+
+        Args:
+            ctx_body: 请求 context
+
+        Returns:
+            (max_bocha, max_anysearch, max_extract_times, max_results_per_search)
+    """
+    legacy = (
+        ctx_body.max_search_times
+        if ctx_body.max_search_times is not None
+        else None
+    )
+    max_bocha = (
+        ctx_body.max_bocha
+        if getattr(ctx_body, "max_bocha", None) is not None
+        else (legacy if legacy is not None else DEFAULT_MAX_BOCHA)
+    )
+    max_anysearch = (
+        ctx_body.max_anysearch
+        if getattr(ctx_body, "max_anysearch", None) is not None
+        else (legacy if legacy is not None else DEFAULT_MAX_ANYSEARCH)
+    )
+    max_extract_times = (
+        ctx_body.max_extract_times
+        if ctx_body.max_extract_times is not None
+        else DEFAULT_MAX_EXTRACT_TIMES
+    )
+    max_results = (
+        ctx_body.max_results_per_search
+        if ctx_body.max_results_per_search is not None
+        else DEFAULT_MAX_RESULTS_PER_SEARCH
+    )
+    return int(max_bocha), int(max_anysearch), int(max_extract_times), int(max_results)
+
+
 def build_radar_event_initial_state(
     request: HuayuanRadarEventRequest,
     trace_id: str,
@@ -74,11 +119,12 @@ def build_radar_event_initial_state(
     """
     ctx = request.context
     query_hint = (ctx.query_hint or "").strip() or DEFAULT_QUERY_HINT
+    max_bocha, max_anysearch, max_extract_times, _ = resolve_radar_tool_quotas(ctx)
     return {
         "current_message": HumanMessage(
             content=(
                 f"{request.query}\n\n"
-                "请严格输出规定的单个 JSON 对象（含 exhibition_related、分项分与 evidences），"
+                "请严格按当前节点系统提示输出单个 JSON 对象，"
                 "不要使用 Markdown 代码围栏。"
             )
         ),
@@ -98,12 +144,15 @@ def build_radar_event_initial_state(
                 if ctx.max_search_times is not None
                 else DEFAULT_MAX_SEARCH_TIMES
             ),
-            "max_extract_times": str(
-                ctx.max_extract_times
-                if ctx.max_extract_times is not None
-                else DEFAULT_MAX_EXTRACT_TIMES
-            ),
+            "max_bocha": str(max_bocha),
+            "max_anysearch": str(max_anysearch),
+            "max_extract_times": str(max_extract_times),
+            # 采集节点写入前给占位，避免终评模板残留未替换花括号
+            "evidence_briefs": "[]",
+            "discarded_briefs": "[]",
         },
+        "edges_var": {},
+        "persistence_edges_var": {},
     }
 
 
@@ -294,24 +343,19 @@ def _parse_discarded(raw: Any) -> List[RadarEventDiscardedItem]:
     return items
 
 
-def parse_radar_event_score_from_ai_text(text: str) -> RadarEventScoreResult:
+def parse_radar_event_score_from_obj(obj: Dict[str, Any]) -> RadarEventScoreResult:
     """
-        解析模型输出为 RadarEventScoreResult；失败抛 ValueError（由路由转 500）。
+        从已解析的 dict 构造 RadarEventScoreResult。
 
         Args:
-            text: 模型最终文本
+            obj: 评分 JSON 对象（可为含 radar_event_score 包装层）
 
         Returns:
             RadarEventScoreResult
 
         Raises:
-            ValueError: 无法解析 JSON、缺关键字段或分值非法
+            ValueError: 缺关键字段或分值非法
     """
-    # 1. 解析 JSON
-    obj = _extract_json_object(text)
-    if not obj:
-        raise ValueError("无法从模型输出中解析 JSON 对象")
-
     if "exhibition_related" not in obj and isinstance(obj.get("radar_event_score"), dict):
         obj = obj["radar_event_score"]
 
@@ -401,12 +445,68 @@ def parse_radar_event_score_from_ai_text(text: str) -> RadarEventScoreResult:
     )
 
 
+def parse_radar_event_score_from_ai_text(text: str) -> RadarEventScoreResult:
+    """
+        解析模型输出为 RadarEventScoreResult；失败抛 ValueError（由路由转 500）。
+
+        Args:
+            text: 模型最终文本
+
+        Returns:
+            RadarEventScoreResult
+
+        Raises:
+            ValueError: 无法解析 JSON、缺关键字段或分值非法
+    """
+    # 1. 解析 JSON
+    obj = _extract_json_object(text)
+    if not obj:
+        raise ValueError("无法从模型输出中解析 JSON 对象")
+    return parse_radar_event_score_from_obj(obj)
+
+
+def resolve_score_from_flow_result(result: Dict[str, Any]) -> RadarEventScoreResult:
+    """
+        优先从 edges_var / persistence_edges_var 的 radar_event_score 解析；
+        否则回退最后一条 AI 文本。
+
+        Args:
+            result: graph.ainvoke 返回的状态
+
+        Returns:
+            RadarEventScoreResult
+
+        Raises:
+            ValueError: 各路径均无法解析
+    """
+    # 1. edges_var 优先（终评节点刚写入）
+    for bag_name in ("edges_var", "persistence_edges_var"):
+        bag = result.get(bag_name) or {}
+        if not isinstance(bag, dict):
+            continue
+        score_obj = bag.get("radar_event_score")
+        if isinstance(score_obj, dict) and score_obj:
+            logger.info(f"从 {bag_name}.radar_event_score 解析评分结果")
+            return parse_radar_event_score_from_obj(score_obj)
+        # 兼容：模型未包一层时，exhibition_related 可能直接在 edges_var
+        if "exhibition_related" in bag:
+            logger.info(f"从 {bag_name} 顶层字段解析评分结果")
+            return parse_radar_event_score_from_obj(bag)
+
+    # 2. 回退 AI 文本
+    ai_text = extract_last_ai_text(result)
+    if not ai_text:
+        raise ValueError("流程未返回 radar_event_score（edges_var 与 AI 文本均空）")
+    logger.info("从最后一条 AI 文本解析评分结果（edges_var 未命中）")
+    return parse_radar_event_score_from_ai_text(ai_text)
+
+
 @router.post("/huayuan/radar-event-score", response_model=HuayuanRadarEventResponse)
 async def huayuan_radar_event_score(
     request: HuayuanRadarEventRequest,
 ) -> HuayuanRadarEventResponse:
     """
-        华院规则二评分接口：ReAct + AnySearch，返回两维分与证据链。
+        华院规则二评分接口：三节点流水线（规划 → 并行采集 → 终评），返回两维分与证据链。
 
         Args:
             request: 评分请求（query + context.company）
@@ -421,33 +521,23 @@ async def huayuan_radar_event_score(
     trace_id = request.trace_id or secrets.token_hex(16)
     ctx_body = request.context
     company = ctx_body.company
-    max_search_times = (
-        ctx_body.max_search_times
-        if ctx_body.max_search_times is not None
-        else DEFAULT_MAX_SEARCH_TIMES
-    )
-    max_extract_times = (
-        ctx_body.max_extract_times
-        if ctx_body.max_extract_times is not None
-        else DEFAULT_MAX_EXTRACT_TIMES
-    )
-    max_results = (
-        ctx_body.max_results_per_search
-        if ctx_body.max_results_per_search is not None
-        else DEFAULT_MAX_RESULTS_PER_SEARCH
+    max_bocha, max_anysearch, max_extract_times, max_results = resolve_radar_tool_quotas(
+        ctx_body
     )
 
     logger.info(
         f"[华院RadarEvent请求开始] trace_id={trace_id}, "
         f"company={company.company_name}, stock_code={company.stock_code}, "
-        f"event_job_id={ctx_body.event_job_id}, max_search_times={max_search_times}"
+        f"event_job_id={ctx_body.event_job_id}, "
+        f"max_bocha={max_bocha}, max_anysearch={max_anysearch}"
     )
 
     runtime_ctx = build_radar_event_context_from_request(
         company_name=company.company_name,
         stock_code=company.stock_code or "",
         aliases=company.aliases,
-        max_search_times=max_search_times,
+        max_bocha=max_bocha,
+        max_anysearch=max_anysearch,
         max_extract_times=max_extract_times,
         max_results_per_search=max_results,
         max_extract_chars=DEFAULT_MAX_EXTRACT_CHARS,
@@ -467,7 +557,7 @@ async def huayuan_radar_event_score(
         if langfuse_handler:
             config["callbacks"] = [langfuse_handler]
             config["metadata"] = {
-                "langfuse_tags": ["huayuan_radar_event", "api"],
+                "langfuse_tags": ["huayuan_radar_event", "api", "pipeline_v2"],
                 "flow_key": HUAYUAN_RADAR_EVENT_FLOW_KEY,
                 "source": "huayuan_radar_event_api",
                 "event_job_id": str(ctx_body.event_job_id or ""),
@@ -476,12 +566,8 @@ async def huayuan_radar_event_score(
         with HuayuanRadarEventContext(runtime_ctx):
             result = await graph.ainvoke(initial_state, config)
 
-        # 3. 解析评分结果（失败 → 500）
-        ai_text = extract_last_ai_text(result)
-        if not ai_text:
-            raise ValueError("流程未返回 AI 消息")
-
-        score_result = parse_radar_event_score_from_ai_text(ai_text)
+        # 3. 优先 edges_var.radar_event_score，回退 AI 文本
+        score_result = resolve_score_from_flow_result(result)
 
         # 用运行时真实计数回填（若模型漏写）
         if score_result.search_count <= 0 and runtime_ctx.search_count > 0:
@@ -494,7 +580,8 @@ async def huayuan_radar_event_score(
             f"[华院RadarEvent请求完成] trace_id={trace_id}, "
             f"exhibition_related={score_result.exhibition_related}, "
             f"total_score={score_result.total_score}, "
-            f"search_count={score_result.search_count}"
+            f"search_count={score_result.search_count}, "
+            f"bocha={runtime_ctx.bocha_count}, anysearch={runtime_ctx.anysearch_count}"
         )
         return HuayuanRadarEventResponse(
             trace_id=trace_id,

@@ -13,6 +13,9 @@ from backend.domain.flows.implementations.insert_rewritten_data_func import (
 from backend.domain.flows.implementations.update_rewritten_data_func import (
     UpdateRewrittenDataNode,
 )
+from backend.domain.flows.implementations.radar_evidence_gather_node import (
+    EvidenceGatherNode,
+)
 
 __all__ = [
     "RetrievalNode",
@@ -23,4 +26,5 @@ __all__ = [
     "InsertRagDataNode",
     "InsertRewrittenDataNode",
     "UpdateRewrittenDataNode",
+    "EvidenceGatherNode",
 ]

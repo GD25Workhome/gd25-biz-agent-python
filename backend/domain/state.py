@@ -67,6 +67,10 @@ class FlowOutputSchema(TypedDict, total=False):
     """图对外输出 schema"""
     flow_msgs: List[BaseMessage]  # Chat 路由主要使用
     session_id: str  # 便于链路追踪
+    # 华院雷达等流水线需要把结构化中间/终态带回 API（否则 ainvoke 会被裁掉）
+    edges_var: Optional[Dict[str, Any]]
+    persistence_edges_var: Optional[Dict[str, Any]]
+    prompt_vars: Optional[Dict[str, Any]]
 
 
 # ========== 内部完整 State ==========

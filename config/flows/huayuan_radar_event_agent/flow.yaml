@@ -1,25 +1,56 @@
-# 华院规则二：ReAct + AnySearch + 展厅需求两维评分
+# 华院规则二：三节点流水线（规划 → 并行采集 → 终评）
+# 旧单节点 ReAct 备份见：config/flows/huayuan_radar_event_agent_v1_single_react/
 name: huayuan_radar_event_agent
-version: "1.0"
-description: "华院规则二：ReAct + AnySearch 自查证据 + 两维离散分与证据链"
+version: "2.0"
+description: "华院规则二：query 规划 + 多源并行采集 briefs + 两维终评"
 
 nodes:
-  - name: radar_event_react_node
+  - name: query_planner
     type: agent
     config:
-      prompt: prompts/radar_event_react.md
+      prompt: prompts/query_planner.md
       model:
         provider: doubao
-        temperature: 0.2
+        temperature: 0.3
         thinking:
           type: disabled
       tools:
+        - bocha_web_search
         - anysearch_web_search
-        - anysearch_extract
+      persist_to_persistence_edges_var:
+        - queries
+        - planner_notes
+
+  - name: evidence_gather
+    type: function
+    config:
+      function_key: "radar_evidence_gather_func"
+
+  - name: score_summarizer
+    type: agent
+    config:
+      prompt: prompts/radar_event_score.md
+      model:
+        provider: doubao
+        temperature: 0.2
+        # 终评上下文含 briefs，代理链路易长时间无响应；显式超时避免无限挂起
+        timeout: 300
+        thinking:
+          type: disabled
+      persist_to_persistence_edges_var:
+        - radar_event_score
 
 edges:
-  - from: radar_event_react_node
+  - from: query_planner
+    to: evidence_gather
+    condition: always
+
+  - from: evidence_gather
+    to: score_summarizer
+    condition: always
+
+  - from: score_summarizer
     to: END
     condition: always
 
-entry_node: radar_event_react_node
+entry_node: query_planner

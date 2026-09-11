@@ -1,0 +1,26 @@
+# 备份：单节点 ReAct + AnySearch（改造前版本，便于回滚）
+# 回滚方式：将 flow_loader / 路由 FLOW_KEY 切回本目录名，或把本目录内容覆盖回 huayuan_radar_event_agent
+name: huayuan_radar_event_agent_v1_single_react
+version: "1.0"
+description: "【备份】华院规则二：单节点 ReAct + AnySearch + 两维离散分与证据链"
+
+nodes:
+  - name: radar_event_react_node
+    type: agent
+    config:
+      prompt: prompts/radar_event_react.md
+      model:
+        provider: doubao
+        temperature: 0.2
+        thinking:
+          type: disabled
+      tools:
+        - anysearch_web_search
+        - anysearch_extract
+
+edges:
+  - from: radar_event_react_node
+    to: END
+    condition: always
+
+entry_node: radar_event_react_node

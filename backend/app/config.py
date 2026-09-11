@@ -73,6 +73,11 @@ class Settings(BaseSettings):
         default=None,
         description="AnySearch API Key（官方文档变量名）",
     )
+    # 博查 Web Search（展厅发觉）；环境变量名按现网 .env：BO_CHA_APIKEY
+    BO_CHA_APIKEY: Optional[str] = Field(
+        default=None,
+        description="博查 AI Web Search API Key",
+    )
     
     # 默认模型配置（可选）
     LLM_MODEL: str = Field(default="doubao-seed-1-6-251015", description="默认模型名称")

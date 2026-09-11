@@ -38,8 +38,9 @@
 | Method / Path | `POST /api/v1/huayuan/radar-event-score`                      |
 | Content-Type  | `application/json`                                            |
 | 鉴权            | V1 无业务登录；依赖内网/网关                                              |
-| 建议超时          | **≥ 180s**（多轮搜索 + 抽正文较慢）                                      |
+| 建议超时          | 服务端墙钟 **120s**；客户端建议 **≥ 130s**                             |
 | 成功            | HTTP **200** + 强类型 `radar_event_score`                        |
+| 执行超时          | HTTP **504**（超过 120s 取消本次 Agent 运行）                          |
 | 业务/解析失败       | HTTP **500**（含模型 JSON 非法、非法分值、有分无 URL 等）；调用方可记 job FAILED 并重试 |
 | 参数校验失败        | HTTP **422**（如 `query` 空、`company_name` 空）                    |
 
@@ -235,7 +236,8 @@ curl -s http://127.0.0.1:8000/api/v1/huayuan/radar-event-score \
 | `query` / `company_name` 为空  | 422  | 修正入参                           |
 | 模型输出非法 JSON / 非法分值 / 有分无 URL | 500  | 按 `trace_id` 查日志；可重试同 job      |
 | 流程/工具异常                      | 500  | 重试；注意 AnySearch 限流与超时          |
-| 长时间无响应                       | —    | 客户端超时建议 ≥180s；工具侧单次 HTTP 约 30s |
+| 长时间无响应                       | —    | 服务端 **120s** 墙钟超时 → **504**；客户端超时建议略大于 120s |
+| 执行超时                         | 504  | 降低 `max_search_times` 后重试；查 `trace_id` 日志     |
 
 
 幂等：本接口**无业务幂等键**；调用方应用 `event_job_id` / `trace_id` 自行防重。

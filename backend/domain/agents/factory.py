@@ -70,8 +70,38 @@ class AgentExecutor:
             config["callbacks"] = callbacks
             logger.debug(f"[AgentExecutor] 传递运行时callbacks: count={len(callbacks)}")
         
-        # 调用LangGraph图（异步）
-        result = await self.graph.ainvoke({"messages": messages}, config)
+        # 调用LangGraph图（异步）；连接类错误重试 1 次（代理/上游偶发断连）
+        last_err: Optional[BaseException] = None
+        result = None
+        for attempt in range(2):
+            try:
+                if sys_msg:
+                    logger.info(
+                        f"[AgentExecutor] ainvoke attempt={attempt + 1}, "
+                        f"sys_msg_chars={len(str(sys_msg.content))}"
+                    )
+                result = await self.graph.ainvoke({"messages": messages}, config)
+                last_err = None
+                break
+            except Exception as e:
+                last_err = e
+                err_name = type(e).__name__
+                err_text = str(e).lower()
+                is_conn = (
+                    "connection" in err_text
+                    or "disconnected" in err_text
+                    or "timeout" in err_text
+                    or err_name in {"APIConnectionError", "RemoteProtocolError", "ConnectError"}
+                )
+                if attempt == 0 and is_conn:
+                    logger.warning(
+                        f"[AgentExecutor] 模型调用连接异常，准备重试 1 次: {err_name}: {e}"
+                    )
+                    continue
+                raise
+        if last_err is not None:
+            raise last_err
+        assert result is not None
         
         # 提取最后一条AI消息作为输出
         output = ""

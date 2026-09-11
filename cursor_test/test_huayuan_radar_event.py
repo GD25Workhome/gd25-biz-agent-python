@@ -1,7 +1,8 @@
 """
 华院规则二 /radar-event-score 单元测试
 
-覆盖：Schema、上下文限流、权威档启发式、评分解析、非法分值、路由 mock。
+覆盖：Schema、上下文限流、权威档启发式、评分解析、非法分值、路由 mock、
+edges_var 优先解析。
 """
 from __future__ import annotations
 
@@ -23,9 +24,14 @@ if str(_project_root) not in sys.path:
 from backend.app.api.routes.huayuan_radar_event import (
     HUAYUAN_RADAR_EVENT_FLOW_KEY,
     parse_radar_event_score_from_ai_text,
+    resolve_radar_tool_quotas,
+    resolve_score_from_flow_result,
     router as radar_event_router,
 )
 from backend.app.api.schemas.huayuan_radar_event import HuayuanRadarEventRequest
+from backend.domain.flows.implementations.radar_evidence_gather_node import (
+    invoke_registered_tool,
+)
 from backend.domain.tools.huayuan_radar_event_context import (
     build_radar_event_context_from_request,
     classify_authority_tier,
@@ -48,7 +54,8 @@ def _sample_request_body() -> dict:
             },
             "time_from": "2025-01-01",
             "time_to": "2026-09-09",
-            "max_search_times": 3,
+            "max_bocha": 3,
+            "max_anysearch": 2,
             "max_extract_times": 2,
         },
         "trace_id": "b" * 32,
@@ -107,29 +114,49 @@ def test_request_rejects_blank_company_name() -> None:
         HuayuanRadarEventRequest(**body)
 
 
-def test_radar_event_context_search_limit_and_dedupe() -> None:
-    """搜索次数与去重限制生效。"""
+def test_resolve_quotas_split_and_legacy() -> None:
+    """分工具限额与旧 max_search_times 回退。"""
+    req = HuayuanRadarEventRequest(**_sample_request_body())
+    b, a, e, r = resolve_radar_tool_quotas(req.context)
+    assert b == 3 and a == 2 and e == 2
+
+    body = _sample_request_body()
+    del body["context"]["max_bocha"]
+    del body["context"]["max_anysearch"]
+    body["context"]["max_search_times"] = 7
+    req2 = HuayuanRadarEventRequest(**body)
+    b2, a2, _, _ = resolve_radar_tool_quotas(req2.context)
+    assert b2 == 7 and a2 == 7
+
+
+def test_radar_event_context_split_limits() -> None:
+    """博查 / AnySearch 分配额与去重。"""
     data = build_radar_event_context_from_request(
         company_name="鼎捷数智",
         stock_code="300378",
         aliases=["鼎捷软件"],
-        max_search_times=2,
+        max_bocha=1,
+        max_anysearch=2,
         max_extract_times=1,
         max_results_per_search=5,
         max_extract_chars=1000,
         event_job_id=1,
         trace_id="t1",
     )
-    ok, _ = data.can_search("鼎捷数智 展厅")
+    ok, _ = data.can_bocha("鼎捷数智 展厅")
     assert ok
-    data.mark_searched("鼎捷数智 展厅")
-    ok2, reason2 = data.can_search("鼎捷数智 展厅")
-    assert not ok2
-    assert "已搜索" in reason2
-    data.mark_searched("鼎捷数智 体验中心")
-    ok3, reason3 = data.can_search("第三个")
-    assert not ok3
-    assert "上限" in reason3
+    data.mark_bocha("鼎捷数智 展厅")
+    ok2, reason2 = data.can_bocha("另一条")
+    assert not ok2 and "max_bocha" in reason2
+
+    assert data.can_anysearch("鼎捷数智 展厅")[0]
+    data.mark_anysearch("鼎捷数智 展厅")
+    # 同 query 在 anysearch 去重；博查侧已搜不影响 anysearch 首次
+    assert not data.can_anysearch("鼎捷数智 展厅")[0]
+    data.mark_anysearch("鼎捷数智 体验中心")
+    ok3, reason3 = data.can_anysearch("第三个")
+    assert not ok3 and "max_anysearch" in reason3
+    assert data.search_count == 3
 
 
 def test_authority_tier_and_subject_match() -> None:
@@ -151,6 +178,13 @@ def test_parse_radar_event_score_success() -> None:
     assert result.specificity_score == 10
     assert result.total_score == 70
     assert result.evidences[0].url.startswith("https://")
+
+
+def test_parse_wrapped_radar_event_score() -> None:
+    """支持 radar_event_score 包装层。"""
+    wrapped = {"radar_event_score": _sample_score_json()}
+    result = parse_radar_event_score_from_ai_text(json.dumps(wrapped, ensure_ascii=False))
+    assert result.total_score == 70
 
 
 def test_parse_rejects_illegal_evidence_score() -> None:
@@ -191,16 +225,32 @@ def test_parse_unrelated_clears_scores() -> None:
     assert result.admission_hint == "reject_unrelated"
 
 
+def test_resolve_score_prefers_edges_var() -> None:
+    """优先 edges_var.radar_event_score，忽略错误的 AI 文本。"""
+    good = _sample_score_json()
+    bad_ai = json.dumps(_sample_score_json(evidence_score=68), ensure_ascii=False)
+    result = resolve_score_from_flow_result(
+        {
+            "edges_var": {"radar_event_score": good},
+            "flow_msgs": [AIMessage(content=bad_ai)],
+        }
+    )
+    assert result.total_score == 70
+
+
 def test_route_success_with_mocked_flow() -> None:
-    """路由成功路径（mock Flow）。"""
+    """路由成功路径（mock Flow，经 edges_var）。"""
     app = FastAPI()
     app.include_router(radar_event_router, prefix="/api/v1")
     client = TestClient(app)
 
-    ai_payload = json.dumps(_sample_score_json(), ensure_ascii=False)
+    score = _sample_score_json()
     mock_graph = MagicMock()
     mock_graph.ainvoke = AsyncMock(
-        return_value={"flow_msgs": [AIMessage(content=ai_payload)]}
+        return_value={
+            "edges_var": {"radar_event_score": score},
+            "flow_msgs": [AIMessage(content=json.dumps(score, ensure_ascii=False))],
+        }
     )
 
     with patch(
@@ -229,7 +279,7 @@ def test_route_parse_failure_returns_500() -> None:
     bad_payload = json.dumps(_sample_score_json(evidence_score=68), ensure_ascii=False)
     mock_graph = MagicMock()
     mock_graph.ainvoke = AsyncMock(
-        return_value={"flow_msgs": [AIMessage(content=bad_payload)]}
+        return_value={"flow_msgs": [AIMessage(content=bad_payload)], "edges_var": {}}
     )
 
     with patch(
@@ -243,6 +293,27 @@ def test_route_parse_failure_returns_500() -> None:
 
     assert resp.status_code == 500
     assert "radar_event_score" in resp.json()["detail"]
+
+
+def test_invoke_registered_tool_uses_ainvoke() -> None:
+    """StructuredTool 须经 ainvoke，不能直接当函数调用。"""
+    import asyncio
+    from langchain_core.tools import tool
+
+    @tool
+    async def _fake_search(query: str, max_results: int = 0) -> str:
+        """测试用假搜索工具。"""
+        return json.dumps({"ok": True, "query": query, "results": []}, ensure_ascii=False)
+
+    async def _run() -> None:
+        raw = await invoke_registered_tool(
+            _fake_search, {"query": "测试公司 展厅", "max_results": 0}
+        )
+        obj = json.loads(raw)
+        assert obj["ok"] is True
+        assert obj["query"] == "测试公司 展厅"
+
+    asyncio.run(_run())
 
 
 def test_flow_key_constant() -> None:

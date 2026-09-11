@@ -38,6 +38,7 @@ def init_tools():
     from backend.domain.tools import health_event_tool  # noqa: F401
     from backend.domain.tools import huayuan_document_tool  # noqa: F401
     from backend.domain.tools import anysearch_tool  # noqa: F401
+    from backend.domain.tools import bocha_tool  # noqa: F401
     
     # 可以在这里导入更多工具模块
     # from backend.domain.tools import appointment  # noqa: F401

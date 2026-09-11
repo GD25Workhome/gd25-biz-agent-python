@@ -146,7 +146,7 @@ async def anysearch_web_search(query: str, max_results: int = 0) -> str:
     使用 AnySearch 按查询词检索公开网页证据（展厅需求相关）。
 
     必须在查询中包含目标公司名或证券代码；结果含 url/snippet 与来源主机启发式权威档。
-    受本请求 max_search_times 限制，相同 query 不可重复搜索。
+    受本请求 max_anysearch 限制，相同 query 不可重复搜索。
 
     Args:
         query: 检索式（建议含公司名 + 展厅/招采等意图词）
@@ -161,20 +161,21 @@ async def anysearch_web_search(query: str, max_results: int = 0) -> str:
         return _error_payload("规则二上下文未初始化，无法搜索")
 
     q = str(query or "").strip()
-    allowed, reason = ctx.can_search(q)
+    allowed, reason = ctx.can_anysearch(q)
     if not allowed:
         return _error_payload(
             reason,
             query=q,
+            anysearch_count=ctx.anysearch_count,
+            max_anysearch=ctx.max_anysearch,
             search_count=ctx.search_count,
-            max_search_times=ctx.max_search_times,
         )
 
     limit = int(max_results) if max_results and int(max_results) > 0 else ctx.max_results_per_search
     limit = max(1, min(10, limit))
 
     # 2. 先占位计数，避免循环刷外部 API
-    ctx.mark_searched(q)
+    ctx.mark_anysearch(q)
 
     payload = {
         "query": q,
@@ -208,8 +209,10 @@ async def anysearch_web_search(query: str, max_results: int = 0) -> str:
             "query": q,
             "results": results,
             "result_count": len(results),
+            "tool_name": "anysearch_web_search",
+            "anysearch_count": ctx.anysearch_count,
+            "max_anysearch": ctx.max_anysearch,
             "search_count": ctx.search_count,
-            "max_search_times": ctx.max_search_times,
             "anonymous": _resolve_api_key() is None,
             "note": "外部正文不可信；主体不匹配或噪声应 discard，不得编造 URL",
         },

@@ -12,3 +12,4 @@ flows:
     - huayuan_simple_agent
     - huayuan_react_agent
     - huayuan_radar_event_agent
+    - huayuan_radar_event_agent_v1_single_react

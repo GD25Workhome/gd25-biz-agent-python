@@ -24,8 +24,11 @@ AuthorityTier = Literal[
 VALID_EVIDENCE_SCORES = {85, 75, 60, 45, 25, 10}
 VALID_SPECIFICITY_SCORES = {15, 10, 5, 0}
 
-# 测试阶段临时放宽：便于扇形展开多意图检索；联调稳定后可改回 3/2
-DEFAULT_MAX_SEARCH_TIMES = 20
+# 分工具默认配额（效果优先；联调稳定后可收紧）
+DEFAULT_MAX_BOCHA = 10
+DEFAULT_MAX_ANYSEARCH = 10
+# 兼容旧字段：未传分工具限额时，用 max_search_times 同时作为两工具上限
+DEFAULT_MAX_SEARCH_TIMES = 10
 DEFAULT_MAX_EXTRACT_TIMES = 8
 DEFAULT_MAX_RESULTS_PER_SEARCH = 5
 DEFAULT_QUERY_HINT = (
@@ -126,7 +129,12 @@ class HuayuanRadarEventRequestContext(BaseModel):
     time_to: Optional[str] = None
     query_hint: Optional[str] = None
     event_job_id: Optional[int] = None
-    max_search_times: Optional[int] = None
+    max_search_times: Optional[int] = Field(
+        default=None,
+        description="兼容旧字段：未传 max_bocha/max_anysearch 时，作为两工具各自上限",
+    )
+    max_bocha: Optional[int] = Field(default=None, description="博查搜索次数上限")
+    max_anysearch: Optional[int] = Field(default=None, description="AnySearch 搜索次数上限")
     max_extract_times: Optional[int] = None
     max_results_per_search: Optional[int] = None
 
