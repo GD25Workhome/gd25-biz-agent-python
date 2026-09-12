@@ -1,0 +1,83 @@
+# 华院最小后端 — K8s 示例清单
+# 使用前替换镜像仓库地址，并用真实 Secret 注入 API Key。
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: huayuan-agent-config
+data:
+  ENABLE_DATABASE: "false"
+  LANGFUSE_ENABLED: "false"
+  PROMPT_SOURCE_MODE: "local"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: huayuan-agent-secrets
+type: Opaque
+stringData:
+  DOUBAO_API_KEY: "replace-me"
+  OPENAI_API_KEY: "replace-me"
+  ANY_SEARCH_API_KEY: "replace-me"
+  BO_CHA_APIKEY: "replace-me"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: huayuan-agent
+  labels:
+    app: huayuan-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: huayuan-agent
+  template:
+    metadata:
+      labels:
+        app: huayuan-agent
+    spec:
+      containers:
+        - name: huayuan-agent
+          image: bj-unidt.tencentcloudcr.com/unidt-repo/unidt-exhibition-opportunity-py-agent:v1-260911
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: huayuan-agent-config
+            - secretRef:
+                name: huayuan-agent-secrets
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: huayuan-agent
+spec:
+  selector:
+    app: huayuan-agent
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+  type: ClusterIP

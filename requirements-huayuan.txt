@@ -1,0 +1,29 @@
+# 华院最小后端运行时依赖（小镜像）
+# 刻意排除：torch / sentence-transformers / autogen / pandas / sqlalchemy / psycopg / pgvector / alembic / volcengine
+
+# Web
+fastapi>=0.100.0,<1.0.0
+uvicorn[standard]>=0.23.0,<1.0.0
+
+# LangGraph / LangChain
+langgraph>=1.0.0,<2.0.0
+langchain>=1.0.0,<2.0.0
+langchain-core>=1.0.0,<2.0.0
+langchain-openai>=1.0.0,<2.0.0
+
+# 配置
+pydantic>=2.0.0,<3.0.0
+pydantic-settings>=2.0.0,<3.0.0
+python-dotenv>=1.0.0,<2.0.0
+
+# HTTP（exhibition 文档 / AnySearch / 博查）
+httpx>=0.24.0,<1.0.0
+
+# YAML（flow + model_providers）
+pyyaml>=6.0.0,<7.0.0
+
+# 条件边求值
+simpleeval>=0.9.13,<1.0.0
+
+# 可观测性（可选；代码已 lazy import，不装也能跑）
+# langfuse>=3.0.0,<4.0.0

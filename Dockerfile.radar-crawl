@@ -1,0 +1,30 @@
+# 华院雷达采集 Worker（独立镜像，不与 FastAPI 同进程）
+# 构建：docker build -f Dockerfile.radar-crawl -t unidt-exhibition-opportunity-py-crawl:latest .
+# 运行：docker run --rm --env-file radar_crawl/.env unidt-exhibition-opportunity-py-crawl:latest
+# 默认一个命令启动全部 Worker（列表 + PDF）
+#
+# 基础镜像默认走 DaoCloud（国内直连 Docker Hub 常超时）；可覆盖：
+#   docker build --build-arg BASE_REGISTRY=docker.io/library/ ...
+
+ARG BASE_REGISTRY=docker.m.daocloud.io/library/
+
+FROM ${BASE_REGISTRY}python:3.11-slim
+
+WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app \
+    RADAR_WORKER_MODE=all
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements-radar-crawl.txt .
+RUN pip install --no-cache-dir -r requirements-radar-crawl.txt
+
+COPY radar_crawl/ radar_crawl/
+
+# 一个启动命令 = 全部采集任务
+CMD ["python", "-m", "radar_crawl"]

@@ -1,15 +1,11 @@
-# 流程加载配置
-# 指定哪些流程需要预加载，哪些按需加载
+# 流程加载配置（华院最小部署）
+# 仅预加载华院三条业务流，避免启动时编译医疗/RAG 流程
 
 flows:
-  preload:  # 需要预加载的流程（启动时编译）
-    - medical_agent_v5
-  
-  lazy_load:  # 按需加载的流程（首次使用时编译）
-    - medical_agent_v3
-    - plan_execute_agent
-    - autogen_review_agent
+  preload:
     - huayuan_simple_agent
     - huayuan_react_agent
     - huayuan_radar_event_agent
+
+  lazy_load:
     - huayuan_radar_event_agent_v1_single_react

@@ -183,7 +183,7 @@ async def lifespan(app: FastAPI):
 
 
 # 创建FastAPI应用，使用新的 lifespan 事件处理器
-app = FastAPI(title="动态流程系统 MVP", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="华院 Agent 服务", version="1.0.0", lifespan=lifespan)
 
 # 配置CORS
 app.add_middleware(
@@ -205,8 +205,16 @@ if frontend_dir.exists():
 
 @app.get("/")
 async def root():
-    """根路径"""
-    return {"message": "动态流程系统 MVP", "status": "running"}
+    """根路径。"""
+    return {
+        "message": "华院 Agent 服务",
+        "status": "running",
+        "routes": [
+            "/api/v1/huayuan/chat",
+            "/api/v1/huayuan/portrait",
+            "/api/v1/huayuan/radar-event-score",
+        ],
+    }
 
 
 @app.get("/health")

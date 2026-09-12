@@ -1,0 +1,65 @@
+# 华院雷达采集 Worker — K8s 示例（一个 Deployment / 一个启动命令）
+# 容器内 python -m radar_crawl 会拉起注册表里全部 Worker（当前：列表 + PDF）
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: radar-crawl-config
+data:
+  RADAR_WORKER_MODE: "all"
+  RADAR_DB_HOST: "请填写MySQL主机"
+  RADAR_DB_PORT: "3306"
+  RADAR_DB_NAME: "unidt_exhibition"
+  RADAR_CNINFO_FETCH_PDF: "1"
+  RADAR_POLL_INTERVAL_SEC: "60"
+  RADAR_PDF_POLL_INTERVAL_SEC: "5"
+  RADAR_PDF_CONCURRENCY: "3"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: radar-crawl-secrets
+type: Opaque
+stringData:
+  RADAR_DB_USER: "root"
+  RADAR_DB_PASSWORD: "replace-me"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: radar-crawl
+  labels:
+    app: radar-crawl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: radar-crawl
+  template:
+    metadata:
+      labels:
+        app: radar-crawl
+    spec:
+      containers:
+        - name: radar-crawl
+          image: bj-unidt.tencentcloudcr.com/unidt-repo/unidt-exhibition-opportunity-py-crawl:v1-260911
+          imagePullPolicy: IfNotPresent
+          # 一个命令启动全部任务；一般不用改
+          args: ["python", "-m", "radar_crawl"]
+          env:
+            - name: RADAR_WORKER_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          envFrom:
+            - configMapRef:
+                name: radar-crawl-config
+            - secretRef:
+                name: radar-crawl-secrets
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"

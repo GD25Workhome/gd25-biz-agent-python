@@ -1,0 +1,51 @@
+# Git / IDE
+.git
+.github
+.vscode
+.claude
+.idea
+.pytest_cache
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+.mypy_cache
+.ruff_cache
+
+# 密钥与本地环境（运行时用 K8s Secret / env 注入）
+.env
+.env*
+!.env.example
+
+# 文档 / 测试 / 设计稿
+doc/
+ai_docs/
+cursor_docs/
+cursor_test/
+华院Agent设计/
+README.md
+LICENSE
+
+# 前端与静态素材（华院纯后端不需要）
+frontend/
+static/
+
+# 医疗 / RAG / 运维脚本（不进华院镜像）
+alembic/
+alembic.ini
+scripts/
+docker/deps.env
+
+# 全量依赖（镜像只用 requirements-huayuan.txt）
+requirements.txt
+requirements.lock
+
+# 医疗 / 旧流程配置（镜像内只 COPY 华院 flow）
+config/oldflow/
+config/flows/medical_agent_*/
+config/flows/plan_execute_agent/
+config/flows/autogen_review_agent/
+config/flows/embedding_knowledge_agent/
+config/flows/create_rag_agent/
+config/flows/pipeline_step2/
+config/flows/flow_rule/

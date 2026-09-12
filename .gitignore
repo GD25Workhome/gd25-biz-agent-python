@@ -66,3 +66,9 @@ frontend/flow_previews/
 华院Agent设计/5维画像调试/trace-80dbb14f443145168c96a3681f994f9b.json
 华院Agent设计/5维画像调试/trace-cffb05f428fe47008b047498391d7a50.json
 .env-back-公共
+
+# 镜像仓库口令（已改用 ~/.config/unidt/tcr.env，防误提交）
+huaYuanTestDeploy/镜像的认证地址.md
+huaYuanTestDeploy/tcr.env
+huaYuanTestDeploy/环境变量.md
+deploy/材料/镜像的认证地址.md
