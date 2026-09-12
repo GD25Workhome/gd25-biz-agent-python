@@ -1,0 +1,37 @@
+[
+  {
+    "stock_code": "000001",
+    "company_name": "平安银行",
+    "news_list_url": "http://bank.pingan.com/bankPingAnCom/about/news"
+  },
+  {
+    "stock_code": "000031",
+    "company_name": "大悦城",
+    "news_list_url": "http://www.grandjoy.com/about/news"
+  },
+  {
+    "stock_code": "000034",
+    "company_name": "神州数码",
+    "news_list_url": "https://www.digitalchina.com/aboutus/news.html"
+  },
+  {
+    "stock_code": "000055",
+    "company_name": "方大集团",
+    "news_list_url": "https://www.fangda.com/news/index.html"
+  },
+  {
+    "stock_code": "000063",
+    "company_name": "中兴通讯",
+    "news_list_url": "https://www.zte.com.cn/china/about/news.html"
+  },
+  {
+    "stock_code": "000333",
+    "company_name": "美的集团",
+    "news_list_url": "https://www.midea.com.cn/zh/about-midea/news"
+  },
+  {
+    "stock_code": "000411",
+    "company_name": "英特集团",
+    "news_list_url": "http://www.intmedic.com/news.html"
+  }
+]

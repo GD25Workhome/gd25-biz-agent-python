@@ -1,0 +1,16 @@
+# Dependencies for company_news_crawl MVP
+
+# HTTP client
+httpx>=0.24.0,<1.0.0
+
+# HTML parsing (fast)
+selectolax>=0.3.0,<1.0.0
+
+# Content extraction
+trafilatura>=1.5.0,<2.0.0
+
+# Optional: Environment variables
+python-dotenv>=1.0.0,<2.0.0
+
+# Optional: Playwright for SPA (commented out for MVP)
+# playwright>=1.40.0,<2.0.0
