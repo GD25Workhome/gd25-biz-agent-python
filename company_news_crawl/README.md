@@ -10,7 +10,13 @@ A股上市公司官网新闻中心爬虫 MVP
 
 - ✅ 加载公司种子列表（JSONL/JSON）
 - ✅ HTTP 方式获取新闻列表页
+- ✅ **结构化列表提取**：从列表页直接提取 URL、标题、发布日期（list-with-date 模式）
+- ✅ **静态分页支持**：自动跟随"下一页"链接，可配置最大页数（默认 3 页）
 - ✅ 基于启发式规则提取同域文章链接
+- ✅ **增强的内容提取**：
+  - 支持 h3/h5 标题和日期模式（适配平安银行等站点）
+  - 自动过滤导航标题（如「组织架构」「关于我们」）
+  - 列表页元数据作为回退（当详情页提取失败时）
 - ✅ 提取文章标题、发布时间、正文内容
 - ✅ 输出 JSONL 格式结果（含站点档案、文章记录、错误日志）
 - ✅ 站点类型识别（static/cms/spa/api/blocked）
@@ -55,6 +61,12 @@ python -m company_news_crawl once \
   --out result.jsonl \
   --max-articles 10 \
   --timeout 15
+
+# 启用分页（最多爬取 5 页）
+python -m company_news_crawl once \
+  --seed my_companies.json \
+  --out result.jsonl \
+  --max-pages 5
 ```
 
 ### 3. 使用环境变量
@@ -196,6 +208,7 @@ python -m company_news_crawl once --seed seed.json --out out.jsonl
 | `CRAWL_MAX_RETRIES` | 2 | 失败重试次数 |
 | `CRAWL_REQUEST_INTERVAL` | 1.0 | 请求间隔（秒） |
 | `CRAWL_MAX_ARTICLES` | 20 | 每家公司最大文章数 |
+| `CRAWL_MAX_PAGES` | 3 | 每家公司最大爬取页数（分页） |
 | `CRAWL_MAX_CONCURRENT` | 1 | 最大并发数（MVP 固定为 1） |
 | `CRAWL_OUTPUT_DIR` | /tmp/company_news_crawl | 默认输出目录 |
 
@@ -255,6 +268,64 @@ company_news_crawl/
 | `api` | JSON API | ⚠️ 标记跳过 |
 | `blocked` | 超时/反爬/需登录 | ⚠️ 标记失败 |
 | `unknown` | 未识别 | ⚠️ 尝试提取 |
+
+## list-with-date 模式说明
+
+### 设计原理
+
+许多公司官网（如平安银行）的新闻列表页本身就包含完整的标题和日期信息，格式通常为：
+
+```html
+<a href="/news/detail/123">2026-08-26 平安银行发布年度报告</a>
+```
+
+本爬虫采用**结构化列表提取**策略：
+
+1. **列表页提取**：从列表页的每个链接中尝试提取 `{url, title, published_at}`
+2. **元数据传递**：将列表页提取的标题和日期传递给详情页解析器
+3. **智能回退**：
+   - 详情页提取成功 → 使用详情页数据
+   - 详情页标题缺失或为导航文本（如「组织架构」） → 使用列表页标题
+   - 详情页日期缺失 → 使用列表页日期
+
+### 支持的日期格式
+
+- `YYYY-MM-DD` (2026-08-26)
+- `YYYY/MM/DD` (2026/08/26)
+- `YYYY年M月D日` (2026年8月26日)
+
+### 导航标题过滤
+
+自动过滤常见的导航/静态页面标题，避免误提取：
+
+- 组织架构、关于我们、联系方式
+- 公司简介、企业文化、发展历程
+- 首页、导航、菜单、网站地图
+- 新闻中心、新闻列表（列表页本身）
+
+### 分页支持
+
+- **自动发现分页链接**：识别"下一页"、`page=N`、`index_N.html` 等模式
+- **有界爬取**：通过 `--max-pages` 限制最大页数（默认 3 页）
+- **去重保护**：自动跳过已访问的 URL
+- **安全第一**：分页失败不影响已获取数据的处理
+
+### 适用站点示例
+
+- ✅ 平安银行：`2026-08-26 新闻标题` 格式
+- ✅ 中兴通讯：列表页带日期的新闻条目
+- ✅ 其他 CMS 站点：列表页包含摘要信息的站点
+
+### 配置建议
+
+```bash
+# 典型 list-with-date 站点配置
+python -m company_news_crawl once \
+  --seed companies.json \
+  --out output.jsonl \
+  --max-articles 30 \
+  --max-pages 3
+```
 
 ## 常见问题
 

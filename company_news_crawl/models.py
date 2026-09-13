@@ -8,6 +8,14 @@ from enum import Enum
 import hashlib
 
 
+@dataclass
+class ListItem:
+    """列表页提取的单条新闻项"""
+    url: str
+    title: Optional[str] = None
+    published_at: Optional[str] = None
+
+
 class SiteType(str, Enum):
     """站点类型枚举"""
     STATIC = "static"
