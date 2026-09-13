@@ -1,0 +1,32 @@
+{
+  "total_companies": 3,
+  "successful_companies": 3,
+  "total_articles": 134,
+  "total_errors": 16,
+  "companies": [
+    {
+      "stock_code": "000001",
+      "company_name": "平安银行",
+      "article_count": 49,
+      "error_count": 1,
+      "site_type": "static",
+      "list_url": "http://bank.pingan.com/bankPingAnCom/about/news"
+    },
+    {
+      "stock_code": "000031",
+      "company_name": "大悦城",
+      "article_count": 36,
+      "error_count": 14,
+      "site_type": "static",
+      "list_url": "http://www.grandjoy.com/about/news"
+    },
+    {
+      "stock_code": "000034",
+      "company_name": "神州数码",
+      "article_count": 49,
+      "error_count": 1,
+      "site_type": "cms",
+      "list_url": "https://www.digitalchina.com/aboutus/news.html"
+    }
+  ]
+}

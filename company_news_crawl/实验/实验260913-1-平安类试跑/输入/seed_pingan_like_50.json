@@ -1,0 +1,452 @@
+[
+  {
+    "stock_code": "000001",
+    "company_name": "平安银行",
+    "news_list_url": "http://bank.pingan.com/bankPingAnCom/about/news",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 14,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "600276",
+    "company_name": "恒瑞医药",
+    "news_list_url": "https://www.hengrui.com/media",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 515,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "300388",
+    "company_name": "节能国祯",
+    "news_list_url": "https://www.gzep.com.cn/info.php?class_id=102",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 501,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "002521",
+    "company_name": "齐峰新材",
+    "news_list_url": "http://www.qifeng.cn/news/index.html",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 414,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "603102",
+    "company_name": "百合股份",
+    "news_list_url": "http://www.baiheshengwu.com/news/qiye",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 408,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "300624",
+    "company_name": "万兴科技",
+    "news_list_url": "https://www.wondershare.cn/news",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 307,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "603569",
+    "company_name": "长久物流",
+    "news_list_url": "https://changjiulogistics.com/index.php?m=y2023.news",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 262,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "300215",
+    "company_name": "电科院",
+    "news_list_url": "http://www.eeti.cn/News/List.htm",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 237,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "600053",
+    "company_name": "*ST九鼎",
+    "news_list_url": "https://www.jdcapital.com/xinwen",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 223,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "603029",
+    "company_name": "天鹅股份",
+    "news_list_url": "http://www.sdmj.com.cn/news.html",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 147,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "002979",
+    "company_name": "雷赛智能",
+    "news_list_url": "https://www.leisai.com/news.html",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 145,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "603919",
+    "company_name": "金徽酒",
+    "news_list_url": "https://www.jinhuijiu.com/news/index.html",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 141,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "688566",
+    "company_name": "吉贝尔",
+    "news_list_url": "https://www.jbepharm.com/news",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 118,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "002587",
+    "company_name": "奥拓电子",
+    "news_list_url": "https://www.aoto.com/news",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 105,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "000811",
+    "company_name": "冰轮环境",
+    "news_list_url": "http://www.moon-tech.com/news/company-news.jsp",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 99,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "920346",
+    "company_name": "威贸电子",
+    "news_list_url": "http://www.shwmdz.com/news",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 97,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "002581",
+    "company_name": "*ST未名",
+    "news_list_url": "https://www.wmm.bio:443/news/type/1",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 85,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "301665",
+    "company_name": "泰禾股份",
+    "news_list_url": "https://www.cacch.com/#met-7",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 85,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "300407",
+    "company_name": "凯发电气",
+    "news_list_url": "https://www.keyvia.cn/cn/NewsList.aspx?TypeId=10012",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 82,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "688234",
+    "company_name": "天岳先进",
+    "news_list_url": "https://www.sicc.cc/news.html",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 67,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "300627",
+    "company_name": "华测导航",
+    "news_list_url": "http://www.huace.cn/information",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 65,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "000333",
+    "company_name": "美的集团",
+    "news_list_url": "https://www.midea.com.cn/zh/about-midea/news",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 63,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "000559",
+    "company_name": "万向钱潮",
+    "news_list_url": "https://www.wxqc.com.cn/news.html",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 63,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "600674",
+    "company_name": "川投能源",
+    "news_list_url": "https://www.ctny.com.cn/news/company-news",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 62,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "002010",
+    "company_name": "传化智联",
+    "news_list_url": "https://www.transfarzl.com/index.php/news/dynamic/37.html",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 60,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "600486",
+    "company_name": "扬农化工",
+    "news_list_url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone1.html",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 60,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "301386",
+    "company_name": "未来电器",
+    "news_list_url": "https://www.szfuture.com/news",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 57,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "300415",
+    "company_name": "伊之密",
+    "news_list_url": "https://www.yizumi.com/news.html",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 55,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "000998",
+    "company_name": "隆平高科",
+    "news_list_url": "http://www.lpht.com.cn/news.html",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 54,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "002668",
+    "company_name": "TCL智家",
+    "news_list_url": "http://www.tclsmarthome.com/newsroom",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 52,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "603616",
+    "company_name": "韩建河山",
+    "news_list_url": "https://www.hjhsgy.com/news.html",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 50,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "688313",
+    "company_name": "仕佳光子",
+    "news_list_url": "https://www.sjphotons.com.cn/articles",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 47,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "688656",
+    "company_name": "浩欧博",
+    "news_list_url": "http://www.hob-biotech.com/media.html",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 46,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "300875",
+    "company_name": "捷强装备",
+    "news_list_url": "https://www.tjjqzb.com/web/newsindex",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 45,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "688083",
+    "company_name": "中望软件",
+    "news_list_url": "https://www.zwsoft.cn/news",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 44,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "688720",
+    "company_name": "艾森股份",
+    "news_list_url": "http://www.asem.cn/news",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 41,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "601567",
+    "company_name": "三星电气",
+    "news_list_url": "https://www.sanxing.com/jeecg-boot/lb/web/news",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 37,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "301558",
+    "company_name": "三态股份",
+    "news_list_url": "https://www.suntekcorps.com/news/list",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 36,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "002513",
+    "company_name": "蓝丰生化",
+    "news_list_url": "https://www.jslanfeng.com/news.html",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 35,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "000799",
+    "company_name": "酒鬼酒",
+    "news_list_url": "http://www.jiuguijiu000799.com/xwzx.html",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 34,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "600557",
+    "company_name": "康缘药业",
+    "news_list_url": "https://www.kanion.com/news/company_news.jsp",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 34,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "002174",
+    "company_name": "游族网络",
+    "news_list_url": "https://www.yoozoo.com/news",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 23,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "300845",
+    "company_name": "捷安高科",
+    "news_list_url": "https://www.jantech.cn/corp-news",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 31,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "001277",
+    "company_name": "速达股份",
+    "news_list_url": "https://www.su-da.cn/news/gsnews.jsp",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 14,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "601991",
+    "company_name": "大唐发电",
+    "news_list_url": "https://www.dtpower.com/dtpower/xwzx/gsxw/A035002003Gone1.html",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 13,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "603759",
+    "company_name": "海天股份",
+    "news_list_url": "https://www.haitian603759.com/news.aspx?t=26",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 14,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "300140",
+    "company_name": "节能环境",
+    "news_list_url": "http://www.zjnhj.cecep.cn/zjnhj/xwzx/gsxw/A011003002Gone1.html",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 13,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "300052",
+    "company_name": "中青宝",
+    "news_list_url": "https://www.zqgame.com/article/list/page/1/19/tag/gamenews.html",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 16,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "300103",
+    "company_name": "达刚控股",
+    "news_list_url": "http://www.sxdagang.com/news.html",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 16,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "000731",
+    "company_name": "四川美丰",
+    "news_list_url": "https://www.scmeif.com/newsindex_3.html",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 15,
+    "pager_hit": true
+  }
+]

@@ -1,0 +1,17 @@
+[
+  {
+    "stock_code": "000001",
+    "company_name": "平安银行",
+    "news_list_url": "http://bank.pingan.com/bankPingAnCom/about/news"
+  },
+  {
+    "stock_code": "000031",
+    "company_name": "大悦城",
+    "news_list_url": "http://www.grandjoy.com/about/news"
+  },
+  {
+    "stock_code": "000034",
+    "company_name": "神州数码",
+    "news_list_url": "https://www.digitalchina.com/aboutus/news.html"
+  }
+]

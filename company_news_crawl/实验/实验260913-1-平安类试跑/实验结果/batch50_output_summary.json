@@ -1,0 +1,408 @@
+{
+  "total_companies": 50,
+  "successful_companies": 39,
+  "total_articles": 380,
+  "total_errors": 21,
+  "companies": [
+    {
+      "stock_code": "000001",
+      "company_name": "平安银行",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "static",
+      "list_url": "http://bank.pingan.com/bankPingAnCom/about/news"
+    },
+    {
+      "stock_code": "600276",
+      "company_name": "恒瑞医药",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "static",
+      "list_url": "https://www.hengrui.com/media"
+    },
+    {
+      "stock_code": "300388",
+      "company_name": "节能国祯",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "cms",
+      "list_url": "https://www.gzep.com.cn/info.php?class_id=102"
+    },
+    {
+      "stock_code": "002521",
+      "company_name": "齐峰新材",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "static",
+      "list_url": "http://www.qifeng.cn/news/index.html"
+    },
+    {
+      "stock_code": "603102",
+      "company_name": "百合股份",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "static",
+      "list_url": "http://www.baiheshengwu.com/news/qiye"
+    },
+    {
+      "stock_code": "300624",
+      "company_name": "万兴科技",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "static",
+      "list_url": "https://www.wondershare.cn/news"
+    },
+    {
+      "stock_code": "603569",
+      "company_name": "长久物流",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "cms",
+      "list_url": "https://changjiulogistics.com/index.php?m=y2023.news"
+    },
+    {
+      "stock_code": "300215",
+      "company_name": "电科院",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "cms",
+      "list_url": "http://www.eeti.cn/News/List.htm"
+    },
+    {
+      "stock_code": "600053",
+      "company_name": "*ST九鼎",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "static",
+      "list_url": "https://www.jdcapital.com/xinwen"
+    },
+    {
+      "stock_code": "603029",
+      "company_name": "天鹅股份",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "cms",
+      "list_url": "http://www.sdmj.com.cn/news.html"
+    },
+    {
+      "stock_code": "002979",
+      "company_name": "雷赛智能",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "cms",
+      "list_url": "https://www.leisai.com/news.html"
+    },
+    {
+      "stock_code": "603919",
+      "company_name": "金徽酒",
+      "article_count": 0,
+      "error_count": 1,
+      "site_type": "unknown",
+      "list_url": "https://www.jinhuijiu.com/news/index.html"
+    },
+    {
+      "stock_code": "688566",
+      "company_name": "吉贝尔",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "static",
+      "list_url": "https://www.jbepharm.com/news"
+    },
+    {
+      "stock_code": "002587",
+      "company_name": "奥拓电子",
+      "article_count": 0,
+      "error_count": 1,
+      "site_type": "unknown",
+      "list_url": "https://www.aoto.com/news"
+    },
+    {
+      "stock_code": "000811",
+      "company_name": "冰轮环境",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "cms",
+      "list_url": "http://www.moon-tech.com/news/company-news.jsp"
+    },
+    {
+      "stock_code": "920346",
+      "company_name": "威贸电子",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "static",
+      "list_url": "http://www.shwmdz.com/news"
+    },
+    {
+      "stock_code": "002581",
+      "company_name": "*ST未名",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "static",
+      "list_url": "https://www.wmm.bio:443/news/type/1"
+    },
+    {
+      "stock_code": "301665",
+      "company_name": "泰禾股份",
+      "article_count": 0,
+      "error_count": 1,
+      "site_type": "unknown",
+      "list_url": "https://www.cacch.com/#met-7"
+    },
+    {
+      "stock_code": "300407",
+      "company_name": "凯发电气",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "cms",
+      "list_url": "https://www.keyvia.cn/cn/NewsList.aspx?TypeId=10012"
+    },
+    {
+      "stock_code": "688234",
+      "company_name": "天岳先进",
+      "article_count": 0,
+      "error_count": 1,
+      "site_type": "unknown",
+      "list_url": "https://www.sicc.cc/news.html"
+    },
+    {
+      "stock_code": "300627",
+      "company_name": "华测导航",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "static",
+      "list_url": "http://www.huace.cn/information"
+    },
+    {
+      "stock_code": "000333",
+      "company_name": "美的集团",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "static",
+      "list_url": "https://www.midea.com.cn/zh/about-midea/news"
+    },
+    {
+      "stock_code": "000559",
+      "company_name": "万向钱潮",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "static",
+      "list_url": "https://www.wxqc.com.cn/news.html"
+    },
+    {
+      "stock_code": "600674",
+      "company_name": "川投能源",
+      "article_count": 0,
+      "error_count": 1,
+      "site_type": "unknown",
+      "list_url": "https://www.ctny.com.cn/news/company-news"
+    },
+    {
+      "stock_code": "002010",
+      "company_name": "传化智联",
+      "article_count": 9,
+      "error_count": 1,
+      "site_type": "cms",
+      "list_url": "https://www.transfarzl.com/index.php/news/dynamic/37.html"
+    },
+    {
+      "stock_code": "600486",
+      "company_name": "扬农化工",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "static",
+      "list_url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone1.html"
+    },
+    {
+      "stock_code": "301386",
+      "company_name": "未来电器",
+      "article_count": 0,
+      "error_count": 1,
+      "site_type": "unknown",
+      "list_url": "https://www.szfuture.com/news"
+    },
+    {
+      "stock_code": "300415",
+      "company_name": "伊之密",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "static",
+      "list_url": "https://www.yizumi.com/news.html"
+    },
+    {
+      "stock_code": "000998",
+      "company_name": "隆平高科",
+      "article_count": 0,
+      "error_count": 1,
+      "site_type": "unknown",
+      "list_url": "http://www.lpht.com.cn/news.html"
+    },
+    {
+      "stock_code": "002668",
+      "company_name": "TCL智家",
+      "article_count": 0,
+      "error_count": 1,
+      "site_type": "unknown",
+      "list_url": "http://www.tclsmarthome.com/newsroom"
+    },
+    {
+      "stock_code": "603616",
+      "company_name": "韩建河山",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "cms",
+      "list_url": "https://www.hjhsgy.com/news.html"
+    },
+    {
+      "stock_code": "688313",
+      "company_name": "仕佳光子",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "cms",
+      "list_url": "https://www.sjphotons.com.cn/articles"
+    },
+    {
+      "stock_code": "688656",
+      "company_name": "浩欧博",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "cms",
+      "list_url": "http://www.hob-biotech.com/media.html"
+    },
+    {
+      "stock_code": "300875",
+      "company_name": "捷强装备",
+      "article_count": 9,
+      "error_count": 1,
+      "site_type": "cms",
+      "list_url": "https://www.tjjqzb.com/web/newsindex"
+    },
+    {
+      "stock_code": "688083",
+      "company_name": "中望软件",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "static",
+      "list_url": "https://www.zwsoft.cn/news"
+    },
+    {
+      "stock_code": "688720",
+      "company_name": "艾森股份",
+      "article_count": 3,
+      "error_count": 7,
+      "site_type": "cms",
+      "list_url": "http://www.asem.cn/news"
+    },
+    {
+      "stock_code": "601567",
+      "company_name": "三星电气",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "cms",
+      "list_url": "https://www.sanxing.com/jeecg-boot/lb/web/news"
+    },
+    {
+      "stock_code": "301558",
+      "company_name": "三态股份",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "static",
+      "list_url": "https://www.suntekcorps.com/news/list"
+    },
+    {
+      "stock_code": "002513",
+      "company_name": "蓝丰生化",
+      "article_count": 0,
+      "error_count": 1,
+      "site_type": "static",
+      "list_url": "https://www.jslanfeng.com/news.html"
+    },
+    {
+      "stock_code": "000799",
+      "company_name": "酒鬼酒",
+      "article_count": 0,
+      "error_count": 1,
+      "site_type": "unknown",
+      "list_url": "http://www.jiuguijiu000799.com/xwzx.html"
+    },
+    {
+      "stock_code": "600557",
+      "company_name": "康缘药业",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "cms",
+      "list_url": "https://www.kanion.com/news/company_news.jsp"
+    },
+    {
+      "stock_code": "002174",
+      "company_name": "游族网络",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "static",
+      "list_url": "https://www.yoozoo.com/news"
+    },
+    {
+      "stock_code": "300845",
+      "company_name": "捷安高科",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "cms",
+      "list_url": "https://www.jantech.cn/corp-news"
+    },
+    {
+      "stock_code": "001277",
+      "company_name": "速达股份",
+      "article_count": 0,
+      "error_count": 1,
+      "site_type": "unknown",
+      "list_url": "https://www.su-da.cn/news/gsnews.jsp"
+    },
+    {
+      "stock_code": "601991",
+      "company_name": "大唐发电",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "cms",
+      "list_url": "https://www.dtpower.com/dtpower/xwzx/gsxw/A035002003Gone1.html"
+    },
+    {
+      "stock_code": "603759",
+      "company_name": "海天股份",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "cms",
+      "list_url": "https://www.haitian603759.com/news.aspx?t=26"
+    },
+    {
+      "stock_code": "300140",
+      "company_name": "节能环境",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "static",
+      "list_url": "http://www.zjnhj.cecep.cn/zjnhj/xwzx/gsxw/A011003002Gone1.html"
+    },
+    {
+      "stock_code": "300052",
+      "company_name": "中青宝",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "static",
+      "list_url": "https://www.zqgame.com/article/list/page/1/19/tag/gamenews.html"
+    },
+    {
+      "stock_code": "300103",
+      "company_name": "达刚控股",
+      "article_count": 9,
+      "error_count": 1,
+      "site_type": "cms",
+      "list_url": "http://www.sxdagang.com/news.html"
+    },
+    {
+      "stock_code": "000731",
+      "company_name": "四川美丰",
+      "article_count": 10,
+      "error_count": 0,
+      "site_type": "static",
+      "list_url": "https://www.scmeif.com/newsindex_3.html"
+    }
+  ]
+}

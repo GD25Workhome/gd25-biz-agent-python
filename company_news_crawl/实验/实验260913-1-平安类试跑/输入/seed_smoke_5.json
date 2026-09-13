@@ -1,0 +1,47 @@
+[
+  {
+    "stock_code": "000001",
+    "company_name": "平安银行",
+    "news_list_url": "http://bank.pingan.com/bankPingAnCom/about/news",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 14,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "600276",
+    "company_name": "恒瑞医药",
+    "news_list_url": "https://www.hengrui.com/media",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 515,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "300388",
+    "company_name": "节能国祯",
+    "news_list_url": "https://www.gzep.com.cn/info.php?class_id=102",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 501,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "002521",
+    "company_name": "齐峰新材",
+    "news_list_url": "http://www.qifeng.cn/news/index.html",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 414,
+    "pager_hit": true
+  },
+  {
+    "stock_code": "603102",
+    "company_name": "百合股份",
+    "news_list_url": "http://www.baiheshengwu.com/news/qiye",
+    "site_family": "list_with_date",
+    "probe_score": 11,
+    "unique_dates": 408,
+    "pager_hit": true
+  }
+]

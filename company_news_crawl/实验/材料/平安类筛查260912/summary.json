@@ -1,0 +1,15 @@
+{
+  "total_probed": 2904,
+  "elapsed_sec": 219.2,
+  "tiers": {
+    "pingan_like_high": 1239,
+    "other": 286,
+    "maybe_list": 805,
+    "hard_or_portal_spa": 235,
+    "unreachable_or_empty": 145,
+    "pingan_like_mid": 194
+  },
+  "pingan_like_high_count": 1239,
+  "pingan_like_mid_count": 194,
+  "note": "high/mid 基于列表页可见日期数、同域新闻链数、分页信号等启发式；非人工逐条确认。"
+}

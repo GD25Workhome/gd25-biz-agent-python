@@ -1,0 +1,34 @@
+{
+  "smoke": {
+    "000001": {
+      "n": 15,
+      "date_nonnull_rate": 1.0,
+      "nav_title_count": 0,
+      "uniq_titles": 15
+    },
+    "600276": {
+      "n": 15,
+      "date_nonnull_rate": 1.0,
+      "nav_title_count": 0,
+      "uniq_titles": 15
+    },
+    "300388": {
+      "n": 15,
+      "date_nonnull_rate": 0.0,
+      "nav_title_count": 0,
+      "uniq_titles": 13
+    },
+    "002521": {
+      "n": 15,
+      "date_nonnull_rate": 1.0,
+      "nav_title_count": 0,
+      "uniq_titles": 15
+    },
+    "603102": {
+      "n": 15,
+      "date_nonnull_rate": 1.0,
+      "nav_title_count": 0,
+      "uniq_titles": 15
+    }
+  }
+}

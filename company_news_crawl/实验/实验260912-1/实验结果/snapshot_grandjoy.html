@@ -1,0 +1,1277 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <link href="/Public/static/themes/zlzd/favicon.ico" type="image/x-icon" rel="shortcut icon"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="renderer" content="webkit">
+    <meta name="author" content="http://www.fractal-technology.com">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="format-detection" content="telephone=no,email=no,adress=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+        <title>大悦城-大悦城控股官网</title>
+                <meta name="keywords" content="大悦城,大悦城控股,中粮大悦城,大悦城控股官网" />
+            <meta name="description" content="大悦城控股集团股份有限公司（简称“大悦城控股”）是中粮集团旗下的地产投资和管理平台。中粮集团是国资委批准的16家以房地产为主业的中央企业之一，大悦城控股于1993年在深圳证券交易所上市（股票代码：000031.SZ）。" />
+        <link rel="stylesheet" type="text/css" href="/Public/static/themes/zlzd/css/jquery.mCustomScrollbar.css">
+    <link rel="stylesheet" type="text/css" href="/Public/static/themes/zlzd/css/global.css">
+    <link rel="stylesheet" type="text/css" href="/Public/static/themes/zlzd/css/lyc.css">
+    <link rel="stylesheet" type="text/css" href="/Public/static/themes/zlzd/css/animate.css">
+    <script src="/Public/static/themes/zlzd/js/plugs/jquery.min.js"></script>
+    <script src="/Public/static/themes/zlzd/js/plugs/jquery.placeholder.min.js"></script>
+    <script src="/Public/static/themes/zlzd/js/plugs/jquery.ba-throttle-debounce.min.js"></script>
+    <script src="/Public/static/themes/zlzd/js/plugs/jquery.mCustomScrollbar.concat.min.js"></script>
+    <script src="/Public/static/themes/zlzd/js/plugs/TweenMax.min.js"></script>
+    <script src="/Public/static/themes/zlzd/js/plugs/video.js"></script>
+    <script src="/Public/static/themes/zlzd/js/plugs/slick.js"></script>
+    <script src="/Public/static/themes/zlzd/js/plugs/xRoll.js"></script>
+    <script src="/Public/static/themes/zlzd/js/plugs/imagesloaded.pkgd.min_v3.2.0.js"></script>
+    <script src="/Public/static/themes/zlzd/js/plugs/masonry.pkgd.min.js"></script>
+    <script src="/Public/static/themes/zlzd/js/plugs/slick.js"></script>
+    <script src="/Public/static/themes/zlzd/js/global.js"></script>
+        <!--[if lt IE 9]>
+<script src="js/plugs/html5shiv.min.js"></script>
+<script src="js/plugs/respond.min.js"></script>
+<![endif]-->
+</head>
+<body>
+    <span class="gotop js-gotop js-scroller">top</span>    <style>
+#myalert{ display:none; }
+.recruit .block1{ height: auto}
+.layer{background:url(/Public/static/themes/zlzd/image/con_mask.png);;position:fixed;left:0;right: 0;top:0;bottom: 0;width:100%;height:100%;z-index: 1000000;}
+.layer .myalert{padding:30px;background:#fff;width:240px;position:absolute;margin-top:-100px;top:50%;left:50%;margin-left:-120px;text-align:center; z-index: 100000}
+/*.layer .guan{background:url(/Public/static/themes/zlzd/image/clos.png) no-repeat center; display:block;width:23px;height:23px;position:absolute;top:10px;right:10px;}*/
+.layer .text{padding-bottom:15px;font-size:16px;color:#474747;}
+.layer .button{background:none;border:1px solid #bbbbbb;width:91px;height:29px;font:14px/100% "Microsoft YaHei", Arial, Tahoma, Helvetica, sans-serif;color: #707070;}
+</style>
+<div id="myalert" class="layer">
+    <div class="myalert">
+        <a href="javascript:;" onclick="myalert_hide();" class="guan"></a>
+        <div class="text">请输入关键字</div>
+        <a><button class="button" id="my_ok" style="cursor:pointer ;opacity: 1;transform: translateY(0px);">确定</button></a>
+    </div>
+</div>
+<script>
+function my_alert(text,callback) {
+    $('#myalert').show();
+    $('#myalert .myalert div').html(text);
+
+    $('#my_ok').click( function() {
+        $('#myalert').hide();
+
+        if (typeof(callback) == 'function') {
+            callback();
+            return false;
+        }
+    });
+}
+
+function myalert_hide(){
+    $('#myalert').hide();
+}
+</script>
+    <div class="x-header">
+    <div class="x-wrap">
+        <div class="menu-head">
+            <div class="logo middle" edit_params="width%3D148%26height%3D50%26zoom%3D0.5%26showAlt%3D1"><a class="middle-cont" href="/"><img src="http://img.grandjoy.com/Uploads/Zlzd/Picture/2023/04/14/s6438e78aea822.png" alt="大悦城控股" title="大悦城控股"></a></div>            <div class="menu-btn m-show"><span class="line"></span></div>
+        </div>
+        <div class="tools p-show">
+
+            <!-- <div class="search-trigger">
+                <div class="search-box">
+                    <div class="box clear">
+                        <div class="search-txt"><input placeholder="请输入您要查询的关键词" type="text" id="txtSearch" onkeydown="keydown(event, '#btnSearch')" name="txtSearchwap"></div><button class="search-btn"
+                            type="submit" id="btnSearch">查询</button>
+                    </div>
+                </div>
+            </div> -->
+
+            <div class="langbox">
+                <a href="/en/index.html" class="a1">En</a>
+                <a href="javascript:void(0);" id="ToTr" class="a2">繁</a>
+                <a href="javascript:void(0);" id="ToCn" class="a3">简</a>
+            </div>
+        </div>
+        <div class="nav-mod">
+            <!-- <div class="search-box m-show">
+                <div class="search-txt"><input type="text" placeholder="请输入您要查询的内容" id="txtSearchwap" onkeydown="keydown(event, '#btnSearchwap')" name="txtSearchwap"></div>
+                <button class="search-btn" type="submit" id="btnSearchwap">查询</button>
+            </div> -->
+            <ul class="nav-lv nav-lv1 clear"><li class="nav-item top">
+        <div class="nav-tit"><a class="nav-link" href="/">首页</a></div>
+            </li><li class="nav-item top">
+        <div class="nav-tit"><a class="nav-link" href="/about.html">关于我们</a><span class="arr"></span></div>
+        <ul class="nav-lv nav-lv2">
+        <li class="nav-item">
+                <div class="nav-tit"><a class="nav-link" href="/about.html">大悦城控股</a></div>
+            </li><li class="nav-item">
+                <div class="nav-tit"><a class="nav-link" href="/about-team1.html">领导团队</a></div>
+            </li><li class="nav-item">
+                <div class="nav-tit"><a class="nav-link" href="/about_structure.html"> 组织架构</a></div>
+            </li><li class="nav-item">
+                <div class="nav-tit"><a class="nav-link" href="/about_course.html"> 发展历程 </a></div>
+            </li><li class="nav-item">
+                <div class="nav-tit"><a class="nav-link" href="/about-honor.html">企业荣誉</a></div>
+            </li><li class="nav-item">
+                <div class="nav-tit"><a class="nav-link" href="/about_culture.html"> 品牌文化</a></div>
+            </li>    
+        </ul>    </li><li class="nav-item top">
+        <div class="nav-tit"><a class="nav-link" href="/shangye.html">产品服务</a><span class="arr"></span></div>
+        <ul class="nav-lv nav-lv2">
+        <li class="nav-item">
+                <div class="nav-tit"><a class="nav-link" href="/shangye.html">大悦生活-商业 </a></div>
+            </li><li class="nav-item">
+                <div class="nav-tit"><a class="nav-link" href="/property.html"> 大悦生活-物业</a></div>
+            </li><li class="nav-item">
+                <div class="nav-tit"><a class="nav-link" href="/residence.html">住宅</a></div>
+            </li><li class="nav-item">
+                <div class="nav-tit"><a class="nav-link" href="/real_esta.html"> 产业地产</a></div>
+            </li><li class="nav-item">
+                <div class="nav-tit"><a class="nav-link" href="/office.html"> 写字楼</a></div>
+            </li><li class="nav-item">
+                <div class="nav-tit"><a class="nav-link" href="/hotel.html"> 酒店</a></div>
+            </li><li class="nav-item">
+                <div class="nav-tit"><a class="nav-link" href="/innovative.html">长租公寓</a></div>
+            </li>    
+        </ul>    </li><li class="nav-item top">
+        <div class="nav-tit"><a class="nav-link" href="/consultation.html">资讯中心</a><span class="arr"></span></div>
+        <ul class="nav-lv nav-lv2">
+        <li class="nav-item">
+                <div class="nav-tit"><a class="nav-link" href="/consultation.html">公司新闻</a></div>
+            </li><li class="nav-item">
+                <div class="nav-tit"><a class="nav-link" href="/consultation-report.html"> 媒体报道 </a></div>
+            </li><li class="nav-item">
+                <div class="nav-tit"><a class="nav-link" href="/consultation_video.html">视图专区</a></div>
+            </li><li class="nav-item">
+                <div class="nav-tit"><a class="nav-link" href="/consultation-media.html"> 自媒体</a></div>
+            </li><li class="nav-item">
+                <div class="nav-tit"><a class="nav-link" href="/consultation_contact.html">媒体联系</a></div>
+            </li>    
+        </ul>    </li><li class="nav-item top">
+        <div class="nav-tit"><a class="nav-link" href="/tzzgx_gszl.html">投资者关系</a><span class="arr"></span></div>
+        <ul class="nav-lv nav-lv2">
+        <li class="nav-item">
+                <div class="nav-tit"><a class="nav-link" href="/tzzgx_gszl.html">公司资料</a></div>
+            </li><li class="nav-item">
+                <div class="nav-tit"><a class="nav-link" href="/interim_notice.html"> 公告</a></div>
+            </li><li class="nav-item">
+                <div class="nav-tit"><a class="nav-link" href="/financial_index.html"> 财务信息</a></div>
+            </li><li class="nav-item">
+                <div class="nav-tit"><a class="nav-link" href="/tzzgx_tzzlx.html"> 投资者联系</a></div>
+            </li>    
+        </ul>    </li><li class="nav-item top">
+        <div class="nav-tit"><a class="nav-link" href="/joinus.html">加入我们</a><span class="arr"></span></div>
+        <ul class="nav-lv nav-lv2">
+        <li class="nav-item">
+                <div class="nav-tit"><a class="nav-link" href="/joinus.html">人才战略</a></div>
+            </li><li class="nav-item">
+                <div class="nav-tit"><a class="nav-link" href="/xiaoyuan.html"> 招聘信息</a></div>
+            </li>    
+        </ul>    </li><li class="nav-item top">
+        <div class="nav-tit"><a class="nav-link" href="/social-responsibility.html">社会责任</a><span class="arr"></span></div>
+        <ul class="nav-lv nav-lv2">
+        <li class="nav-item">
+                <div class="nav-tit"><a class="nav-link" href="/social-responsibility.html">概况</a></div>
+            </li><li class="nav-item">
+                <div class="nav-tit"><a class="nav-link" href="/poverty-alleviation.html"> 精准扶贫</a></div>
+            </li><li class="nav-item">
+                <div class="nav-tit"><a class="nav-link" href="/benefit-activities.html"> 公益活动</a></div>
+            </li>    
+        </ul>    </li><li class="nav-item top">
+        <div class="nav-tit"><a class="nav-link" href="/sunshine.html">阳光招租</a></div>
+            </li><li class="nav-item top">
+        <div class="nav-tit"><a class="nav-link" href="/intecm_notice.html">信息公开</a></div>
+            </li><script type="text/javascript">
+// 高亮
+function navgl(){
+
+    var category = "/about.html" ;
+
+    var now  = ( category != 'javascript:void(0);' ) ? category : window.location.pathname;
+        now2 = now +window.location.hash;
+    var curl = "",
+        curlv = "",
+        curls = "/about.html";
+    var href = '';
+    $('.nav-lv1 .top').each(function(index){
+        var _this = $(this);
+        var _index = index;
+        href = _this.find('.nav-tit a').attr('href');
+        if( now == '/index.html' || now == '/index' || now == '/' ){
+          $('.nav-lv1 li:first').addClass('cur');
+            return false ;
+        }
+        
+        // 一级
+        try {
+            if( href.indexOf(now) > -1 ){
+                _this.addClass('cur');
+            }
+
+        } catch (e) {
+        } 
+         var isShow = true ;
+        // 二级
+        if(_this.find('.nav-lv2 li').size() > 0){
+             _this.find('.nav-lv2 li a').each(function(i){
+                href = $(this).attr('href');
+                if( isShow && href.indexOf(now2) > -1 ){  
+                    _this.addClass("cur").siblings().removeClass('cur');
+                     isShow = false ;
+                }else if(curl && isShow && href.indexOf(curl) > -1 ){  
+                    _this.addClass("cur").siblings().removeClass('cur');
+                    isShow = false ;
+                }else if(curls && isShow && href.indexOf(curls) > -1 ){  
+                    _this.addClass("cur").siblings().removeClass('cur');
+                    isShow = false ;
+                }else if(curlv && isShow && href.indexOf(curlv) > -1 ){
+                    _this.addClass("cur").siblings().removeClass('cur');
+                    isShow = false ;
+                }
+                
+            })
+        }
+    })
+}
+navgl();
+
+</script></ul>
+        </div>
+    </div>
+</div>
+<script type="text/javascript">
+$(function(){
+    $('#btnSearch').click(function(){
+        var keywords = $("#txtSearch").val();
+        // keywords = StranText(keywords, 0);
+        if(keywords == ''){
+            my_alert(StranText('请输入关键字')); return false;
+        }
+        window.location.href = "/searchs/keywords.html?txtSearch=" + encodeURI(keywords);
+    });
+
+})
+$(function(){
+    $('#btnSearchwap').click(function(){
+        var keywords = $("#txtSearchwap").val();
+        // keywords = StranText(keywords, 0);
+        if(keywords == ''){
+            my_alert(StranText('请输入关键字')); return false;
+        }
+        window.location.href = "/searchs/keywords.html?txtSearch=" + encodeURI(keywords);
+    });
+
+})
+function keydown(e, but) {
+    var currKey=0,e=e||event;
+    var _this = $(but);
+
+    if(e.keyCode==13)
+    {
+        _this.click();
+        return false;
+    }
+}
+</script>
+    <link rel="stylesheet" type="text/css" href="/Public/static/themes/zlzd/css/map.css">
+<div class="x-container ">
+    <div id="pubcbanner" class="pubcbanner" edit_params="width%3D1920%26height%3D581"><style type="text/css">
+#pubcbanner{background-image:url(http://img.grandjoy.com/Uploads/Zlzd/Picture/2019/04/01/s5ca1812b2b540.jpg);}
+</style></div>    <div class="mg50 mt80 clear">
+        <div class="pubccolumnbox">
+            <div class="pubccolumn1">
+    <div class="list">
+                    <div class="item now">
+                <a href="/about.html"><span> 大悦城控股</span></a>
+            </div>            <div class="item">
+                <a href="/about-team1.html"><span>领导团队</span></a>
+            </div>            <div class="item">
+                <a href="/about_structure.html"><span>组织架构</span></a>
+            </div>            <div class="item">
+                <a href="/about_course.html"><span>发展历程</span></a>
+            </div>            <div class="item">
+                <a href="/about-honor.html"><span>企业荣誉</span></a>
+            </div>            <div class="item">
+                <a href="/about_culture.html"><span>品牌文化</span></a>
+            </div>    </div>
+</div>
+            <div class="pubccolumn2">
+			    <div class="inner">
+			        <div class="img" edit_params="width%3D100%26height%3D100%26img1remove%3D1"><img src="http://img.grandjoy.com/Uploads/Zlzd/Picture/2019/06/18/s5d0881563ded2.png" title="" alt=""></div>			        <div class="tit"> 大悦城控股</div>
+			        <div class="tit1" style="min-height:14px;">GRANDJOY</div>			        <div class="date" style="min-height:14px;"></div>			        <div class="desc" style="min-height:14px;">“创造城市永续价值，追求可持续性幸福，<br />
+力争成为更具持续发展能力的城市美好生活创造者”<br />
+</div>			    </div>
+			</div>
+            <div class="pubccolumn3 teampagebg">
+                <div class="inner">
+                		<div class="position" id="left">
+	    <a href="/"><img src="/Public/static/themes/zlzd/image/position1.png" alt=""></a>
+	    <a href="/about.html">关于我们</a>
+	    <a class="cur"> 大悦城控股</a>
+	</div>                    <div class="about">
+                    	<div class="ptit1" style="min-height:14px;">公司简介</div>                    	<!-- <div class="tit" style="min-height:14px;"></div>                    	<div class="desc" style="min-height:14px;"></div> -->
+                       <!--  <div class="box1">
+                            <div class="inner clear">
+	                            <div class="item">
+	                                    <div class="img" edit_params="width%3D197%26height%3D197%26img1remove%3D1"><img src="/Public/static/images/default.png" title="" alt=""></div>	                                    <div class="desc1" style="min-height:14px;"></div>	                                </div><div class="item">
+	                                    <div class="img" edit_params="width%3D197%26height%3D197%26img1remove%3D1"><img src="http://img.grandjoy.com/Uploads/Zlzd/Picture/2019/03/21/s5c9361a775ebf.png" title="" alt=""></div>	                                    <div class="desc1" style="min-height:14px;"></div>	                                </div><div class="item">
+	                                    <div class="img" edit_params="width%3D197%26height%3D197%26img1remove%3D1"><img src="http://img.grandjoy.com/Uploads/Zlzd/Picture/2019/03/21/s5c9361c769bd6.png" title="" alt=""></div>	                                    <div class="desc1" style="min-height:14px;"></div>	                                </div><div class="item">
+	                                    <div class="img" edit_params="width%3D197%26height%3D197%26img1remove%3D1"><img src="http://img.grandjoy.com/Uploads/Zlzd/Picture/2019/03/21/s5c9361edd9431.png" title="" alt=""></div>	                                    <div class="desc1" style="min-height:14px;"></div>	                                </div>   
+                            </div>
+                        </div> -->
+                        <div class="box4">
+                        	<div id="descbr" class="desc1"><p>中粮集团是国资委批准的16家以房地产为主业的中央企业之一，大悦城控股集团股份有限公司（简称：大悦城控股）是中粮集团旗下的地产投资与管理平台、于1993年在深圳证券交易所上市（股票代码：000031.SZ）。</p><p>大悦城控股定位“卓越的城市运营与美好生活服务商”，持续驱动多业态立体联动，服务城市发展与美好生活。公司业务覆盖商业、住宅、产业地产、酒店、写字楼、长租公寓、物业服务等领域，布局北京、上海、深圳、成都、杭州、西安等近40个一、二线核心城市，总资产近1600亿元，构建起了业态类型丰富、城市布局完善、资产结构均衡、集人民美好生活场景于一体的“大悦”生态圈。</p><p>在商业地产和物业服务领域，大悦城控股成立“大悦生活”商业运营和物业服务公司，以全方位服务提供一体化解决方案。商业板块以“大悦城”和“大悦汇”为标准产品线，以城市新生代和城市新中产为核心客群，通过不断创新线下场景体验并构建大运营、大服务、大会员、大数据体系，实现精细化运营。商业项目现已落地全国超20个城市，在运营、在建项目总数40余个，引领消费升级背景下的商业地产高质量发展。物业板块拥有全国物业管理一级资质的“大悦服务”品牌，在管项目近250个、总管理面积超4000万平米，深耕全业态综合服务，覆盖居住、休闲与工作多元场景，以优质服务缔造温暖惬意的美好生活图景。</p><p>在住宅开发领域，大悦城控股持续迭代“壹号系”和“悦系”产品，满足客户多层次的购房与居住需求，累计开发规划面积超4300万平米。积极响应国家要求，大悦城控股打造了“自然、宜居、可持续”的“中粮好房子”产品体系，以“主动健康&nbsp;场景生活”为产品价值主张，提出“智慧适衡、五维健康、绿色减碳”等11大标准，升级美好人居体验。</p><p>在产业地产、写字楼、酒店、长租公寓等优质投资和创新发展领域，大悦城控股立足新发展阶段，主动服务国家战略，积极融入城市更新大局，提供多元化生活体验。写字楼与产业地产项目已逐步成为大悦城控股发展新质生产力的策源地和集聚地，为科技、大健康等国家重点战略行业提供优质保障，助力企业高效运转，推动物业及所在区域价值不断提升。同时，大悦城控股创新打造了“大悦酒店”品牌，为商旅菁英人群提供个性居住体验；顺应“租购并举”政策，推出长租公寓“大悦乐邑”，满足居民租住生活需求更好满足大众旅居需求。 </p><p>站在新的发展起点，大悦城控股将不断践行高质量发展理念，提升核心竞争力和盈利水平，实现内涵式增长，为股东、客户、员工创造价值，与美好生活共同前行、与城市发展共同前行、与时代梦想共同前行。</p><script type="text/javascript">
+$('#descbr p').each(function(){
+	$(this).after('<br>'); 
+})
+</script></div>                        </div>
+                        <div class="box2">
+                        	<div class="ptit2" style="min-height:14px;">发展模式</div>                            <div class="img" edit_params="width%3D977%26height%3D117%26showtitle%3D1"><img src="https://img.grandjoy.com/Uploads/Zlzd/Picture/2026/08/14/s6a7ee9fc3c421.png" title="" alt=""></div>                            <div class="desc1"><p>大悦城控股结合行业趋势，以及公司特点和优势，推进“十五五”战略重塑，将战略定位更新为“卓越的城市运营与美好生活服务商”并提出“1123”战略，加快构建发展新模式，培育发展新增长极，实现高质量发展。</p></div>                            <div class="img1" edit_params="width%3D978%26height%3D398%26showtitle%3D1"><img src="https://img.grandjoy.com/Uploads/Zlzd/Picture/2026/08/17/s6a82b4fb95429.png" title="1123战略" alt=""></div>                        </div>
+                        <div class="box3">
+                            <div class="ptit2" style="min-height:14px;">城市布局</div>                            <div class="desc1" style="min-height:14px;">大悦城控股坚持深耕一线、二线重点城市，截至2024年12月累计进入城市38个。公司聚焦长三角、京津冀、粤港澳大湾区、成渝及长江中游城市群，强化区域深耕，持续优化投资结构，重点围绕抗风险能力强、盈利空间合理的城市和区域进行投资，实现稳健发展。</div>                            <div class="about-map">
+                                <div class="lmap">
+                                    <div class="map">
+                                        <div class="parts">
+                                            <div class="part part-990125" pid="990125"><span></span><div class="xing"></div></div>
+                                            <div class="part part-990126" pid="990126"> <span></span> </div>
+                                            <div class="part part-990127 " pid="990127"> <span></span> </div>
+                                            <div class="part part-990128" pid="990128"> <span></span> </div>
+                                            <div class="part part-990129 " pid="990129"> <span></span> </div>
+                                            <div class="part part-990130 " pid="990130"> <span></span> </div>
+                                            <div class="part part-990131 " pid="990131"> <span></span> </div>
+                                            <div class="part part-990132 " pid="990132"> <span></span> </div>
+                                            <div class="part part-990133" pid="990133"> <span></span> </div>
+                                            <div class="part part-990134 " pid="990134"> <span></span> </div>
+                                            <div class="part part-990135 " pid="990135"> <span></span> </div>
+                                            <div class="part part-990136 " pid="990136"> <span></span> </div>
+                                            <div class="part part-990137" pid="990137"> <span></span> </div>
+                                            <div class="part part-990138 " pid="990138"> <span></span> </div>
+                                            <div class="part part-990139 " pid="990139"> <span></span> </div>
+                                            <div class="part part-990140 " pid="990140"> <span></span> </div>
+                                            <div class="part part-990141 " pid="990141"> <span></span> </div>
+                                            <div class="part part-990142 " pid="990142"> <span></span> </div>
+                                            <div class="part part-990143 " pid="990143"> <span></span> </div>
+                                            <div class="part part-990144 " pid="990144"> <span></span> </div>
+                                            <div class="part part-990145 " pid="990145"> <span></span> </div>
+                                            <div class="part part-990146 " pid="990146"> <span></span> </div>
+                                            <div class="part part-990147 " pid="990147"> <span></span> </div>
+                                            <div class="part part-990148 " pid="990148"> <span></span> </div>
+                                            <div class="part part-990149 " pid="990149"> <span></span> </div>
+                                            <div class="part part-990150 " pid="990150"> <span></span> </div>
+                                            <div class="part part-990151 " pid="990151"> <span></span> </div>
+                                            <div class="part part-990152 " pid="990152"> <span></span> </div>
+                                            <div class="part part-990153 " pid="990153"> <span></span> </div>
+                                            <div class="part part-990154 " pid="990154"> <span></span> </div>
+                                            <div class="part part-990155 " pid="990155"> <span></span> </div>
+                                            <div class="part part-990156 " pid="990156"> <span></span> </div>
+                                            <div class="part part-990157 " pid="990157"> <span></span> </div>
+                                            <div class="part part-990158 " pid="990158"> <span></span> </div>
+                                        </div>
+                                        <div class="city"></div>
+                                        <img class="layer2" src="/Public/static/themes/zlzd/image/maps/layer.png" usemap="#layermap">
+                                        <map name="layermap" id="layermap">
+                                            <area href="javascript:;" shape="poly" coords="509,297,500,300,493,297,490,293,491,306,488,314,483,316,477,316,471,318,467,322,462,323,452,327,453,337,457,342,461,348,471,352,480,354,491,355,497,360,512,363,518,368,524,362,520,356,514,353,511,348,511,344,516,337,520,334,527,324,520,319,513,319,507,317,505,311,509,304"
+                                                alt="河南" pid="990140">
+                                            <area href="javascript:;" shape="poly" coords="214,329">
+                                            <area href="javascript:;" shape="poly" coords="515,216,510,224,505,232,507,238,516,241,521,244,531,227,528,222,524,217"
+                                                alt="北京" pid="990125">
+                                            <area href="javascript:;" shape="poly" coords="203,254,201,264,210,273,207,287,200,293,190,290,186,303,186,313,185,323,194,332,209,340,225,346,252,351,263,365,274,362,281,358,284,334,299,333,312,349,320,358,334,347,325,333,337,330,338,320,348,315,354,303,344,278,323,266,306,259,288,254,282,266,273,263,265,254,247,249"
+                                                alt="青海" pid="990153">
+                                            <area href="javascript:;" shape="poly" coords="500,469,513,469,517,468,514,474,513,481,522,482,527,477,532,476,539,476,547,474,550,480,556,488,549,493,545,501,538,504,530,505,512,493,505,500,498,500,491,503,489,510,487,523,483,524,474,529,467,530,462,533,459,539,461,547,454,545,452,533,455,527,462,523,466,522,467,512,475,510,475,502,479,496,482,481,486,475,494,474"
+                                                alt="广东" pid="990143">
+                                            <area href="javascript:;" shape="poly" coords="615,453,600,470,595,482,597,492,602,505,612,512,619,497,623,483,623,470,623,464"
+                                                alt="台湾" pid="990156">
+                                            <area href="javascript:;" shape="poly" coords="317,201,330,202,343,204,362,216,375,215,384,217,395,212,404,207,420,205,436,206,454,188,461,183,456,169,463,160,479,166,488,156,501,149,510,136,526,130,541,127,535,118,529,114,527,109,517,111,516,117,510,116,507,113,504,117,492,112,496,104,499,84,507,80,516,86,527,74,526,63,534,43,535,35,528,30,533,23,543,21,540,33,549,36,558,45,561,50,568,51,576,47,582,44,587,55,585,75,582,86,579,92,570,102,567,113,572,120,576,131,566,129,561,139,567,145,570,154,574,157,580,152,588,162,590,171,590,177,581,179,576,185,568,186,560,191,556,197,548,194,549,203,545,212,536,207,534,199,531,190,522,193,516,195,514,202,510,201,503,206,498,203,495,199,491,205,488,210,482,217,491,224,482,229,476,231,466,234,460,247,449,247,439,250,436,256,432,262,427,272,425,278,414,275,407,267,407,256,403,250,394,249,389,255,389,264,386,270,377,276,367,279,363,276,364,268,370,263,375,253,371,247,364,247,358,249,353,251,346,251,342,259,337,257,332,251,329,247,320,241,322,234,322,227,316,227,304,228,302,226,298,216,295,199"
+                                                alt="内蒙古" pid="990129">
+                                            <area href="javascript:;" shape="poly" coords="593,172,604,177,608,173,611,183,615,188,618,194,623,202,619,208,615,213,608,223,592,234,585,243,579,246,580,234,586,225,583,213,576,212,569,217,561,230,558,226,551,223,546,218,549,213,552,199,558,201,565,192,571,188,579,186,586,182"
+                                                alt="辽宁" pid="990130">
+                                            <area href="javascript:;" shape="poly" coords="574,370,584,372,589,374,589,381,595,383,602,380,610,384,610,394,608,405,606,413,596,414,596,424,596,429,590,424,584,424,574,424,570,422,569,416,563,406,561,398,569,390,574,382"
+                                                alt="浙江" pid="990135">
+                                            <area href="javascript:;" shape="poly" coords="459,550,444,555,434,563,432,576,440,586,459,585,466,580,470,572,472,559,469,551"
+                                                alt="海南" pid="990145">
+                                            <area href="javascript:;" shape="poly" coords="443,463,433,468,424,479,418,478,409,474,402,479,398,483,389,483,382,482,376,483,377,489,383,489,387,494,396,494,400,501,395,502,391,507,404,510,406,514,406,521,411,526,424,532,432,530,439,533,444,534,450,530,455,523,463,520,463,515,463,509,470,508,475,497,477,489,478,483,468,479,463,472,467,463,463,456,454,464"
+                                                alt="广西" pid="990144">
+                                            <area href="javascript:;" shape="poly" coords="578,125,575,134,567,132,564,137,567,141,573,153,582,152,591,161,594,168,603,174,608,169,614,177,618,184,621,191,626,202,635,189,642,188,652,190,650,182,656,176,662,167,667,162,674,167,677,155,665,153,660,149,660,157,655,156,648,153,640,151,633,151,625,147,623,142,615,139,605,137,595,141,589,137"
+                                                alt="吉林" pid="990131">
+                                            <area href="javascript:;" shape="poly" coords="460,397,481,402,486,399,492,401,496,401,502,410,506,416,506,424,501,429,498,434,502,444,506,451,507,460,505,465,498,466,494,470,487,472,479,481,474,478,467,471,471,462,463,452,456,457,451,462,443,456,445,445,443,440,441,429,441,419,443,408,447,403"
+                                                alt="湖南" pid="990142">
+                                            <area href="javascript:;" shape="poly" coords="198,83,188,93,175,98,170,115,158,112,146,104,132,123,134,134,105,129,107,156,104,167,94,173,88,180,80,178,75,181,69,183,62,180,57,183,49,184,45,190,37,190,36,185,34,181,30,185,16,187,8,189,7,195,9,201,5,209,12,208,16,212,16,218,13,226,8,232,7,237,14,243,18,247,18,256,25,261,30,268,41,273,40,285,48,292,60,293,68,280,86,285,98,278,108,285,126,287,141,285,148,282,160,279,171,281,180,282,182,286,196,286,201,289,203,281,208,277,199,264,200,253,237,246,234,233,237,227,241,227,249,219,262,210,275,206,282,194,272,178,268,169,258,163,245,157,228,154,221,149,229,131,222,115,221,105,207,100"
+                                                alt="新疆" pid="990155">
+                                            <area href="javascript:;" shape="poly" coords="547,18,573,18,584,31,597,48,607,63,616,64,632,67,641,73,646,83,654,86,664,85,670,80,673,73,679,66,686,64,691,73,691,89,691,106,687,118,683,119,676,120,669,125,669,134,676,142,679,151,668,150,660,144,655,150,655,155,643,147,639,143,636,150,628,141,622,137,614,136,605,133,591,136,584,127,584,122,578,123,576,117,571,107,573,102,579,96,583,91,587,82,587,72,590,59,589,51,585,43,584,42,576,41,571,46,565,48,559,40,547,33,545,27"
+                                                alt="黑龙江" pid="990132">
+                                            <area href="javascript:;" shape="poly" coords="540,393,520,402,506,405,506,411,508,420,507,429,504,436,504,446,510,457,510,463,520,469,516,478,529,473,535,476,535,465,541,452,544,446,537,441,548,434,549,425,553,419,560,420,566,415,560,405,560,399,554,396,546,392,540,399"
+                                                alt="江西" pid="990138">
+                                            <area href="javascript:;" shape="poly" coords="559,313,578,318,588,335,589,349,599,349,588,355,588,364,582,371,574,368,568,367,559,360,561,355,569,343,565,338,559,339,553,336,551,331,543,325,539,321,554,320"
+                                                alt="江苏" pid="990134">
+                                            <area href="javascript:;" shape="poly" coords="599,353,590,357,590,364,590,371,594,376,608,373,613,372,613,369,613,362,612,354,605,354,599,350"
+                                                alt="上海" pid="990133">
+                                            <area href="javascript:;" shape="poly" coords="396,249,391,256,389,266,387,273,381,279,371,280,383,287,385,295,385,300,387,309,391,315,398,312,401,304,401,297,397,292,400,286,405,284,408,279,408,274,403,271,405,263,401,256"
+                                                alt="宁夏" pid="990154">
+                                            <area href="javascript:;" shape="poly" coords="431,368,424,382,419,386,414,391,409,395,401,399,396,403,392,408,395,415,398,421,406,422,410,415,419,412,425,412,428,420,432,424,434,428,439,424,439,416,437,412,431,405,429,397,427,391,431,388,440,388,447,383,447,379,447,375,441,373"
+                                                alt="重庆" pid="990146">
+                                            <area href="javascript:;" shape="poly" coords="298,336,288,335,286,343,285,355,292,366,298,382,301,404,300,416,304,428,311,418,315,425,317,434,323,432,336,458,349,456,348,442,360,428,369,423,374,425,377,433,383,431,386,438,392,437,396,432,387,425,388,422,396,420,390,410,388,404,395,399,402,396,407,390,414,385,419,381,422,376,427,366,420,366,414,366,406,360,402,358,391,357,387,359,381,361,375,360,372,355,368,347,361,344,356,341,350,336,348,344,341,347,336,348,331,353,328,359,324,359,319,362,314,358,311,353,310,350,303,343"
+                                                alt="四川" pid="990147">
+                                            <area href="javascript:;" shape="poly" coords="507,503,511,498,516,498,521,502,524,506,522,510,522,512,520,514,518,517,509,516,508,510"
+                                                alt="香港" pid="990157">
+                                            <area href="javascript:;" shape="poly" coords="496,250,488,259,493,269,493,275,493,282,488,289,495,295,503,296,512,294,512,287,517,280,521,275,526,268,536,263,533,256,520,254,520,247,507,242,501,232,505,225,511,216,515,211,523,213,531,220,536,224,542,233,545,239,549,244,554,240,558,236,556,229,550,225,545,223,543,214,535,211,532,204,529,195,521,197,516,204,511,206,502,211,495,204,488,216,491,218,494,226,491,233,487,237,497,243"
+                                                alt="河北" pid="990127">
+                                            <area href="javascript:;" shape="poly" coords="185,290,167,281,154,285,132,289,117,289,106,287,100,282,92,286,84,287,68,285,65,291,61,295,54,295,47,302,50,321,41,320,38,331,40,342,45,343,54,356,67,366,73,361,82,372,98,386,126,410,146,416,163,416,162,428,174,415,199,423,208,442,225,438,264,422,275,432,281,418,286,425,294,416,298,404,293,382,284,358,276,366,270,367,262,370,257,364,250,354,238,352,213,345,202,340,199,337,193,335,184,328,182,314,183,305"
+                                                alt="西藏" pid="990150">
+                                            <area href="javascript:;" shape="poly" coords="529,327,528,317,535,324,544,330,550,338,558,341,564,344,559,352,558,359,562,365,569,368,571,374,569,385,563,392,558,394,553,394,547,390,539,388,534,390,531,386,527,381,528,375,527,371,525,367,527,360,526,355,519,350,515,347,515,342,521,340,526,333"
+                                                alt="安徽" pid="990136">
+                                            <area href="javascript:;" shape="poly" coords="458,252,453,249,443,251,437,258,433,267,424,280,413,276,409,287,420,292,429,296,431,308,424,313,416,318,413,324,406,324,399,329,399,338,399,343,394,345,394,352,401,354,408,356,416,363,427,363,434,366,443,371,440,360,445,359,440,351,448,347,453,347,457,343,451,337,449,332,447,327,443,321,445,310,447,304,446,294,448,283,451,278,447,269,453,261"
+                                                alt="陕西" pid="990151">
+                                            <area href="javascript:;" shape="poly" coords="568,416,571,425,575,430,581,426,587,428,595,428,592,439,589,456,586,462,572,480,563,489,559,493,558,489,554,487,552,481,547,476,548,471,541,472,539,463,546,453,546,446,545,442,549,433,554,425,563,423"
+                                                alt="福建" pid="990137">
+                                            <area href="javascript:;" shape="poly" coords="534,230,528,238,523,244,522,250,531,252,538,253,541,250,543,243,539,237,538,233"
+                                                alt="天津" pid="990126">
+                                            <area href="javascript:;" shape="poly" coords="601,265,576,263,567,272,557,276,553,271,552,264,547,261,545,267,538,265,530,269,523,279,516,285,515,292,513,301,511,309,510,312,518,317,524,317,527,313,534,313,535,319,543,319,551,318,557,313,563,307,565,302,571,296,574,291,575,285,578,280,585,280,590,277,598,273"
+                                                alt="山东" pid="990139">
+                                            <area href="javascript:;" shape="poly" coords="457,348,472,357,491,357,495,366,503,362,509,368,518,368,526,374,526,382,529,390,517,400,507,400,503,405,495,400,492,396,487,396,483,396,474,400,465,395,457,395,451,396,440,409,434,404,430,392,442,389,450,382,452,376,446,369,446,364,444,359,448,353,448,348"
+                                                alt="湖北" pid="990141">
+                                            <area href="javascript:;" shape="poly" coords="297,417,291,426,288,435,296,442,296,453,294,465,286,467,282,476,279,484,278,493,290,486,295,496,294,505,304,507,299,518,318,533,324,527,328,536,335,535,332,516,345,514,350,520,355,513,364,516,370,514,376,509,383,506,388,502,395,499,393,499,386,496,384,495,377,491,373,488,375,482,377,475,371,472,371,462,373,455,365,455,360,452,361,447,362,443,366,440,373,440,380,439,375,433,368,427,361,433,354,436,353,442,352,448,350,456,346,461,337,462,329,461,332,453,324,446,322,437,316,436,311,424,303,433"
+                                                alt="云南" pid="990149">
+                                            <area href="javascript:;" shape="poly" coords="489,229,474,234,469,236,466,242,462,249,456,257,454,264,453,272,455,281,449,292,450,303,449,315,447,323,460,320,468,318,474,313,482,314,487,310,488,303,488,296,485,290,485,283,490,279,491,274,489,269,485,262,483,253,488,250,494,246,494,241,489,240,484,239,484,234"
+                                                alt="山西" pid="990128">
+                                            <area href="javascript:;" shape="poly" coords="493,504,490,516,490,523,492,522,495,525,500,524,501,522,499,518,503,519,503,512,502,503"
+                                                alt="澳门" pid="990158">
+                                            <area href="javascript:;" shape="poly" coords="422,414,426,425,432,430,437,430,440,439,439,442,442,444,440,461,429,466,422,476,410,471,399,479,381,479,374,467,377,459,376,455,366,452,364,444,374,443,385,440,394,442,400,434,401,430,389,424,403,426,408,422,415,418"
+                                                alt="贵州" pid="990148">
+                                            <area href="javascript:;" shape="poly" coords="288,197,283,200,278,209,271,210,265,212,261,216,255,218,244,226,238,232,241,244,251,246,264,251,273,256,280,262,285,252,292,251,300,254,308,258,330,268,346,276,354,294,356,303,355,310,346,320,340,324,342,332,331,335,337,343,342,341,348,336,354,332,363,342,371,344,377,353,383,358,390,351,391,341,397,341,397,335,396,328,397,326,402,322,408,321,413,319,419,313,426,307,426,299,420,295,411,292,406,291,403,291,406,300,404,309,401,314,393,318,387,317,385,311,382,302,382,295,378,289,371,284,365,281,359,278,359,272,359,267,366,262,367,258,370,254,367,249,359,252,351,255,347,256,345,263,340,262,334,260,327,255,324,250,319,244,318,240,318,234,318,231,311,229,303,232,299,228,296,224,295,219,294,214,294,208,292,203"
+                                                alt="甘肃" pid="990152">
+                                        </map>
+                                        <div class="sf-icon sf1" pid="990125"><span>北京</span></div>
+                                        <div class="sf-icon sf2" pid="990126"><span>天津</span></div>
+                                        <div class="sf-icon sf3" pid="990134"><span>江苏</span></div>
+                                        <div class="sf-icon sf4" pid="990133"><span>上海</span></div>
+                                        <div class="sf-icon sf5" pid="990143"><span>广东</span></div>
+                                        <div class="sf-icon sf6" pid="990147"><span>四川</span></div>
+                                        <div class="sf-icon sf7" pid="990135"><span>浙江</span></div>
+                                        <div class="sf-icon sf8" pid="990139"><span>山东</span></div>
+                                        <div class="sf-icon sf9" pid="990137"><span>福建</span></div>
+                                        <div class="sf-icon sf10" pid="990151"><span>陕西</span></div>
+                                        <div class="sf-icon sf11" pid="990130"><span>辽宁</span></div>
+                                        <div class="sf-icon sf12" pid="990145"><span>海南</span></div>
+                                        
+                                        <div class="sf-icon sf13 " pid="990157"><span>香港</span></div>
+                                        <div class="sf-icon sf14 " pid="990142"><span>湖南</span></div>
+                                        <div class="sf-icon sf15 " pid="990141"><span>湖北</span></div>
+                                        <div class="sf-icon sf16 " pid="990146"><span>重庆</span></div>
+                                        <div class="sf-icon sf17 " pid="990149"><span>云南</span></div>
+                                    </div>
+                                </div>
+
+                                <div class="phone_op">
+                                    <div class="li" style="display:none;" pid="990125">北京</div>
+                                    <div class="li" style="display:none;" pid="990126">天津</div>
+                                    <div class="li" style="display:none;" pid="990127">河北省</div>
+                                    <div class="li" style="display:none;" pid="990128">山西省</div>
+                                    <div class="li" style="display:none;" pid="990129">内蒙古</div>
+                                    <div class="li" style="display:none;" pid="990130">辽宁省</div>
+                                    <div class="li" style="display:none;" pid="990131">吉林省</div>
+                                    <div class="li" style="display:none;" pid="990132">黑龙江省</div>
+                                    <div class="li" style="display:none;" pid="990133">上海</div>
+                                    <div class="li" style="display:none;" pid="990134">江苏省</div>
+                                    <div class="li" style="display:none;" pid="990135">浙江省</div>
+                                    <div class="li" style="display:none;" pid="990136">安徽省</div>
+                                    <div class="li" style="display:none;" pid="990137">福建省</div>
+                                    <div class="li" style="display:none;" pid="990138">江西省</div>
+                                    <div class="li" style="display:none;" pid="990139">山东省</div>
+                                    <div class="li" style="display:none;" pid="990140">河南省</div>
+                                    <div class="li" style="display:none;" pid="990141">湖北省</div>
+                                    <div class="li" style="display:none;" pid="990142">湖南省</div>
+                                    <div class="li" style="display:none;" pid="990143">广东省</div>
+                                    <div class="li" style="display:none;" pid="990144">广西</div>
+                                    <div class="li" style="display:none;" pid="990145">海南省</div>
+                                    <div class="li" style="display:none;" pid="990146">重庆</div>
+                                    <div class="li" style="display:none;" pid="990147">四川省</div>
+                                    <div class="li" style="display:none;" pid="990148">贵州省</div>
+                                    <div class="li" style="display:none;" pid="990149">云南省</div>
+                                    <div class="li" style="display:none;" pid="990150">西藏</div>
+                                    <div class="li" style="display:none;" pid="990151">陕西省</div>
+                                    <div class="li" style="display:none;" pid="990152">甘肃省</div>
+                                    <div class="li" style="display:none;" pid="990153">青海省</div>
+                                    <div class="li" style="display:none;" pid="990154">宁夏</div>
+                                    <div class="li" style="display:none;" pid="990155">新疆</div>
+                                    <div class="li" style="display:none;" pid="990156">台湾省</div>
+                                    <div class="li" style="display:none;" pid="990157">香港</div>
+                                    <div class="li" style="display:none;" pid="990158">澳门</div>
+                                </div>
+                                <div class="about-map1">
+
+                                    <div class="g " pid="990138">
+                                            <div class="caption">
+                                                <div class="shengfen">
+                                                                                                        <div class="tit1">江西省</div>
+                                                    <div class="tit2">JIANGXI</div>
+                                                </div>
+                                            </div>
+                                                                                        <div class="list">
+                                                                                        </div>
+                                        </div><div class="g " pid="990127">
+                                            <div class="caption">
+                                                <div class="shengfen">
+                                                                                                        <div class="tit1">河北省</div>
+                                                    <div class="tit2">HEIBEI</div>
+                                                </div>
+                                            </div>
+                                                                                        <div class="list">
+                                                                                        </div>
+                                        </div><div class="g " pid="990132">
+                                            <div class="caption">
+                                                <div class="shengfen">
+                                                                                                        <div class="tit1">黑龙江省</div>
+                                                    <div class="tit2">HEILONGJIANG</div>
+                                                </div>
+                                            </div>
+                                                                                        <div class="list">
+                                                                                        </div>
+                                        </div><div class="g " pid="990137">
+                                            <div class="caption">
+                                                <div class="shengfen">
+                                                                                                        <div class="tit1">福建省</div>
+                                                    <div class="tit2">FUJIAN</div>
+                                                </div>
+                                            </div>
+                                                                                        <div class="list">
+                                            <div class="item">
+                                                    <a>商业</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a >厦门</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div>                                            </div>
+                                        </div><div class="g " pid="990149">
+                                            <div class="caption">
+                                                <div class="shengfen">
+                                                                                                        <div class="tit1">云南省</div>
+                                                    <div class="tit2">YUNNAN</div>
+                                                </div>
+                                            </div>
+                                                                                        <div class="list">
+                                                                                        </div>
+                                        </div><div class="g " pid="990146">
+                                            <div class="caption">
+                                                <div class="shengfen">
+                                                                                                        <div class="tit1">重庆</div>
+                                                    <div class="tit2">CHONGQING</div>
+                                                </div>
+                                            </div>
+                                                                                        <div class="list">
+                                            <div class="item">
+                                                    <a>商业</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/shangye.html" target="_blank">重庆大悦城</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div><div class="item">
+                                                    <a>住宅</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/detail/320.html" target="_blank">重庆中粮中央公园祥云</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div>                                            </div>
+                                        </div><div class="g " pid="990147">
+                                            <div class="caption">
+                                                <div class="shengfen">
+                                                                                                        <div class="tit1">四川省</div>
+                                                    <div class="tit2">SICHUAN</div>
+                                                </div>
+                                            </div>
+                                                                                        <div class="list">
+                                            <div class="item">
+                                                    <a>商业</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/shangye.html" target="_blank">成都大悦城</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div><div class="item">
+                                                    <a>住宅</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/detail/332.html" target="_blank">成都中粮御岭湾</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/detail/312.html" target="_blank">成都中粮武侯瑞府</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/detail/317.html" target="_blank">成都中粮祥云国际</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/detail/316.html" target="_blank">成都中粮祥云里</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/detail/324.html" target="_blank">成都锦云</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/detail/326.html" target="_blank">成都中粮珑悦锦云</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div>                                            </div>
+                                        </div><div class="g " pid="990141">
+                                            <div class="caption">
+                                                <div class="shengfen">
+                                                                                                        <div class="tit1">湖北省</div>
+                                                    <div class="tit2">HUBEI</div>
+                                                </div>
+                                            </div>
+                                                                                        <div class="list">
+                                            <div class="item">
+                                                    <a>商业</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/shangye.html" target="_blank">武汉光谷大悦城</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div>                                            </div>
+                                        </div><div class="g " pid="990142">
+                                            <div class="caption">
+                                                <div class="shengfen">
+                                                                                                        <div class="tit1">湖南省</div>
+                                                    <div class="tit2">HUNAN</div>
+                                                </div>
+                                            </div>
+                                                                                        <div class="list">
+                                            <div class="item">
+                                                    <a>住宅</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/detail/328.html" target="_blank">长沙中粮鸿云</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div>                                            </div>
+                                        </div><div class="g " pid="990151">
+                                            <div class="caption">
+                                                <div class="shengfen">
+                                                                                                        <div class="tit1">陕西省</div>
+                                                    <div class="tit2">SHAANXI</div>
+                                                </div>
+                                            </div>
+                                                                                        <div class="list">
+                                            <div class="item">
+                                                    <a>商业</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/shangye.html" target="_blank">西安大悦城</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div>                                            </div>
+                                        </div><div class="g " pid="990130">
+                                            <div class="caption">
+                                                <div class="shengfen">
+                                                                                                        <div class="tit1">辽宁省</div>
+                                                    <div class="tit2">LIAONING</div>
+                                                </div>
+                                            </div>
+                                                                                        <div class="list">
+                                            <div class="item">
+                                                    <a>商业</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/shangye.html" target="_blank">沈阳大悦城</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/xiangyunxiaozhen.html" target="_blank">沈阳祥云小镇</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div><div class="item">
+                                                    <a>住宅</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/detail/310.html" target="_blank">沈阳中粮隆玺壹号</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/detail/321.html" target="_blank">沈阳中粮花熙祥云</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/detail/325.html" target="_blank">沈阳中粮锦云天城</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div>                                            </div>
+                                        </div><div class="g " pid="990157">
+                                            <div class="caption">
+                                                <div class="shengfen">
+                                                                                                        <div class="tit1">香港 </div>
+                                                    <div class="tit2">HONGKONG</div>
+                                                </div>
+                                            </div>
+                                                                                        <div class="list">
+                                            <div class="item">
+                                                    <a>写字楼</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/office/299.html" target="_blank">香港中粮大厦</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div>                                            </div>
+                                        </div><div class="g " pid="990145">
+                                            <div class="caption">
+                                                <div class="shengfen">
+                                                                                                        <div class="tit1">海南省</div>
+                                                    <div class="tit2">HAINAN</div>
+                                                </div>
+                                            </div>
+                                                                                        <div class="list">
+                                            <div class="item">
+                                                    <a>产业地产</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/real_esta/300.html" target="_blank">三亚亚龙湾</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div><div class="item">
+                                                    <a>酒店</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/hotel/271.html" target="_blank">三亚美高梅度假酒店</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/hotel/273.html" target="_blank">三亚瑞吉度假酒店</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/hotel/275.html" target="_blank">三亚凯莱仙人掌度假酒店</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div>                                            </div>
+                                        </div><div class="g " pid="990143">
+                                            <div class="caption">
+                                                <div class="shengfen">
+                                                                                                        <div class="tit1">广东省</div>
+                                                    <div class="tit2">GUANGDONG</div>
+                                                </div>
+                                            </div>
+                                                                                        <div class="list">
+                                            <div class="item">
+                                                    <a>商业</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/shangye.html" target="_blank">深圳宝安大悦城</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div><div class="item">
+                                                    <a>住宅</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/detail/308.html" target="_blank">深圳中粮天悦壹号</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/detail/327.html" target="_blank">深圳中粮锦云</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/detail/330.html" target="_blank">深圳中粮鸿云</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/detail/319.html" target="_blank">佛山珑湾祥云</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div><div class="item">
+                                                    <a>产业地产</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/real_esta/302.html" target="_blank">中粮商务公园</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/real_esta/301.html" target="_blank">中粮（福安）机器人智造产业园</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div><div class="item">
+                                                    <a>写字楼</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/office/296.html" target="_blank">深圳中粮亚太地区总部</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/office/297.html" target="_blank">中粮地产集团中心大厦</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/office/298.html" target="_blank">广州鹏源发展大厦</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div><div class="item">
+                                                    <a>创新业务</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/innovative/279.html" target="_blank">邑公寓创邑031店</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/innovative/280.html" target="_blank">乐邑公寓商务公园店</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/innovative/281.html" target="_blank">乐邑fresh公寓大洋店</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div>                                            </div>
+                                        </div><div class="g " pid="990135">
+                                            <div class="caption">
+                                                <div class="shengfen">
+                                                                                                        <div class="tit1">浙江省</div>
+                                                    <div class="tit2">ZHEJIANG</div>
+                                                </div>
+                                            </div>
+                                                                                        <div class="list">
+                                            <div class="item">
+                                                    <a>商业</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/shangye.html" target="_blank">杭州大悦城</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div><div class="item">
+                                                    <a>住宅</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/detail/318.html" target="_blank">杭州梦栖祥云</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div>                                            </div>
+                                        </div><div class="g " pid="990134">
+                                            <div class="caption">
+                                                <div class="shengfen">
+                                                                                                        <div class="tit1">江苏省</div>
+                                                    <div class="tit2">JIANGSU</div>
+                                                </div>
+                                            </div>
+                                                                                        <div class="list">
+                                            <div class="item">
+                                                    <a>商业</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/shangye.html" target="_blank">苏州大悦春风里</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div><div class="item">
+                                                    <a>住宅</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/detail/329.html" target="_blank">南京中粮鸿云</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/detail/331.html" target="_blank">苏州中粮本园</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/detail/315.html" target="_blank">苏州中粮祥云国际</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div>                                            </div>
+                                        </div><div class="g " pid="990133">
+                                            <div class="caption">
+                                                <div class="shengfen">
+                                                                                                        <div class="tit1">上海</div>
+                                                    <div class="tit2">SHANGHAI</div>
+                                                </div>
+                                            </div>
+                                                                                        <div class="list">
+                                            <div class="item">
+                                                    <a>商业</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/shangye.html" target="_blank">上海静安大悦城</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/shangye.html" target="_blank">上海长风大悦城</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div><div class="item">
+                                                    <a>住宅</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/detail/306.html" target="_blank">上海海景壹号</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/detail/307.html" target="_blank">上海前滩海景壹号</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/detail/309.html" target="_blank">上海中粮天悦壹号</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div><div class="item">
+                                                    <a>酒店</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/hotel/274.html" target="_blank">上海鹏利辉盛阁公寓</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div>                                            </div>
+                                        </div><div class="g " pid="990139">
+                                            <div class="caption">
+                                                <div class="shengfen">
+                                                                                                        <div class="tit1">山东省</div>
+                                                    <div class="tit2">SHANDONG</div>
+                                                </div>
+                                            </div>
+                                                                                        <div class="list">
+                                            <div class="item">
+                                                    <a>商业</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/shangye.html" target="_blank">烟台大悦城</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/shangye.html" target="_blank">青岛大悦春风里</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div><div class="item">
+                                                    <a>住宅</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/detail/322.html" target="_blank">青岛金沙祥云</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a >即墨中粮创智锦云</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div>                                            </div>
+                                        </div><div class="g " pid="990126">
+                                            <div class="caption">
+                                                <div class="shengfen">
+                                                                                                        <div class="tit1">天津</div>
+                                                    <div class="tit2">TIANJIN</div>
+                                                </div>
+                                            </div>
+                                                                                        <div class="list">
+                                            <div class="item">
+                                                    <a>商业</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/shangye.html" target="_blank">天津南开大悦城</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/shangye.html" target="_blank">天津和平大悦城</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div>                                            </div>
+                                        </div><div class="g " pid="990125">
+                                            <div class="caption">
+                                                <div class="shengfen">
+                                                                                                        <div class="tit1">北京</div>
+                                                    <div class="tit2">Beijing</div>
+                                                </div>
+                                            </div>
+                                                                                        <div class="list">
+                                            <div class="item">
+                                                    <a>商业</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/shangye.html" target="_blank">北京西单大悦城</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/shangye.html" target="_blank">北京朝阳大悦城</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/shangye.html" target="_blank">京西大悦城</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/chunfnegli.html" target="_blank">北京春风里大悦城（大兴项目）</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/chunfnegli.html" target="_blank">北京大悦春风里（丰台项目）</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/xiangyunxiaozhen.html" target="_blank">北京祥云小镇</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div><div class="item">
+                                                    <a>住宅</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/detail/333.html" target="_blank">北京中粮瑞府</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/detail/313.htm.html" target="_blank">北京祥云国际</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/detail/323.html" target="_blank">北京京西祥云</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div><div class="item">
+                                                    <a>产业产地</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/real_esta/304.html" target="_blank">中国北京农业生态谷</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/real_esta/303.html" target="_blank">中粮营养健康科学园</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div><div class="item">
+                                                    <a>写字楼</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/office/293.html" target="_blank">北京中粮广场</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/office/294.html" target="_blank">北京中粮·置地广场</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/office/295.html" target="_blank">西单大悦城写字楼</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div><div class="item">
+                                                    <a>酒店</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/hotel/257.html" target="_blank">西单大悦酒店（Le Joy Hotel）</a>
+                                                            <div class="arr1"></div>
+                                                        </div><div class="item">
+                                                            <a href="/hotel/270.html" target="_blank">北京华尔道夫酒店</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div><div class="item">
+                                                    <a>创新业务</a>
+                                                    <div class="arr1"></div>
+                                                    <div class="itemlist">
+                                                    <div class="item">
+                                                            <a href="/innovative/277.html" target="_blank">乐邑公寓中粮健康科技园店</a>
+                                                            <div class="arr1"></div>
+                                                        </div>    
+                                                    </div>
+                                                </div>                                            </div>
+                                        </div>                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+<script type="text/javascript">
+var arr = new Array();
+$(".about-map1 .g").each(function(index){
+    arr.push($(this).attr("pid"));
+})
+$.each(arr,function(index,value){
+    $('.map .parts .part').each(function(){
+        var listids = $(this).attr('pid');
+        if(value == listids){
+            $(this).addClass('hnum');
+        }
+    });
+    $('.about-map .phone_op .li').each(function(){
+        var listides = $(this).attr('pid');
+        if(value == listides){
+            $(this).css('display','inline-block');
+        }
+    });
+});
+</script>
+<script>
+    $(function () {
+        var ww = $(window).width();
+
+        if (ww > 1200) {
+            $("#layermap area").click(function () {
+                var pid = $(this).attr("pid");
+                $(".parts .part-" + pid).addClass("show").siblings().removeClass("show");
+                //$(".elite_club .crcon .part-" + $(this).attr("pid")).show().siblings().hide();
+                $(".about-map1 .g").each(function () {
+                    var pid1 = $(this).attr("pid");
+                    if (pid === pid1) {
+                        $(this).addClass("show").siblings().removeClass("show");
+                        return false;
+                    }
+                });
+            });
+
+
+            $("#layermap area").mouseover(function () {
+                var pid = $(this).attr("pid");
+                $(".about-map .map .sf-icon").each(function () {
+                    var pid1 = $(this).attr("pid");
+                    if (pid === pid1) {
+                        $(this).addClass("show").siblings().removeClass("show");
+                        return false;
+                    }
+                });
+            });
+
+            $(".about-map .map .sf-icon").click(function(){
+                var pid = $(this).attr("pid");
+                $("#layermap area").each(function () {
+                    var pid1 = $(this).attr("pid");
+                    if (pid === pid1) {
+                        $(this).trigger("click");
+						$(".about-map1").show();
+                        return false;
+                    }
+                });
+
+            });
+
+            /*$("#layermap area").each(function () {
+                var tattr = $(this).attr("pid");
+                if (tattr == "990125") {
+                    $(this).click();
+                }
+            });*/
+
+        }else {
+            $(".phone_op .li").bind("click", function () {
+                var pid = $(this).attr("pid");
+                $(this).addClass("now").siblings().removeClass("now");
+                $(".about-map1 .g").each(function () {
+                    var pid1 = $(this).attr("pid");
+                    if (pid === pid1) {
+                        $(this).addClass("show").siblings().removeClass("show");
+                        return false;
+                    }
+                });
+            });
+
+            if(ww<751){
+                $(".about-map1 .item").bind("click",function(){
+                    $(this).addClass("now").siblings().removeClass("now");
+                    $(this).find(".itemlist").show().parent().siblings().find(".itemlist").hide();
+                });
+            }
+
+            $(".phone_op .li").each(function () {
+                var tattr = $(this).attr("pid");
+                if (tattr == "990125") {
+                    $(this).click();
+                }
+            });
+        }
+
+
+        
+        
+      
+
+
+    })
+</script>
+    <div class="x-footer">
+    <div class="x-wrap clear">
+        <div class="textl">
+            <div class="linkbox" style="min-height:20px;"><a href="/lxwm.html" target="_blank">联系我们</a>-<a href="/legal.html" target="_blank">法律声明</a>-<a href="/policy.html" target="_blank">隐私政策</a>-<a href="/sitemap.html" target="_blank">网站地图</a>-<a href="/xinagguan.html" target="_blank">相关链接</a></div>            <div class="cy">大悦城控股集团股份有限公司 © 版权所有<br>GRANDJOY HOLDINGS GROUP CO.,LTD. <a href="https://beian.miit.gov.cn/" target="_blank">粤ICP备19011199号-2</a></div>
+        </div>
+        <div class="ewmbox clear">
+            <div class="item">
+                <div class="tit">大悦城控股</div>                <div class="img" edit_params="width%3D80%26height%3D80%26img1remove%3D1"><img src="http://img.grandjoy.com/Uploads/Zlzd/Picture/2019/04/01/s5ca1816be5fe5.jpeg"   title="大悦城控股" alt="大悦城控股"/></div>            </div>
+            <div class="item">
+                <div class="tit">大悦城商业</div>                <div class="img" edit_params="width%3D80%26height%3D80%26img1remove%3D1"><img src="https://img.grandjoy.com/Uploads/Zlzd/Picture/2026/08/20/s6a8670a162148.jpg"   title="大悦城控股商业" alt="大悦城地产"/></div>            </div>
+            <div class="item">
+                <div class="tit">悦客会</div>                <div class="img" edit_params="width%3D80%26height%3D80%26img1remove%3D1"><img src="http://img.grandjoy.com/Uploads/Zlzd/Picture/2019/04/02/s5ca2f14d77506.jpg"   title="悦客会" alt="悦客会"/></div>            </div>
+        </div>
+        <div class="title">中粮集团成员企业</div>    </div>
+
+</div>
+<script type="text/javascript" src="/Public/static/themes/zlzd/js/language.js"></script>
+<script type="text/javascript">
+//模仿语言包式的简繁转换功能插件！
+
+var Default_isFT = 0        //默认是否繁体，0-简体，1-繁体
+var StranIt_Delay = 500; //翻译延时毫秒（设这个的目的是让网页先流畅的显现出来）
+var JF_cn="ft"+self.location.hostname.toString().replace(/\./g,"");
+var BodyIsFt=getCookie(JF_cn);
+if(location.hash == '#cn'){
+    StranBody();
+}else if(location.hash == '#tr'){
+    BodyIsFt = 1;
+}
+if(BodyIsFt!="1"){
+    BodyIsFt = Default_isFT;
+    $('#ToCn').addClass('cur').siblings().removeClass('cur');
+}else{
+    $('#ToTr').addClass('cur').siblings().removeClass('cur');
+    setTimeout(function(){
+        document.title = StranText(document.title,BodyIsFt);
+        StranBody('',BodyIsFt);
+    },StranIt_Delay);
+}
+$('#ToTr').click(function(){
+    if(!$(this).hasClass('cur')){
+        StranBody('', 1);
+        $('#ToTr').addClass('cur').siblings().removeClass('cur');
+    }
+})
+$('#ToCn').click(function(){
+    if(!$(this).hasClass('cur')){
+        StranBody();
+        $('#ToCn').addClass('cur').siblings().removeClass('cur');
+    }
+})
+</script>
+</body>
+</html>
+<script>
+var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "https://hm.baidu.com/hm.js?7eb38b0c1ff488d659983155d82b564c";
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script>

@@ -1,0 +1,4566 @@
+[
+  {
+    "stock_code": "000725",
+    "company_name": "京东方Ａ",
+    "news_url": "https://www.boe.com/#homenews1",
+    "final_url": "https://www.boe.com/#homenews1",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 200,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pager",
+      "index_"
+    ],
+    "http_status": 200,
+    "html_len": 421327,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "301318",
+    "company_name": "维海德",
+    "news_url": "https://www.vhd.com.cn/xwzx",
+    "final_url": "https://www.vhd.com.cn/xwzx",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 42,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "尾页",
+      "首页",
+      "pager"
+    ],
+    "http_status": 200,
+    "html_len": 241365,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "002041",
+    "company_name": "登海种业",
+    "news_url": "http://www.sddhzy.com/html/news",
+    "final_url": "http://www.sddhzy.com/html/news/",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 33,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 16588,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "300142",
+    "company_name": "沃森生物",
+    "news_url": "http://www.walvax.com/news/index.html",
+    "final_url": "http://www.walvax.com/news/index.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 26,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "pagination",
+      "pager"
+    ],
+    "http_status": 200,
+    "html_len": 170798,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "300817",
+    "company_name": "双飞集团",
+    "news_url": "https://www.sf-bearing.com/news/news-1",
+    "final_url": "https://www.sf-bearing.com/news/news-1/",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 21,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "pager"
+    ],
+    "http_status": 200,
+    "html_len": 31218,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "300051",
+    "company_name": "琏升科技",
+    "news_url": "http://www.lianstech.com/company-news",
+    "final_url": "http://www.lianstech.com/company-news",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 20,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 388070,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "002918",
+    "company_name": "蒙娜丽莎",
+    "news_url": "https://www.monalisa.com.cn/branddynamics/list.html",
+    "final_url": "https://www.monalisa.com.cn/branddynamics/list.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 19,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "pager"
+    ],
+    "http_status": 200,
+    "html_len": 35583,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "300234",
+    "company_name": "开尔新材",
+    "news_url": "https://www.zjke.com/news",
+    "final_url": "https://www.zjke.com/news/",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 18,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 112901,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "002519",
+    "company_name": "银河电子",
+    "news_url": "http://www.yinhe.com/news/gong-si-xin-wen-list-0.htm",
+    "final_url": "http://www.yinhe.com/news/gong-si-xin-wen-list-0.htm",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 17,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 22508,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "603298",
+    "company_name": "杭叉集团",
+    "news_url": "https://www.zjhc.cn/news.html",
+    "final_url": "https://www.zjhc.cn/news.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 16,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 49305,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "603638",
+    "company_name": "艾迪精密",
+    "news_url": "https://www.cceddie.com/news/news.jsp",
+    "final_url": "https://www.cceddie.com/news/news.jsp",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 16,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "pagination",
+      "index_"
+    ],
+    "http_status": 200,
+    "html_len": 43442,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "300838",
+    "company_name": "浙江力诺",
+    "news_url": "https://zj-lenor.com/about/news",
+    "final_url": "https://zj-lenor.com/about/news",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 15,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 48542,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "688651",
+    "company_name": "盛邦安全",
+    "news_url": "https://www.webray.com.cn/partners.html#d6",
+    "final_url": "https://www.webray.com.cn/partners.html#d6",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 15,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 111402,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "002629",
+    "company_name": "仁智股份",
+    "news_url": "http://www.chinarenzhi.com/news.asp?ChannelId=2",
+    "final_url": "http://www.chinarenzhi.com/news.asp?ChannelId=2",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 14,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "尾页",
+      "首页",
+      "pager",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 6577,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "300424",
+    "company_name": "航新科技",
+    "news_url": "http://www.hangxin.cn/cn/qydt/list_9.aspx",
+    "final_url": "http://www.hangxin.cn/cn/qydt/list_9.aspx",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 14,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "pager",
+      "index_",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 25143,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "301513",
+    "company_name": "尚水智能",
+    "news_url": "https://www.ss-smartech.com/news-center",
+    "final_url": "https://www.ss-smartech.com/news-center",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 14,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 51342,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "600436",
+    "company_name": "片仔癀",
+    "news_url": "https://www.zzpzh.com/yzyw/list_17.aspx",
+    "final_url": "https://www.zzpzh.com/yzyw/list_17.aspx",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 13,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "index_",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 33694,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "001390",
+    "company_name": "古麒绒材",
+    "news_url": "http://www.guqiyr.com/?news",
+    "final_url": "http://www.guqiyr.com/?news",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 12,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "尾页",
+      "首页",
+      "pagination",
+      "pager"
+    ],
+    "http_status": 200,
+    "html_len": 15856,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "688251",
+    "company_name": "井松智能",
+    "news_url": "https://www.gen-song.net/News",
+    "final_url": "https://www.gen-song.net/News",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 12,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "尾页",
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 18167,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "688373",
+    "company_name": "盟科药业",
+    "news_url": "https://www.micurxchina.com/news/news-releases",
+    "final_url": "https://www.micurxchina.com/news/news-releases",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 12,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 37900,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "688396",
+    "company_name": "华润微",
+    "news_url": "https://www.crmicro.com/news/index.html",
+    "final_url": "https://www.crmicro.com/news/index.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 12,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "首页",
+      "index_",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 66116,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "000510",
+    "company_name": "新金路",
+    "news_url": "http://www.xjinlu.cn/news",
+    "final_url": "http://www.xjinlu.cn/news",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 11,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pager"
+    ],
+    "http_status": 200,
+    "html_len": 124005,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "300645",
+    "company_name": "正元智慧",
+    "news_url": "https://www.hzsun.com/news",
+    "final_url": "https://www.hzsun.com/news",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 11,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 26691,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "301021",
+    "company_name": "英诺激光",
+    "news_url": "http://www.inno-laser.com/newscenter",
+    "final_url": "http://www.inno-laser.com/newscenter",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 11,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 52874,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "601616",
+    "company_name": "广电电气",
+    "news_url": "http://www.sgeg.cn/news.php",
+    "final_url": "http://www.sgeg.cn/news.php",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 11,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "尾页",
+      "首页",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 41747,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "001314",
+    "company_name": "亿道信息",
+    "news_url": "https://www.emdoor.net/news",
+    "final_url": "https://www.emdoor.net/news",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 10,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pager"
+    ],
+    "http_status": 200,
+    "html_len": 111203,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "300965",
+    "company_name": "恒宇信通",
+    "news_url": "http://www.bjhyxt.cn/news.html",
+    "final_url": "http://www.bjhyxt.cn/news.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 10,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 55078,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "301126",
+    "company_name": "达嘉维康",
+    "news_url": "https://djwk.com.cn/en/news",
+    "final_url": "https://djwk.com.cn/en/news",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 10,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 104019,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "301186",
+    "company_name": "超达装备",
+    "news_url": "http://www.chaodamould.com/news/5",
+    "final_url": "http://www.chaodamould.com/news/5",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 10,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 98296,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "600469",
+    "company_name": "风神股份",
+    "news_url": "https://www.aeolustyre.com/aeolus/xwmt/gsxw/A090002001Gone1.html",
+    "final_url": "https://www.aeolustyre.com/aeolus/xwmt/gsxw/A090002001Gone1.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 10,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "index_"
+    ],
+    "http_status": 200,
+    "html_len": 28737,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "600961",
+    "company_name": "株冶集团",
+    "news_url": "https://www.torchcn.com/xwzx_7742/zzxw",
+    "final_url": "https://www.torchcn.com/xwzx_7742/zzxw/",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 10,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pager"
+    ],
+    "http_status": 200,
+    "html_len": 20191,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "603283",
+    "company_name": "赛腾股份",
+    "news_url": "https://www.secote.com/cn/news/index",
+    "final_url": "https://www.secote.com/cn/news/index",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 10,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "尾页",
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 51935,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "688428",
+    "company_name": "诺诚健华",
+    "news_url": "https://www.innocarepharma.com",
+    "final_url": "https://www.innocarepharma.com",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 10,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 73176,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "002285",
+    "company_name": "世联行",
+    "news_url": "https://www.worldunion.com.cn/sldt/list_13.html",
+    "final_url": "https://www.worldunion.com.cn/sldt/list_13.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 9,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "pager",
+      "index_",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 40473,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "300128",
+    "company_name": "锦富技术",
+    "news_url": "https://www.jin-fu.cn/article",
+    "final_url": "https://www.jin-fu.cn/article",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 9,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "尾页",
+      "首页",
+      "index_"
+    ],
+    "http_status": 200,
+    "html_len": 22601,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "300885",
+    "company_name": "海昌新材",
+    "news_url": "http://www.seashinepm.com/news.html",
+    "final_url": "http://www.seashinepm.com/news.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 9,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "index_"
+    ],
+    "http_status": 200,
+    "html_len": 8941,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "301215",
+    "company_name": "中汽股份",
+    "news_url": "https://www.capg.com.cn/qjcpfbymthd",
+    "final_url": "https://www.capg.com.cn/qjcpfbymthd",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 9,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 23277,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "301413",
+    "company_name": "安培龙",
+    "news_url": "http://www.ampron.com/news",
+    "final_url": "http://www.ampron.com/news",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 9,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 29447,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "600960",
+    "company_name": "渤海汽车",
+    "news_url": "http://www.bohai-auto.com/navToChannel?channelId=12&pageNo=1&pageSize=6",
+    "final_url": "http://www.bohai-auto.com/navToChannel?channelId=12&pageNo=1&pageSize=6",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 9,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 17195,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "600963",
+    "company_name": "岳阳林纸",
+    "news_url": "https://www.yypaper.com/yypaper/qydt44/index.html",
+    "final_url": "https://www.yypaper.com/yypaper/qydt44/index.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 9,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 19583,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "603203",
+    "company_name": "快克智能",
+    "news_url": "http://www.quick-global.com/news.html",
+    "final_url": "http://www.quick-global.com/news.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 9,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pagination",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 77428,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "920427",
+    "company_name": "华维设计",
+    "news_url": "https://www.hwsjjt.com/article",
+    "final_url": "https://www.hwsjjt.com/article",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 9,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 29084,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "001373",
+    "company_name": "翔腾新材",
+    "news_url": "http://www.topflygroup.cn/news/4",
+    "final_url": "http://www.topflygroup.cn/news/4",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 8,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 60800,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "002880",
+    "company_name": "卫光生物",
+    "news_url": "https://www.szwg.com/news",
+    "final_url": "https://www.szwg.com/news",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 8,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 49265,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "300323",
+    "company_name": "华灿光电",
+    "news_url": "https://www.hcsemitek.com/news.html",
+    "final_url": "https://www.hcsemitek.com/news.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 8,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 38198,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "300591",
+    "company_name": "万里马",
+    "news_url": "http://www.wanlima.com.cn/news.html",
+    "final_url": "http://www.wanlima.com.cn/news.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 8,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 13924,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "603168",
+    "company_name": "莎普爱思",
+    "news_url": "https://www.zjspas.com/news",
+    "final_url": "https://www.zjspas.com/news",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 8,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 17406,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "605123",
+    "company_name": "派克新材",
+    "news_url": "https://www.wuxipaike.com/news/index.html",
+    "final_url": "https://www.wuxipaike.com/news/index.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 8,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pager",
+      "index_"
+    ],
+    "http_status": 200,
+    "html_len": 18124,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "920436",
+    "company_name": "大地电气",
+    "news_url": "https://www.ntgec.com/news.html",
+    "final_url": "https://www.ntgec.com/news.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 8,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 68026,
+    "reasons": [
+      "many_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "002021",
+    "company_name": "中捷资源",
+    "news_url": "https://www.zoje.com/list_39",
+    "final_url": "https://www.zoje.com/list_39",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 7,
+    "same_domain_news_links": 14,
+    "pager_hit": false,
+    "pager_signals": [],
+    "http_status": 200,
+    "html_len": 21592,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "list_date_link_combo"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "600056",
+    "company_name": "中国医药",
+    "news_url": "https://www.meheco.com/news.html",
+    "final_url": "https://www.meheco.com/news.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 7,
+    "same_domain_news_links": 8,
+    "pager_hit": false,
+    "pager_signals": [],
+    "http_status": 200,
+    "html_len": 13998,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "list_date_link_combo"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "002326",
+    "company_name": "永太科技",
+    "news_url": "https://www.yongtaitech.com/newslist/zh.aspx",
+    "final_url": "https://www.yongtaitech.com/newslist/zh.aspx",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 6,
+    "same_domain_news_links": 13,
+    "pager_hit": false,
+    "pager_signals": [],
+    "http_status": 200,
+    "html_len": 22877,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "list_date_link_combo"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "002472",
+    "company_name": "双环传动",
+    "news_url": "https://www.gearsnet.com/news_list.html",
+    "final_url": "https://www.gearsnet.com/news_list.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 6,
+    "same_domain_news_links": 13,
+    "pager_hit": false,
+    "pager_signals": [],
+    "http_status": 200,
+    "html_len": 25840,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "list_date_link_combo"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "002546",
+    "company_name": "新联电子",
+    "news_url": "http://www.xldz.com/?companynews",
+    "final_url": "http://www.xldz.com/?companynews",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 6,
+    "same_domain_news_links": 9,
+    "pager_hit": false,
+    "pager_signals": [],
+    "http_status": 200,
+    "html_len": 26056,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "list_date_link_combo"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "300201",
+    "company_name": "海伦哲",
+    "news_url": "http://www.xzhlz.com/news",
+    "final_url": "http://www.xzhlz.com/news/",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 6,
+    "same_domain_news_links": 9,
+    "pager_hit": false,
+    "pager_signals": [],
+    "http_status": 200,
+    "html_len": 28483,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "list_date_link_combo"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "300500",
+    "company_name": "启迪设计",
+    "news_url": "http://www.tusdesign.com/news.html",
+    "final_url": "http://www.tusdesign.com/news.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 6,
+    "same_domain_news_links": 10,
+    "pager_hit": false,
+    "pager_signals": [],
+    "http_status": 200,
+    "html_len": 8199,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "list_date_link_combo"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "688189",
+    "company_name": "ST南新",
+    "news_url": "http://www.nucien.com/news/list-405.html",
+    "final_url": "http://www.nucien.com/news/list-405.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 6,
+    "same_domain_news_links": 12,
+    "pager_hit": false,
+    "pager_signals": [],
+    "http_status": 200,
+    "html_len": 23717,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "list_date_link_combo"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "920020",
+    "company_name": "泰凯英",
+    "news_url": "https://www.techking.com/news",
+    "final_url": "https://www.techking.com/news",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 6,
+    "same_domain_news_links": 9,
+    "pager_hit": false,
+    "pager_signals": [],
+    "http_status": 200,
+    "html_len": 35406,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "list_date_link_combo"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "000516",
+    "company_name": "国际医学",
+    "news_url": "http://www.000516.cn/meiti/jituanxinwen",
+    "final_url": "http://www.000516.cn/meiti/jituanxinwen/",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 11,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 27744,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "000663",
+    "company_name": "永安林业",
+    "news_url": "https://www.yonglin.com/news",
+    "final_url": "https://www.yonglin.com/news",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 9,
+    "pager_hit": true,
+    "pager_signals": [
+      "尾页",
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 25033,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "000917",
+    "company_name": "电广传媒",
+    "news_url": "http://www.tik.com.cn/news/287.html",
+    "final_url": "http://www.tik.com.cn/news/287.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 9,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 11137,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "002072",
+    "company_name": "凯瑞德",
+    "news_url": "http://002072krd.com/lists/18.html",
+    "final_url": "http://002072krd.com/lists/18.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 11,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "index_"
+    ],
+    "http_status": 200,
+    "html_len": 8242,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "002528",
+    "company_name": "*ST英飞",
+    "news_url": "https://www.infinova.com.cn/news/index.html",
+    "final_url": "https://www.infinova.com.cn/news/index.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 8,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 24368,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "002615",
+    "company_name": "哈尔斯",
+    "news_url": "http://www.haersgroup.com/news",
+    "final_url": "http://www.haersgroup.com/news/",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 8,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "pager"
+    ],
+    "http_status": 200,
+    "html_len": 12248,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "002847",
+    "company_name": "盐津铺子",
+    "news_url": "https://www.yanjinpuzi.com",
+    "final_url": "https://www.yanjinpuzi.com",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 13,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "index_"
+    ],
+    "http_status": 200,
+    "html_len": 111008,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "003037",
+    "company_name": "三和管桩",
+    "news_url": "https://www.sanhepile.com/news/12",
+    "final_url": "https://www.sanhepile.com/news/12",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 12,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 50484,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "300045",
+    "company_name": "华力创通",
+    "news_url": "http://www.hwacreate.com.cn/news.aspx?CateId=58",
+    "final_url": "http://www.hwacreate.com.cn/news.aspx?CateId=58",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 11,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "pager"
+    ],
+    "http_status": 200,
+    "html_len": 15217,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "300118",
+    "company_name": "东方日升",
+    "news_url": "https://www.risen.com/news/index",
+    "final_url": "https://www.risen.com/news/index",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 9,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 85515,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "300243",
+    "company_name": "瑞丰高材",
+    "news_url": "http://www.ruifengchemical.com/news/index.html",
+    "final_url": "http://www.ruifengchemical.com/news/index.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 13,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "首页",
+      "pagination",
+      "index_"
+    ],
+    "http_status": 200,
+    "html_len": 12725,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "300326",
+    "company_name": "ST凯利",
+    "news_url": "http://www.kineticmedinc.com.cn/index/news",
+    "final_url": "http://www.kineticmedinc.com.cn/index/news",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 10,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "尾页",
+      "首页",
+      "index_"
+    ],
+    "http_status": 200,
+    "html_len": 12485,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "300340",
+    "company_name": "科恒股份",
+    "news_url": "http://www.keheng.com.cn/Kh_newslist1.aspx",
+    "final_url": "http://www.keheng.com.cn/Kh_newslist1.aspx",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 8,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "尾页",
+      "首页",
+      "pager"
+    ],
+    "http_status": 200,
+    "html_len": 33584,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "300472",
+    "company_name": "*ST新元",
+    "news_url": "http://www.newu.com.cn/news.aspx?pid=80",
+    "final_url": "http://www.newu.com.cn/news.aspx?pid=80",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 10,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 34757,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "300542",
+    "company_name": "新晨科技",
+    "news_url": "https://www.brilliance.com.cn/news",
+    "final_url": "https://www.brilliance.com.cn/news",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 14,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "index_"
+    ],
+    "http_status": 200,
+    "html_len": 67828,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "300752",
+    "company_name": "隆利科技",
+    "news_url": "http://www.blbgy.com/news",
+    "final_url": "http://www.blbgy.com/news/",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 13,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 22386,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "300953",
+    "company_name": "震裕科技",
+    "news_url": "https://www.zhenyumould.com/news/index.html",
+    "final_url": "https://www.zhenyumould.com/news/index.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 8,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 15689,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "300977",
+    "company_name": "深圳瑞捷",
+    "news_url": "http://www.szridge.com/news",
+    "final_url": "http://www.szridge.com/news",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 14,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 43579,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "301030",
+    "company_name": "*ST仕净",
+    "news_url": "https://www.sz-sjef.com/news",
+    "final_url": "https://www.sz-sjef.com/news",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 13,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "尾页",
+      "首页",
+      "pagination",
+      "pager",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 21133,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "301160",
+    "company_name": "翔楼新材",
+    "news_url": "https://www.xl-nm.com/news",
+    "final_url": "https://www.xl-nm.com/news",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 10,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 26971,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "301310",
+    "company_name": "鑫宏业",
+    "news_url": "http://www.xhycable.com/news.html",
+    "final_url": "http://www.xhycable.com/news.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 9,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "laypage"
+    ],
+    "http_status": 200,
+    "html_len": 20336,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "600095",
+    "company_name": "湘财股份",
+    "news_url": "http://www.600095.com.cn/index.php/news.html",
+    "final_url": "http://www.600095.com.cn/index.php/news.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 12,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 20444,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "600106",
+    "company_name": "重庆路桥",
+    "news_url": "https://www.cqrb.com.cn/news",
+    "final_url": "https://www.cqrb.com.cn/news/",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 11,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 6718,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "600241",
+    "company_name": "时代万恒",
+    "news_url": "https://www.shidaiwanheng.com:443/News/List.aspx?ClassId=2",
+    "final_url": "https://www.shidaiwanheng.com/News/List.aspx?ClassId=2",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 9,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "pager",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 23124,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "600496",
+    "company_name": "精工钢构",
+    "news_url": "http://www.600496.com/news.html",
+    "final_url": "http://www.600496.com/news.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 12,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 10944,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "600665",
+    "company_name": "天地源",
+    "news_url": "http://www.tande.cn/default/articles/430",
+    "final_url": "http://www.tande.cn/default/articles/430",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 12,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pagination",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 31620,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "600820",
+    "company_name": "隧道股份",
+    "news_url": "https://www.stec.net/site/stecnews/30",
+    "final_url": "https://www.stec.net/site/stecnews/30",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 13,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pagination",
+      "pager"
+    ],
+    "http_status": 200,
+    "html_len": 36544,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "601089",
+    "company_name": "福元医药",
+    "news_url": "https://www.foyou.com.cn/news/index.html",
+    "final_url": "https://www.foyou.com.cn/news/index.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 12,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 26713,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "603151",
+    "company_name": "邦基科技",
+    "news_url": "http://www.bangjigroup.com/news",
+    "final_url": "http://www.bangjigroup.com/news",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 10,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "尾页",
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 35713,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "603213",
+    "company_name": "镇洋发展",
+    "news_url": "http://www.nbocc.com/news.html",
+    "final_url": "http://www.nbocc.com/news.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 13,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "首页",
+      "pager"
+    ],
+    "http_status": 200,
+    "html_len": 10280,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "603506",
+    "company_name": "南都物业",
+    "news_url": "http://www.nacityres.com/news",
+    "final_url": "http://www.nacityres.com/news",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 11,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 17079,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "603886",
+    "company_name": "元祖股份",
+    "news_url": "https://www.ganso.com.cn/yuanzugonggao.html",
+    "final_url": "https://www.ganso.com.cn/yuanzugonggao.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 9,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 62587,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "603992",
+    "company_name": "松霖科技",
+    "news_url": "https://www.solex.cn/news",
+    "final_url": "https://www.solex.cn/news",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 12,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pagination",
+      "pager"
+    ],
+    "http_status": 200,
+    "html_len": 10005,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "605268",
+    "company_name": "王力安防",
+    "news_url": "http://www.wanglianfang.com/news",
+    "final_url": "http://www.wanglianfang.com/news",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 10,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 31569,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "688280",
+    "company_name": "精进电动",
+    "news_url": "https://www.jjeglobal.com/news/1",
+    "final_url": "https://www.jjeglobal.com/news/1",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 8,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 41142,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "920017",
+    "company_name": "星昊医药",
+    "news_url": "https://www.sunho.com.cn/news.php",
+    "final_url": "https://www.sunho.com.cn/news.php",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 13,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 11888,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "920571",
+    "company_name": "国航远洋",
+    "news_url": "https://www.gh-shipping.com/news",
+    "final_url": "https://www.gh-shipping.com/news",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 12,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "pagination",
+      "index_",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 9061,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "920906",
+    "company_name": "舜宇精工",
+    "news_url": "https://www.sunnymould.com/news1.html",
+    "final_url": "https://www.sunnymould.com/news1.html",
+    "score": 7,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 8,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pagination",
+      "index_"
+    ],
+    "http_status": 200,
+    "html_len": 28383,
+    "reasons": [
+      "some_unique_dates",
+      "mod_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "001237",
+    "company_name": "惠康科技",
+    "news_url": "https://www.hicon.cn/news",
+    "final_url": "https://www.hicon.cn/news/",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 7,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 36311,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "002397",
+    "company_name": "梦洁股份",
+    "news_url": "http://www.mendale.com/news",
+    "final_url": "http://www.mendale.com/news",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 7,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 17668,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "600423",
+    "company_name": "*ST柳化",
+    "news_url": "http://www.lzhg.cn/index/news",
+    "final_url": "http://www.lzhg.cn/index/news",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 7,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "尾页",
+      "首页",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 17708,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "601133",
+    "company_name": "柏诚股份",
+    "news_url": "http://www.jsboth.com/companydynamics/list.html",
+    "final_url": "http://www.jsboth.com/companydynamics/list.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 7,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "pager"
+    ],
+    "http_status": 200,
+    "html_len": 21577,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "601890",
+    "company_name": "亚星锚链",
+    "news_url": "https://www.asac.cn/news.php?categoryID=630",
+    "final_url": "https://www.asac.cn/news.php?categoryID=630",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 7,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 19101,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "603728",
+    "company_name": "鸣志电器",
+    "news_url": "https://www.moons.com.cn/about-us/news",
+    "final_url": "https://www.moons.com.cn/about-us/news",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 7,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 99991,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "688310",
+    "company_name": "迈得医疗",
+    "news_url": "https://www.maiderchina.com/news",
+    "final_url": "https://www.maiderchina.com/news",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 7,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "index_"
+    ],
+    "http_status": 200,
+    "html_len": 67275,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "920212",
+    "company_name": "智新电子",
+    "news_url": "https://www.genius-gp.com/news/index.html",
+    "final_url": "https://www.genius-gp.com/news/index.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 7,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 17543,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "000791",
+    "company_name": "甘肃能源",
+    "news_url": "https://nyfz.gepic.cn/news",
+    "final_url": "https://nyfz.gepic.cn/news",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 6,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 13628,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "001260",
+    "company_name": "坤泰股份",
+    "news_url": "https://www.chinakuntai.com/news.html",
+    "final_url": "https://www.chinakuntai.com/news.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 6,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 38718,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "002685",
+    "company_name": "华东重机",
+    "news_url": "http://www.hdhm.com/news.html",
+    "final_url": "http://www.hdhm.com/news.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 6,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 39430,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "300401",
+    "company_name": "花园生物",
+    "news_url": "http://www.hybiotech.com/news/1",
+    "final_url": "http://www.hybiotech.com/news/1",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 6,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 41948,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "300560",
+    "company_name": "中富通",
+    "news_url": "http://www.zftii.com/news.html",
+    "final_url": "http://www.zftii.com/news.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 6,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 14357,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "301234",
+    "company_name": "五洲医疗",
+    "news_url": "https://www.hongyu-wuzhou.com/news.html",
+    "final_url": "https://www.hongyu-wuzhou.com/news.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 6,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pager"
+    ],
+    "http_status": 200,
+    "html_len": 72613,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "600312",
+    "company_name": "平高电气",
+    "news_url": "https://www.pinggao.com/news/company.html",
+    "final_url": "https://www.pinggao.com/news/company.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 6,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "pagination",
+      "laypage"
+    ],
+    "http_status": 200,
+    "html_len": 27687,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "600418",
+    "company_name": "江淮汽车",
+    "news_url": "https://www.jac.com.cn/news/index.html",
+    "final_url": "https://www.jac.com.cn/news/index.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 6,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "index_",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 40935,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "600667",
+    "company_name": "太极实业",
+    "news_url": "https://www.wxtj.com/xwzx",
+    "final_url": "https://www.wxtj.com/xwzx",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 6,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "尾页",
+      "首页",
+      "pager"
+    ],
+    "http_status": 200,
+    "html_len": 141126,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "601058",
+    "company_name": "赛轮轮胎",
+    "news_url": "http://www.sailungroup.com/news/index.html",
+    "final_url": "http://www.sailungroup.com/news/index.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 6,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 30886,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "603041",
+    "company_name": "美思德",
+    "news_url": "https://www.maysta.com/news/news.aspx",
+    "final_url": "https://www.maysta.com/news/news.aspx",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 6,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "尾页",
+      "首页",
+      "pager"
+    ],
+    "http_status": 200,
+    "html_len": 11298,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "603227",
+    "company_name": "雪峰科技",
+    "news_url": "http://www.xjxfkj.com/news.html",
+    "final_url": "http://www.xjxfkj.com/news.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 6,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "尾页",
+      "首页",
+      "pagination",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 30211,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "688323",
+    "company_name": "瑞华泰",
+    "news_url": "https://www.rayitek.com/xwdt",
+    "final_url": "https://www.rayitek.com/xwdt",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 6,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "尾页",
+      "首页",
+      "pager"
+    ],
+    "http_status": 200,
+    "html_len": 106042,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "688561",
+    "company_name": "奇安信",
+    "news_url": "https://www.qianxin.com/topics/aiforsecurity",
+    "final_url": "https://www.qianxin.com/topics/aiforsecurity",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 6,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 46644,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "920106",
+    "company_name": "林泰新材",
+    "news_url": "http://www.lintexcn.cn/news.html",
+    "final_url": "http://www.lintexcn.cn/news.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 6,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "尾页",
+      "首页",
+      "pager"
+    ],
+    "http_status": 200,
+    "html_len": 16183,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "920218",
+    "company_name": "新天力",
+    "news_url": "https://www.otor.cn/news.html",
+    "final_url": "https://www.otor.cn/news.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 6,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 63197,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "002015",
+    "company_name": "协鑫能科",
+    "news_url": "https://www.gcl-et.com/news",
+    "final_url": "https://www.gcl-et.com/news",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 5,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 56252,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "002364",
+    "company_name": "中恒电气",
+    "news_url": "https://www.hzzh.com/news/index.html",
+    "final_url": "https://www.hzzh.com/news/index.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 5,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 16468,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "002379",
+    "company_name": "宏桥控股",
+    "news_url": "http://www.hongqiaoholdings.com/news",
+    "final_url": "http://www.hongqiaoholdings.com/news",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 5,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 58458,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "300394",
+    "company_name": "天孚通信",
+    "news_url": "http://www.tfcsz.com",
+    "final_url": "http://www.tfcsz.com",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 5,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 50905,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "300530",
+    "company_name": "领湃科技",
+    "news_url": "http://www.dzpower.com/news01",
+    "final_url": "http://www.dzpower.com/news01",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 5,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 21383,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "300903",
+    "company_name": "科翔股份",
+    "news_url": "https://www.gdkxpcb.com/xwzx",
+    "final_url": "https://www.gdkxpcb.com/xwzx",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 5,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 31331,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "301069",
+    "company_name": "凯盛新材",
+    "news_url": "http://www.ksxc.cn/?article",
+    "final_url": "http://www.ksxc.cn/?article",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 5,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "尾页",
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 26423,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "301335",
+    "company_name": "天元宠物",
+    "news_url": "https://www.tianyuanpet.com/news.html",
+    "final_url": "https://www.tianyuanpet.com/news.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 5,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 39016,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "600892",
+    "company_name": "大晟文化",
+    "news_url": "http://www.600892.com.cn/news.html",
+    "final_url": "http://www.600892.com.cn/news.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 5,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 3426,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "600983",
+    "company_name": "惠而浦",
+    "news_url": "https://www.whirlpool.com.cn/about/news",
+    "final_url": "https://www.whirlpool.com.cn/about/news",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 5,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 19934,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "601155",
+    "company_name": "新城控股",
+    "news_url": "https://www.seazen.com.cn:443/news/index.html",
+    "final_url": "https://www.seazen.com.cn/news/index.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 5,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 24153,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "688051",
+    "company_name": "佳华科技",
+    "news_url": "https://www.rockontrol.com/jhdt/index.jhtml",
+    "final_url": "https://www.rockontrol.com/jhdt/index.jhtml",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 5,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 48998,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "920088",
+    "company_name": "科力股份",
+    "news_url": "http://www.xkeli.com/news",
+    "final_url": "http://www.xkeli.com/news",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 5,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "尾页",
+      "首页",
+      "pagination",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 26865,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "000657",
+    "company_name": "中钨高新",
+    "news_url": "https://www.minmetalstungsten.com/xwzx_7917/gsxw",
+    "final_url": "https://www.minmetalstungsten.com/xwzx_7917/gsxw/",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pager"
+    ],
+    "http_status": 200,
+    "html_len": 20297,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "000729",
+    "company_name": "燕京啤酒",
+    "news_url": "https://www.yanjing.com.cn/news/index.html",
+    "final_url": "https://www.yanjing.com.cn/news/index.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "尾页",
+      "首页",
+      "laypage",
+      "index_"
+    ],
+    "http_status": 200,
+    "html_len": 28329,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "002675",
+    "company_name": "东诚药业",
+    "news_url": "https://www.dcb-group.com/xwzx/index.html",
+    "final_url": "https://www.dcb-group.com/xwzx/index.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 25196,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "002779",
+    "company_name": "中坚科技",
+    "news_url": "https://www.topsunpower.cc/index.php/index/lists?catname=news&lang=zh-cn",
+    "final_url": "https://www.topsunpower.cc/index.php/index/lists?catname=news&lang=zh-cn",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "index_"
+    ],
+    "http_status": 200,
+    "html_len": 25416,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "300198",
+    "company_name": "*ST纳川",
+    "news_url": "http://www.nachuan.com/news.html",
+    "final_url": "http://www.nachuan.com/news.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 15,
+    "pager_hit": false,
+    "pager_signals": [],
+    "http_status": 200,
+    "html_len": 12216,
+    "reasons": [
+      "some_unique_dates",
+      "many_news_links"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "300747",
+    "company_name": "锐科激光",
+    "news_url": "https://www.laserhome.com/news.html",
+    "final_url": "https://www.laserhome.com/news.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 138100,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "300955",
+    "company_name": "嘉亨家化",
+    "news_url": "http://www.jahenjh.com/news2.html",
+    "final_url": "http://www.jahenjh.com/news2.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "尾页",
+      "首页",
+      "index_"
+    ],
+    "http_status": 200,
+    "html_len": 5706,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "301106",
+    "company_name": "骏成科技",
+    "news_url": "http://www.smartwinlcd.com/news",
+    "final_url": "http://www.smartwinlcd.com/news",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 6749,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "301169",
+    "company_name": "零点有数",
+    "news_url": "https://www.idataway.com/column/5",
+    "final_url": "https://www.idataway.com/column/5",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 54569,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "600096",
+    "company_name": "云天化",
+    "news_url": "https://www.yyth.com.cn/news/index.html",
+    "final_url": "https://www.yyth.com.cn/news/index.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 42501,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "600320",
+    "company_name": "振华重工",
+    "news_url": "https://www.zpmc.com/news",
+    "final_url": "https://www.zpmc.com/news",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 27,
+    "pager_hit": false,
+    "pager_signals": [],
+    "http_status": 200,
+    "html_len": 30674,
+    "reasons": [
+      "some_unique_dates",
+      "many_news_links"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "605005",
+    "company_name": "合兴股份",
+    "news_url": "https://www.cwb.com.cn/news",
+    "final_url": "https://www.cwb.com.cn/news/",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 43332,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "688020",
+    "company_name": "方邦股份",
+    "news_url": "http://www.fbflex.com/news.aspx?code=0201",
+    "final_url": "http://www.fbflex.com/news.aspx?code=0201",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 7,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pager"
+    ],
+    "http_status": 200,
+    "html_len": 19684,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "688596",
+    "company_name": "正帆科技",
+    "news_url": "https://www.gentechindustries.com/index/news/news.html",
+    "final_url": "https://www.gentechindustries.com/index/news/news.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 6,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 17148,
+    "reasons": [
+      "some_unique_dates",
+      "few_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "688711",
+    "company_name": "宏微科技",
+    "news_url": "https://www.macmicst.com/news/company-news",
+    "final_url": "https://www.macmicst.com/news/company-news",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 4,
+    "same_domain_news_links": 23,
+    "pager_hit": false,
+    "pager_signals": [],
+    "http_status": 200,
+    "html_len": 94883,
+    "reasons": [
+      "some_unique_dates",
+      "many_news_links"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "000790",
+    "company_name": "华神科技",
+    "news_url": "https://www.huasungrp.com/news.aspx?nid=2&typeid=4",
+    "final_url": "https://www.huasungrp.com/news.aspx?nid=2&typeid=4",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 17,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "index_"
+    ],
+    "http_status": 200,
+    "html_len": 48438,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "000995",
+    "company_name": "皇台酒业",
+    "news_url": "http://www.huangtai.com.cn/news.html",
+    "final_url": "http://www.huangtai.com.cn/news.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 16,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 34796,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "002007",
+    "company_name": "华兰生物",
+    "news_url": "http://www.hualanbio.com/news.html",
+    "final_url": "http://www.hualanbio.com/news.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 35,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 58948,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "002111",
+    "company_name": "威海广泰",
+    "news_url": "https://www.guangtai.com.cn/news.html",
+    "final_url": "https://www.guangtai.com.cn/news.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 17,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 36952,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "002482",
+    "company_name": "广田集团",
+    "news_url": "https://www.szgt.com/news/news.aspx?m=115001",
+    "final_url": "https://www.szgt.com/news/news.aspx?m=115001",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 26,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "尾页",
+      "首页",
+      "pager",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 27346,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "002572",
+    "company_name": "索菲亚",
+    "news_url": "https://www.sfygroup.com/company-news/28.html",
+    "final_url": "https://www.sfygroup.com/company-news/28.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 27,
+    "pager_hit": true,
+    "pager_signals": [
+      "尾页",
+      "首页",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 50726,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "002687",
+    "company_name": "乔治白",
+    "news_url": "http://www.giuseppe.cn/news",
+    "final_url": "http://www.giuseppe.cn/news",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 45,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 92408,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "002925",
+    "company_name": "盈趣科技",
+    "news_url": "https://intretech.com/news",
+    "final_url": "https://intretech.com/news/",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 38,
+    "pager_hit": true,
+    "pager_signals": [
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 164867,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "300123",
+    "company_name": "ST亚光",
+    "news_url": "https://www.ygkjgroup.com/news/0.html",
+    "final_url": "https://www.ygkjgroup.com/news/0.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 18,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 12265,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "300164",
+    "company_name": "通源石油",
+    "news_url": "https://www.tongoiltools.com/index.php/home/Article/index/cid/34",
+    "final_url": "https://www.tongoiltools.com/index.php/home/Article/index/cid/34",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 17,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 8728,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "300189",
+    "company_name": "神农种业",
+    "news_url": "https://www.hnsnkj.com.cn/news.php",
+    "final_url": "https://www.hnsnkj.com.cn/news.php",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 18,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "尾页",
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 18465,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "300466",
+    "company_name": "赛摩智能",
+    "news_url": "https://www.saimo.cn/news",
+    "final_url": "https://www.saimo.cn/news/",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 25,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pager",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 59015,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "300525",
+    "company_name": "博思软件",
+    "news_url": "https://www.bosssoft.com.cn",
+    "final_url": "https://www.bosssoft.com.cn",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 49,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 44522,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "300713",
+    "company_name": "英可瑞",
+    "news_url": "https://www.szincrease.com/news/company",
+    "final_url": "https://www.szincrease.com/news/company",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 15,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pagination",
+      "laypage"
+    ],
+    "http_status": 200,
+    "html_len": 73017,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "300862",
+    "company_name": "蓝盾光电",
+    "news_url": "https://www.ldchina.cn/cn/list_27.aspx",
+    "final_url": "https://www.ldchina.cn/cn/list_27.aspx",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 24,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "尾页",
+      "首页",
+      "pager",
+      "index_",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 24805,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "301036",
+    "company_name": "双乐股份",
+    "news_url": "https://www.shuangle.com/news.html",
+    "final_url": "https://www.shuangle.com/news.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 19,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 25371,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "301115",
+    "company_name": "联检科技",
+    "news_url": "https://www.utic.com/news.html",
+    "final_url": "https://www.utic.com/news.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 21,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 26909,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "301325",
+    "company_name": "曼恩斯特",
+    "news_url": "https://www.manst.com/news/index.html",
+    "final_url": "https://www.manst.com/news/index.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 16,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pager"
+    ],
+    "http_status": 200,
+    "html_len": 21000,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "301680",
+    "company_name": "固德电材",
+    "news_url": "https://www.goodeeis.com/news",
+    "final_url": "https://www.goodeeis.com/news/",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 23,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 41694,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "600135",
+    "company_name": "乐凯胶片",
+    "news_url": "https://lkjp.luckyfilm.com/index/Article/index.html?cate=105",
+    "final_url": "https://lkjp.luckyfilm.com/index/Article/index.html?cate=105",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 24,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 47949,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "600345",
+    "company_name": "长江通信",
+    "news_url": "https://www.ycig.com/ycig/xwzx/gsyw/A145003001Gone1.html",
+    "final_url": "https://www.ycig.com/ycig/xwzx/gsyw/A145003001Gone1.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 17,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "尾页",
+      "首页",
+      "pagination",
+      "pager"
+    ],
+    "http_status": 200,
+    "html_len": 39599,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "600657",
+    "company_name": "信达地产",
+    "news_url": "https://www.cindare.com/cnews.html",
+    "final_url": "https://www.cindare.com/cnews.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 20,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 14145,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "600959",
+    "company_name": "江苏有线",
+    "news_url": "http://www.jscnnet.com/xwzx",
+    "final_url": "http://www.jscnnet.com/xwzx/",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 22,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "index_"
+    ],
+    "http_status": 200,
+    "html_len": 12235,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "603105",
+    "company_name": "芯能科技",
+    "news_url": "http://www.sunorensolar.com/news",
+    "final_url": "https://www.sunorensolar.com/news/",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 31,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 21519,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "603130",
+    "company_name": "云中马",
+    "news_url": "http://www.yzmgf.com/news_lists/16.html",
+    "final_url": "http://www.yzmgf.com/news_lists/16.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 18,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 20185,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "603180",
+    "company_name": "金牌家居",
+    "news_url": "https://www.goldenhome.cc/news.html",
+    "final_url": "https://www.goldenhome.cc/news.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 18,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 30029,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "603258",
+    "company_name": "电魂网络",
+    "news_url": "http://www.dianhun.cn/news.aspx",
+    "final_url": "http://www.dianhun.cn/news.aspx",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 15,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 23186,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "603267",
+    "company_name": "鸿远电子",
+    "news_url": "http://www.yldz.com.cn/news.php",
+    "final_url": "http://www.yldz.com.cn/news.php",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 28,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 20818,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "603567",
+    "company_name": "珍宝岛",
+    "news_url": "https://www.zbdzy.com/news.php?cid=25",
+    "final_url": "https://www.zbdzy.com/news.php?cid=25",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 22,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "pagination",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 34729,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "603598",
+    "company_name": "引力传媒",
+    "news_url": "https://www.yinlimedia.com/index.php/news.html",
+    "final_url": "https://www.yinlimedia.com/index.php/news.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 15,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 20246,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "605198",
+    "company_name": "安德利",
+    "news_url": "https://www.andre.com.cn/index.php?m=content&c=index&a=lists&catid=14",
+    "final_url": "https://www.andre.com.cn/index.php?m=content&c=index&a=lists&catid=14",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 20,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "首页",
+      "pagination",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 20930,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "688011",
+    "company_name": "新光光电",
+    "news_url": "http://www.xggdkj.com/news",
+    "final_url": "http://www.xggdkj.com/news",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 16,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pagination",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 20943,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "688015",
+    "company_name": "交控科技",
+    "news_url": "http://www.bj-tct.com/news/index.html",
+    "final_url": "http://www.bj-tct.com/news/index.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 19,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 32210,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "688107",
+    "company_name": "安路科技",
+    "news_url": "https://www.anlogic.com/news/company-news",
+    "final_url": "https://www.anlogic.com/news/company-news",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 36,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 107791,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "688165",
+    "company_name": "埃夫特",
+    "news_url": "https://www.efort.com.cn/news",
+    "final_url": "https://www.efort.com.cn/news",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 16,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 65315,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "688185",
+    "company_name": "康希诺",
+    "news_url": "http://www.cansinotech.com.cn/companynews",
+    "final_url": "http://www.cansinotech.com.cn/companynews",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 35,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 13595,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "688325",
+    "company_name": "赛微微电",
+    "news_url": "http://www.cellwise-semi.com/Home/Index/news",
+    "final_url": "http://www.cellwise-semi.com/Home/Index/news",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 15,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "pager",
+      "index_",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 77392,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "688707",
+    "company_name": "振华新材",
+    "news_url": "https://www.zh-echem.com/xwzx",
+    "final_url": "https://www.zh-echem.com/xwzx",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 19,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 10043,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "688719",
+    "company_name": "爱科赛博",
+    "news_url": "http://www.cnaction.com/news",
+    "final_url": "http://www.cnaction.com/news/",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 15,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 26397,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "920029",
+    "company_name": "开发科技",
+    "news_url": "https://www.kaifametering.com/xinwendongtai",
+    "final_url": "https://www.kaifametering.com/xinwendongtai",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 39,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 73660,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "920092",
+    "company_name": "汉鑫科技",
+    "news_url": "https://www.hiacent.cn/news",
+    "final_url": "https://www.hiacent.cn/news",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 16,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 26140,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "920126",
+    "company_name": "永大股份",
+    "news_url": "http://www.jsydzb.com/index.php?m=content&c=index&a=lists&catid=6",
+    "final_url": "http://www.jsydzb.com/index.php?m=content&c=index&a=lists&catid=6",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 40,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 34493,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  },
+  {
+    "stock_code": "920186",
+    "company_name": "中科仪",
+    "news_url": "https://www.sky.ac.cn/news.html",
+    "final_url": "https://www.sky.ac.cn/news.html",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 15,
+    "pager_hit": true,
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页"
+    ],
+    "http_status": 200,
+    "html_len": 71006,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "920207",
+    "company_name": "众诚科技",
+    "news_url": "https://www.cocyber.com.cn/news",
+    "final_url": "https://www.cocyber.com.cn/news",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 21,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pagination"
+    ],
+    "http_status": 200,
+    "html_len": 23381,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "920925",
+    "company_name": "锦好医疗",
+    "news_url": "https://www.jinghao.cn/company-news",
+    "final_url": "https://www.jinghao.cn/company-news",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 15,
+    "pager_hit": true,
+    "pager_signals": [
+      "pagination",
+      "pager",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 760856,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "路径匹配"
+  },
+  {
+    "stock_code": "920932",
+    "company_name": "科达自控",
+    "news_url": "https://www.sxkeda.com/index.php?p=news_list&c_id=23&lanmu=4#tz1",
+    "final_url": "https://www.sxkeda.com/index.php?p=news_list&c_id=23&lanmu=4#tz1",
+    "score": 6,
+    "tier": "pingan_like_mid",
+    "unique_dates": 3,
+    "same_domain_news_links": 23,
+    "pager_hit": true,
+    "pager_signals": [
+      "首页",
+      "pagination",
+      "page_pattern"
+    ],
+    "http_status": 200,
+    "html_len": 40513,
+    "reasons": [
+      "few_dates",
+      "many_news_links",
+      "pager"
+    ],
+    "method": "导航提取"
+  }
+]

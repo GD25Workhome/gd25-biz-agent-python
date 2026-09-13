@@ -1,0 +1,48 @@
+{
+  "total_companies": 5,
+  "successful_companies": 5,
+  "total_articles": 75,
+  "total_errors": 0,
+  "companies": [
+    {
+      "stock_code": "000001",
+      "company_name": "平安银行",
+      "article_count": 15,
+      "error_count": 0,
+      "site_type": "static",
+      "list_url": "http://bank.pingan.com/bankPingAnCom/about/news"
+    },
+    {
+      "stock_code": "600276",
+      "company_name": "恒瑞医药",
+      "article_count": 15,
+      "error_count": 0,
+      "site_type": "static",
+      "list_url": "https://www.hengrui.com/media"
+    },
+    {
+      "stock_code": "300388",
+      "company_name": "节能国祯",
+      "article_count": 15,
+      "error_count": 0,
+      "site_type": "cms",
+      "list_url": "https://www.gzep.com.cn/info.php?class_id=102"
+    },
+    {
+      "stock_code": "002521",
+      "company_name": "齐峰新材",
+      "article_count": 15,
+      "error_count": 0,
+      "site_type": "static",
+      "list_url": "http://www.qifeng.cn/news/index.html"
+    },
+    {
+      "stock_code": "603102",
+      "company_name": "百合股份",
+      "article_count": 15,
+      "error_count": 0,
+      "site_type": "static",
+      "list_url": "http://www.baiheshengwu.com/news/qiye"
+    }
+  ]
+}
