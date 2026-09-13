@@ -91,6 +91,7 @@ def main():
     once_parser.add_argument("--seed", required=True, help="种子文件路径 (JSON/JSONL)")
     once_parser.add_argument("--out", required=True, help="输出文件路径 (JSONL)")
     once_parser.add_argument("--max-articles", type=int, help="每家公司最大文章数")
+    once_parser.add_argument("--max-pages", type=int, help="每家公司最大爬取页数（分页）")
     once_parser.add_argument("--timeout", type=int, help="HTTP 超时时间（秒）")
     
     args = parser.parse_args()
@@ -105,6 +106,8 @@ def main():
     # 覆盖命令行参数
     if hasattr(args, "max_articles") and args.max_articles:
         config.max_articles_per_company = args.max_articles
+    if hasattr(args, "max_pages") and args.max_pages:
+        config.max_pages = args.max_pages
     if hasattr(args, "timeout") and args.timeout:
         config.timeout = args.timeout
     

@@ -19,6 +19,7 @@ class CrawlConfig:
     # 爬取限制
     max_articles_per_company: int = 20
     max_concurrent_requests: int = 1
+    max_pages: int = 3
     
     # URL 处理
     same_domain_only: bool = True
@@ -44,6 +45,7 @@ class CrawlConfig:
             request_interval=float(os.getenv("CRAWL_REQUEST_INTERVAL", "1.0")),
             max_articles_per_company=int(os.getenv("CRAWL_MAX_ARTICLES", "20")),
             max_concurrent_requests=int(os.getenv("CRAWL_MAX_CONCURRENT", "1")),
+            max_pages=int(os.getenv("CRAWL_MAX_PAGES", "3")),
             output_dir=os.getenv("CRAWL_OUTPUT_DIR", "/tmp/company_news_crawl"),
             db_enabled=os.getenv("CRAWL_DB_ENABLED", "false").lower() == "true",
             db_host=os.getenv("DB_HOST", "localhost"),
