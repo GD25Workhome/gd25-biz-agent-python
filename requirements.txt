@@ -59,3 +59,8 @@ pgvector>=0.2.0,<1.0.0
 
 # 豆包 Embedding API
 volcengine-python-sdk[ark]>=5.0.0,<6.0.0
+
+# 新闻 URL 抓取 Agent（Claude Agent SDK）
+# ⚠️ SDK 是 CLI 子进程模型：跑起来还需要镜像/主机里有 claude 可执行文件
+#    （Dockerfile 中通过 Node.js + npm i -g @anthropic-ai/claude-code 提供）
+claude-agent-sdk>=0.1.0,<1.0.0

@@ -1,0 +1,80 @@
+[
+  {
+    "stock_code": "000001",
+    "company_name": "平安银行",
+    "list_url": "http://bank.pingan.com/bankPingAnCom/about/news",
+    "A_count": 98,
+    "B_count": 98,
+    "intersection": 98,
+    "only_B": 0,
+    "only_A": 0,
+    "pagination_effect": false,
+    "only_B_examples": []
+  },
+  {
+    "stock_code": "600486",
+    "company_name": "扬农化工",
+    "list_url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone1.html",
+    "A_count": 91,
+    "B_count": 91,
+    "intersection": 91,
+    "only_B": 0,
+    "only_A": 0,
+    "pagination_effect": false,
+    "only_B_examples": []
+  },
+  {
+    "stock_code": "920139",
+    "company_name": "华岭股份",
+    "list_url": "https://www.sinoictest.com.cn:443/news/class/?1.html",
+    "A_count": 39,
+    "B_count": 64,
+    "intersection": 39,
+    "only_B": 25,
+    "only_A": 0,
+    "pagination_effect": true,
+    "only_B_examples": [
+      "https://www.sinoictest.com.cn:443/news/class/index.php?1.html&page=1&showtj=0&showhot=0&author=&key=",
+      "https://www.sinoictest.com.cn:443/news/html/?15.html",
+      "https://www.sinoictest.com.cn:443/news/html/?16.html",
+      "https://www.sinoictest.com.cn:443/news/html/?17.html",
+      "https://www.sinoictest.com.cn:443/news/html/?18.html"
+    ]
+  },
+  {
+    "stock_code": "000955",
+    "company_name": "欣龙控股",
+    "list_url": "https://www.xinlong-holding.com/news.php?catid=93",
+    "A_count": 70,
+    "B_count": 70,
+    "intersection": 70,
+    "only_B": 0,
+    "only_A": 0,
+    "pagination_effect": false,
+    "only_B_examples": []
+  },
+  {
+    "stock_code": "300582",
+    "company_name": "英飞特",
+    "list_url": "https://cn.inventronics-co.com/news_company/1.html",
+    "A_count": 0,
+    "B_count": 0,
+    "intersection": 0,
+    "only_B": 0,
+    "only_A": 0,
+    "pagination_effect": false,
+    "only_B_examples": []
+  },
+  {
+    "stock_code": "920478",
+    "company_name": "峆一药业",
+    "list_url": "http://www.heryipharma.com/news",
+    "A_count": 48,
+    "B_count": 48,
+    "intersection": 48,
+    "only_B": 0,
+    "only_A": 0,
+    "pagination_effect": false,
+    "only_B_examples": []
+  }
+]

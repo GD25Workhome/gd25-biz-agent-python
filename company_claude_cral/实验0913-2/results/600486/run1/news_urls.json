@@ -1,0 +1,374 @@
+{
+  "stock_code": "600486",
+  "company_name": "扬农化工",
+  "entry_page": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone1.html",
+  "max_pages": 8,
+  "list_pages": [
+    {
+      "requested_url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone1.html",
+      "final_url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone1.html",
+      "http_status": 200,
+      "fetched_at": "2026-09-13T20:45:23",
+      "next_page_url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone2.html"
+    },
+    {
+      "requested_url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone2.html",
+      "final_url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone2.html",
+      "http_status": 200,
+      "fetched_at": "2026-09-13T20:45:34",
+      "next_page_url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone3.html"
+    },
+    {
+      "requested_url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone3.html",
+      "final_url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone3.html",
+      "http_status": 200,
+      "fetched_at": "2026-09-13T20:45:43",
+      "next_page_url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone4.html"
+    },
+    {
+      "requested_url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone4.html",
+      "final_url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone4.html",
+      "http_status": 200,
+      "fetched_at": "2026-09-13T20:45:49"
+    }
+  ],
+  "pages": [
+    {
+      "page_index": 1,
+      "is_entry_page": true,
+      "list_page_url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone1.html",
+      "news_count": 61,
+      "news": [
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2026/7/I1532813953715929088.html",
+          "title": "2026年6月我国大宗农药制剂价格调查情况",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2026/7/I1527723317694300160.html",
+          "title": "农业农村部公告，60种禁用农药名单发布",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2026/7/I1522655038407704576.html",
+          "title": "2025年农药舆情分析及展望",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2026/7/I1522660992213843968.html",
+          "title": "国际农药登记数据公开体系概述及对我国的启示",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2026/6/I1520121820848586752.html",
+          "title": "2026年5月中国农药价格指数（CAPI）",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2026/5/I1509969851467169792.html",
+          "title": "关于仅供境外使用农药登记管理规定的专家解读",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2026/3/I1487126591644368896.html",
+          "title": "2025年下半年农药登记产品情况分析",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2026/3/I1487123717107482624.html",
+          "title": "农业农村部办公厅关于集中整治禁限用农药非法生产经营使用的通知",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2026/2/I1472238164088193024.html",
+          "title": "2026年中央一号文件",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2026/2/I1468573559075897344.html",
+          "title": "《农药中文通用名称》新国标发布",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2026/2/I1468573249129414656.html",
+          "title": "我国农药管理法律法规概述",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2026/2/I1468568751665315840.html",
+          "title": "我国农药产业发展现状分析与展望",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2026/1/I1458488747866718208.html",
+          "title": "2025年我国农药登记新政策大汇总",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2026/1/I1458489141774778368.html",
+          "title": "农业农村部进一步从严规范农药管理",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2026/1/I1458489521795497984.html",
+          "title": "农业农村部办公厅关于进一步规范农药管理工作的通知",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946085279105024.html",
+          "title": "多款原药货源紧张价格坚挺，百余种农药行情最新发布",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946086063439872.html",
+          "title": "2025年8月中国农药价格指数（CAPI）持续回涨",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946087128793088.html",
+          "title": "权威解读“委托加工”“一证一品”等最严新规",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946083454582784.html",
+          "title": "2023年世界农药用量及单位面积用量排名",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946084394106880.html",
+          "title": "扬农优创植保生产基地获“先进级智能工厂”",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946080698925056.html",
+          "title": "农药热点新闻排行榜及热点话题舆情分析",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2026/2/I1468559826886852608.html",
+          "title": "中华人民共和国农业农村部公告 第925号",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946081646837760.html",
+          "title": "我国农药出口增长显著，成为产业发展的强大...",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946082582167552.html",
+          "title": "2025年5月中国农药价格指数（CAPI）...",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946079922978816.html",
+          "title": "农药行业营收和利润总额降幅收窄，效益筑底...",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946079126061056.html",
+          "title": "印度市场引入Spidoxamat、氟吡草腙等16种新...",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946078241062912.html",
+          "title": "拉丁美洲作物保护市场的现状及2025年展望...",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946077368647680.html",
+          "title": "氯虫苯甲酰胺、甲维盐等原药价格上涨",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946076596895744.html",
+          "title": "扬农化工两款创新化合物获ISO通用名",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946073967067136.html",
+          "title": "多杀霉素等24个农药活性物质登记有效期延长...",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946074810122240.html",
+          "title": "近三年江苏省除草剂产品质量和市场情况分析",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946075636400128.html",
+          "title": "我国农药产能及出口量TOP5亮相，农药出口需...",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946072239013888.html",
+          "title": "农药行业逆风破局，市场需求回暖在望",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946071316267008.html",
+          "title": "江苏省限制使用农药门店发展现状与分析",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946073027543040.html",
+          "title": "5个农药品种将遭禁用，另有5个品种规格发生...",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946067759497216.html",
+          "title": "“一证一品”政策或将落地，近八成农药产品...",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946068657078272.html",
+          "title": "10%产品上涨，市场亟待挖掘新增长点",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946069428830208.html",
+          "title": "原药市场呈现六大趋势，生物农药发展潜力巨...",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946070439657472.html",
+          "title": "农药混配制剂弊端不少，科学合理研发尤为重...",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946067000328192.html",
+          "title": "精细化工产业创新发展，农药行业机会如何？",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946066178244608.html",
+          "title": "美国农药使用管理制度概述",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946064462774272.html",
+          "title": "农药去库存接近尾声，行业周期将迎来修复",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946065297440768.html",
+          "title": "农业农村部将对两款农药实施管控",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946063560998912.html",
+          "title": "中美欧农药登记分析及如何做好布局",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946062722138112.html",
+          "title": "2024年上半年我国新登记的植物生长调节剂...",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946061799391232.html",
+          "title": "农药行业竞争论",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946060755009536.html",
+          "title": "水稻用杀虫剂迭代升级，环丙氟虫胺等新药剂...",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946059865817088.html",
+          "title": "28家江苏企业入围百强榜单，8家公司销售额超...",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946056556511232.html",
+          "title": "农化企业年报盘点",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946052827774976.html",
+          "title": "商务部公告2024年第17号 关于对原产于印度的...",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946053729550336.html",
+          "title": "32家农药上市公司2023年度业绩报告",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946054769737728.html",
+          "title": "国际新规对我国农药产业发展的影响",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946055688290304.html",
+          "title": "转基因玉米推广对农药市场的影响分析",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946051988914176.html",
+          "title": "全球农药禁限用最新政策",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946058267787264.html",
+          "title": "农药用表面活性剂的发展趋势和方向",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946059064705024.html",
+          "title": "2024年2月中国农药价格指数（CAPI）...",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946057412149248.html",
+          "title": "产能过剩之解",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946048574750720.html",
+          "title": "农业农村部部署落实中央一号文件重点工作",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946049405222912.html",
+          "title": "2023年度农化行业五大关键词",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946050286026752.html",
+          "title": "2024年中央一号文件发布（全文）",
+          "published_at": null
+        },
+        {
+          "url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/2025/11/I1438946051145859072.html",
+          "title": "商务部：对日本、印度进口邻二氯苯继续征收...",
+          "published_at": null
+        }
+      ]
+    },
+    {
+      "page_index": 2,
+      "is_entry_page": false,
+      "list_page_url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone2.html",
+      "news_count": 0,
+      "news": []
+    },
+    {
+      "page_index": 3,
+      "is_entry_page": false,
+      "list_page_url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone3.html",
+      "news_count": 0,
+      "news": []
+    },
+    {
+      "page_index": 4,
+      "is_entry_page": false,
+      "list_page_url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone4.html",
+      "news_count": 0,
+      "news": []
+    }
+  ],
+  "news_url_count": 61,
+  "errors": [],
+  "exported_at": "2026-09-13T20:45:52"
+}

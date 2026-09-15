@@ -25,5 +25,15 @@ pyyaml>=6.0.0,<7.0.0
 # 条件边求值
 simpleeval>=0.9.13,<1.0.0
 
+# 新闻 URL 抓取 Agent（Claude Agent SDK）
+# ⚠️ SDK 是 CLI 子进程模型：Python 包装器只是壳，真正干活的是 claude 可执行文件。
+#    镜像里必须额外装 Node.js 并 npm i -g @anthropic-ai/claude-code（见 Dockerfile）。
+#    缺 CLI 时启动会打印 ERROR 并让本功能不可用，不影响其他路由。
+claude-agent-sdk>=0.1.0,<1.0.0
+
+# 新闻 URL 抓取 Agent 的 HTML 解析（crawl_tools 依赖）
+beautifulsoup4>=4.12.0,<5.0.0
+lxml>=5.0.0,<6.0.0
+
 # 可观测性（可选；代码已 lazy import，不装也能跑）
 # langfuse>=3.0.0,<4.0.0

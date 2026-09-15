@@ -1,0 +1,33 @@
+{
+  "code": "600486",
+  "company_name": "扬农化工",
+  "run": "run2",
+  "passed": false,
+  "pages_ok": true,
+  "later_ok": false,
+  "list_pages_fetched": 4,
+  "list_page_urls": [
+    "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone1.html",
+    "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone2.html",
+    "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone3.html",
+    "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone4.html"
+  ],
+  "agent_url_count": 61,
+  "hit_page1": 61,
+  "truth_page1_count": 61,
+  "later_page_unique_urls": 0,
+  "truth_later_only_count": 0,
+  "hit_rate": 1.0,
+  "recall_later": null,
+  "noise_count": 0,
+  "agent_turns": 10,
+  "cost_usd": 0.6100600000000002,
+  "agent_is_error": false,
+  "tool_errors": 0,
+  "truth_errors": [
+    "第5页抓取失败 https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone5.html: HTTP 404"
+  ],
+  "reason": "后续页新URL不足(0<5)",
+  "expect": "boundary_fail",
+  "note": "【通道问题对照组】列表为 Ajax/JS 渲染：Gone2 页返回与 Gone1 完全相同的 61 条详情链（p2新增=0）。按 讨论0913-1/结论.md §5，Agent 拿不到服务端 HTML，预期无法翻页。用于验证「Agent 治不了通道问题」这条边界。"
+}

@@ -1,0 +1,56 @@
+{
+  "total_companies": 6,
+  "successful_companies": 5,
+  "total_articles": 411,
+  "total_errors": 8,
+  "companies": [
+    {
+      "stock_code": "000001",
+      "company_name": "平安银行",
+      "article_count": 98,
+      "error_count": 2,
+      "site_type": "static",
+      "list_url": "http://bank.pingan.com/bankPingAnCom/about/news"
+    },
+    {
+      "stock_code": "600486",
+      "company_name": "扬农化工",
+      "article_count": 98,
+      "error_count": 2,
+      "site_type": "static",
+      "list_url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone1.html"
+    },
+    {
+      "stock_code": "920139",
+      "company_name": "华岭股份",
+      "article_count": 97,
+      "error_count": 3,
+      "site_type": "cms",
+      "list_url": "https://www.sinoictest.com.cn:443/news/class/?1.html"
+    },
+    {
+      "stock_code": "000955",
+      "company_name": "欣龙控股",
+      "article_count": 70,
+      "error_count": 0,
+      "site_type": "cms",
+      "list_url": "https://www.xinlong-holding.com/news.php?catid=93"
+    },
+    {
+      "stock_code": "300582",
+      "company_name": "英飞特",
+      "article_count": 0,
+      "error_count": 1,
+      "site_type": "unknown",
+      "list_url": "https://cn.inventronics-co.com/news_company/1.html"
+    },
+    {
+      "stock_code": "920478",
+      "company_name": "峆一药业",
+      "article_count": 48,
+      "error_count": 0,
+      "site_type": "static",
+      "list_url": "http://www.heryipharma.com/news"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "code": "920139",
+  "company_name": "华岭股份",
+  "run": "run2",
+  "passed": true,
+  "pages_ok": true,
+  "later_ok": true,
+  "list_pages_fetched": 3,
+  "list_page_urls": [
+    "https://www.sinoictest.com.cn/news/class/?1.html",
+    "https://www.sinoictest.com.cn/news/class/index.php?1.html&page=2&showtj=0&showhot=0&author=&key=",
+    "https://www.sinoictest.com.cn/news/class/index.php?1.html&page=3&showtj=0&showhot=0&author=&key="
+  ],
+  "agent_url_count": 47,
+  "hit_page1": 23,
+  "truth_page1_count": 23,
+  "later_page_unique_urls": 24,
+  "truth_later_only_count": 45,
+  "hit_rate": 1.0,
+  "recall_later": 0.533,
+  "noise_count": 0,
+  "agent_turns": 8,
+  "cost_usd": 0.36235399999999995,
+  "agent_is_error": false,
+  "tool_errors": 0,
+  "truth_errors": [],
+  "reason": "通过",
+  "expect": "pass",
+  "note": "服务端翻页 ?N.html；【难】列表页 /news/class/ 与详情页 /news/html/ 路径极像，测 Agent 能否区分"
+}

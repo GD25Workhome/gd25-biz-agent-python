@@ -1,0 +1,14 @@
+{
+  "stock_code": "300582",
+  "company_name": "英飞特",
+  "seed_url": "https://cn.inventronics-co.com/news_company/1.html",
+  "list_pages_fetched": 8,
+  "news_url_count": 160,
+  "errors": [],
+  "agent": {
+    "status": "success",
+    "turns": 18,
+    "cost_usd": 0.9443159999999999,
+    "is_error": false
+  }
+}

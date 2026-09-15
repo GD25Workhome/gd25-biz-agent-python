@@ -159,6 +159,25 @@ async def lifespan(app: FastAPI):
                 "6. 跳过 Rewritten 队列消费者（无数据库模式下不启动）"
             )
 
+        # 7. 新闻 URL 抓取：自检 claude CLI（SDK 是 CLI 子进程模型）
+        #    ⚠️ 自检失败只告警不阻断 —— 其他路由不受影响，
+        #    抓取接口会因缺 CLI 而在调用时报错（见 02-gd25侧详细设计.md §6.1）。
+        if settings.is_news_crawl_enabled:
+            logger.info("7. 自检新闻 URL 抓取运行时（claude CLI）...")
+            from backend.domain.news_crawl.agent_runner import check_cli_available
+            if await check_cli_available():
+                logger.info("   ✓ claude CLI 就绪，新闻 URL 抓取可用")
+            else:
+                logger.error(
+                    "   ✗ 未找到可用的 claude CLI，新闻 URL 抓取将不可用"
+                    "（镜像需装 Node.js 并 npm i -g @anthropic-ai/claude-code）"
+                )
+        else:
+            logger.info(
+                "7. 跳过新闻 URL 抓取自检"
+                "（NEWS_CRAWL_ENABLED=false 或未配置 Anthropic 凭证）"
+            )
+
         logger.info("=" * 60)
         logger.info("系统启动完成！")
         logger.info("=" * 60)

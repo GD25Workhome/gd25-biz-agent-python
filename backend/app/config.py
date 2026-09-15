@@ -92,6 +92,17 @@ class Settings(BaseSettings):
         """当前是否启用数据库（启动与连接层统一入口）。"""
         return bool(self.ENABLE_DATABASE)
 
+    @property
+    def is_news_crawl_enabled(self) -> bool:
+        """
+        新闻 URL 抓取可用性：显式开启 + 有 Anthropic 凭证。
+
+        ⚠️ 不依赖 is_database_enabled —— 本功能无状态、不碰数据库，
+        ENABLE_DATABASE=false 下也能正常工作。
+        """
+        has_credential = bool(self.ANTHROPIC_AUTH_TOKEN or self.ANTHROPIC_API_KEY)
+        return bool(self.NEWS_CRAWL_ENABLED and has_credential)
+
     def require_database_url(self) -> str:
         """
             返回已配置的 DATABASE_URL；未启用或未配置时抛出明确错误。
@@ -125,6 +136,37 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = None
     DOUBAO_API_KEY: Optional[str] = None
     DEEPSEEK_API_KEY: Optional[str] = None
+
+    # ---------------- Claude Agent SDK（新闻 URL 抓取） ----------------
+    # 设计文档：华院Agent设计/260914-整体重构/02-gd25侧详细设计.md §5.1
+    ANTHROPIC_BASE_URL: Optional[str] = Field(
+        default=None, description="Anthropic 兼容网关地址"
+    )
+    ANTHROPIC_AUTH_TOKEN: Optional[str] = Field(
+        default=None, description="网关鉴权 token（与 ANTHROPIC_API_KEY 二选一）"
+    )
+    ANTHROPIC_API_KEY: Optional[str] = Field(
+        default=None, description="Anthropic 官方 key"
+    )
+    ANTHROPIC_MODEL: Optional[str] = Field(
+        default=None, description="Agent 使用的模型"
+    )
+    ANTHROPIC_SMALL_FAST_MODEL: Optional[str] = Field(default=None)
+
+    # ---------------- 新闻 URL 抓取 ----------------
+    NEWS_CRAWL_ENABLED: bool = Field(
+        default=False, description="是否启用新闻 URL 抓取（未配置凭证时应关闭）"
+    )
+    NEWS_CRAWL_MAX_TURNS: int = Field(default=50, description="Agent 最大轮次")
+    NEWS_CRAWL_TIMEOUT_SECONDS: int = Field(
+        default=600, description="单次抓取墙钟超时（秒），超时返回 504"
+    )
+    NEWS_CRAWL_MAX_CONCURRENCY: int = Field(
+        default=2, description="同时运行的 Agent 数上限；超出者排队"
+    )
+    NEWS_CRAWL_REQUEST_INTERVAL: float = Field(
+        default=0.4, description="同站抓取最小请求间隔（秒），礼貌爬取"
+    )
 
     # AnySearch 联网检索（华院规则二）；双名兼容官方 ANYSEARCH_API_KEY
     ANY_SEARCH_API_KEY: Optional[str] = Field(

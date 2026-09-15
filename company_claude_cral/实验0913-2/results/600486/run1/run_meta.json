@@ -1,0 +1,14 @@
+{
+  "stock_code": "600486",
+  "company_name": "扬农化工",
+  "seed_url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone1.html",
+  "list_pages_fetched": 4,
+  "news_url_count": 61,
+  "errors": [],
+  "agent": {
+    "status": "success",
+    "turns": 10,
+    "cost_usd": 0.666281,
+    "is_error": false
+  }
+}

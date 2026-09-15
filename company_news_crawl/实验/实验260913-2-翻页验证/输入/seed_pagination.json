@@ -1,0 +1,91 @@
+[
+  {
+    "stock_code": "000001",
+    "company_name": "平安银行",
+    "news_list_url": "http://bank.pingan.com/bankPingAnCom/about/news",
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "尾页",
+      "首页",
+      "pagination",
+      "index_",
+      "page_pattern"
+    ],
+    "unique_dates": 14,
+    "same_domain_news_links": 45,
+    "why": "probe有分页信号且列表日期/新闻链足够，用于翻页对照"
+  },
+  {
+    "stock_code": "600486",
+    "company_name": "扬农化工",
+    "news_list_url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone1.html",
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "尾页",
+      "首页",
+      "pager",
+      "page_pattern"
+    ],
+    "unique_dates": 60,
+    "same_domain_news_links": 68,
+    "why": "probe有分页信号且列表日期/新闻链足够，用于翻页对照"
+  },
+  {
+    "stock_code": "920139",
+    "company_name": "华岭股份",
+    "news_list_url": "https://www.sinoictest.com.cn:443/news/class/?1.html",
+    "pager_signals": [
+      "下一页",
+      "上一页",
+      "首页",
+      "pagination",
+      "page_pattern"
+    ],
+    "unique_dates": 25,
+    "same_domain_news_links": 29,
+    "why": "probe有分页信号且列表日期/新闻链足够，用于翻页对照"
+  },
+  {
+    "stock_code": "000955",
+    "company_name": "欣龙控股",
+    "news_list_url": "https://www.xinlong-holding.com/news.php?catid=93",
+    "pager_signals": [
+      "下一页",
+      "首页",
+      "page_pattern"
+    ],
+    "unique_dates": 21,
+    "same_domain_news_links": 35,
+    "why": "probe有分页信号且列表日期/新闻链足够，用于翻页对照"
+  },
+  {
+    "stock_code": "300582",
+    "company_name": "英飞特",
+    "news_list_url": "https://cn.inventronics-co.com/news_company/1.html",
+    "pager_signals": [
+      "下一页",
+      "首页",
+      "pagination",
+      "index_"
+    ],
+    "unique_dates": 20,
+    "same_domain_news_links": 30,
+    "why": "probe有分页信号且列表日期/新闻链足够，用于翻页对照"
+  },
+  {
+    "stock_code": "920478",
+    "company_name": "峆一药业",
+    "news_list_url": "http://www.heryipharma.com/news",
+    "pager_signals": [
+      "下一页",
+      "尾页",
+      "首页",
+      "index_"
+    ],
+    "unique_dates": 19,
+    "same_domain_news_links": 36,
+    "why": "probe有分页信号且列表日期/新闻链足够，用于翻页对照"
+  }
+]

@@ -1,0 +1,50 @@
+[
+  {
+    "stock_code": "000001",
+    "company_name": "平安银行",
+    "news_list_url": "http://bank.pingan.com/bankPingAnCom/about/news",
+    "expect": "pass",
+    "note": "样板站（原实验已过，作回归对照，判定不计入新增证据）",
+    "pager_probe": {"形态": "index_N.shtml", "p2新增": 26, "p3新增": 25}
+  },
+  {
+    "stock_code": "000955",
+    "company_name": "欣龙控股",
+    "news_list_url": "https://www.xinlong-holding.com/news.php?catid=93",
+    "expect": "pass",
+    "note": "服务端翻页 ?page=N，规则版翻页失效（无增量）",
+    "pager_probe": {"形态": "?catid=93&page=N", "p2新增": 21, "p3新增": 20}
+  },
+  {
+    "stock_code": "920478",
+    "company_name": "峆一药业",
+    "news_list_url": "http://www.heryipharma.com/news",
+    "expect": "pass",
+    "note": "服务端翻页 ?&p=N（共6页），规则版翻页失效（无增量）",
+    "pager_probe": {"形态": "?&p=N", "p2新增": 31, "p3新增": 30}
+  },
+  {
+    "stock_code": "920139",
+    "company_name": "华岭股份",
+    "news_list_url": "https://www.sinoictest.com.cn/news/class/?1.html",
+    "expect": "pass",
+    "note": "服务端翻页 ?N.html；【难】列表页 /news/class/ 与详情页 /news/html/ 路径极像，测 Agent 能否区分",
+    "pager_probe": {"形态": "?N.html", "p2新增": 18, "p3新增": 5}
+  },
+  {
+    "stock_code": "600486",
+    "company_name": "扬农化工",
+    "news_list_url": "https://www.yangnongchem.com/yangnongchem/xwzx/hyzx/A158004001Gone1.html",
+    "expect": "boundary_fail",
+    "note": "【通道问题对照组】列表为 Ajax/JS 渲染：Gone2 页返回与 Gone1 完全相同的 61 条详情链（p2新增=0）。按 讨论0913-1/结论.md §5，Agent 拿不到服务端 HTML，预期无法翻页。用于验证「Agent 治不了通道问题」这条边界。",
+    "pager_probe": {"形态": "Ajax", "p2新增": 0}
+  },
+  {
+    "stock_code": "300582",
+    "company_name": "英飞特",
+    "news_list_url": "https://cn.inventronics-co.com/news_company/1.html",
+    "expect": "boundary_fail",
+    "note": "【通道问题对照组】新闻列表 JS 模板渲染（页面含 news_company/${hPro[i].url}），服务端只回 1 条详情链。规则版在此站零产出。预期 Agent 也无法翻页。",
+    "pager_probe": {"形态": "JS渲染", "p2新增": 0}
+  }
+]

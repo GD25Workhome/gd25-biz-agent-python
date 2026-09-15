@@ -1,0 +1,652 @@
+{
+  "stock_code": "920478",
+  "company_name": "峆一药业",
+  "entry_page": "http://www.heryipharma.com/news",
+  "max_pages": 8,
+  "list_pages": [
+    {
+      "requested_url": "http://www.heryipharma.com/news",
+      "final_url": "http://www.heryipharma.com/news",
+      "http_status": 200,
+      "fetched_at": "2026-09-13T20:43:48",
+      "next_page_url": "http://www.heryipharma.com/news?&p=2"
+    },
+    {
+      "requested_url": "http://www.heryipharma.com/news?&p=2",
+      "final_url": "http://www.heryipharma.com/news?&p=2",
+      "http_status": 200,
+      "fetched_at": "2026-09-13T20:43:53",
+      "next_page_url": "http://www.heryipharma.com/news?&p=3"
+    },
+    {
+      "requested_url": "http://www.heryipharma.com/news?&p=3",
+      "final_url": "http://www.heryipharma.com/news?&p=3",
+      "http_status": 200,
+      "fetched_at": "2026-09-13T20:43:58",
+      "next_page_url": "http://www.heryipharma.com/news?&p=4"
+    },
+    {
+      "requested_url": "http://www.heryipharma.com/news?&p=4",
+      "final_url": "http://www.heryipharma.com/news?&p=4",
+      "http_status": 200,
+      "fetched_at": "2026-09-13T20:44:02",
+      "next_page_url": "http://www.heryipharma.com/news?&p=5"
+    },
+    {
+      "requested_url": "http://www.heryipharma.com/news?&p=5",
+      "final_url": "http://www.heryipharma.com/news?&p=5",
+      "http_status": 200,
+      "fetched_at": "2026-09-13T20:44:07",
+      "next_page_url": "http://www.heryipharma.com/news?&p=6"
+    },
+    {
+      "requested_url": "http://www.heryipharma.com/news?&p=6",
+      "final_url": "http://www.heryipharma.com/news?&p=6",
+      "http_status": 200,
+      "fetched_at": "2026-09-13T20:44:11"
+    }
+  ],
+  "pages": [
+    {
+      "page_index": 1,
+      "is_entry_page": true,
+      "list_page_url": "http://www.heryipharma.com/news",
+      "news_count": 20,
+      "news": [
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/155.html",
+          "title": "安徽修一制药有限公司环境信息公开2025年度",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/154.html",
+          "title": "安徽峆一药业股份有限公司2025年环境信息公开",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/153.html",
+          "title": "公司快讯：峆一药业与韩国医药上市公司MFC Co.，Ltd.签署MOU",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/152.html",
+          "title": "公司快讯：中韩合作成立公司安徽峆一达善成立一周年之际",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/150.html",
+          "title": "安徽修一制药有限公司 2024年度环境信息公开",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/151.html",
+          "title": "安徽修一制药有限公司环境信息公示",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/148.html",
+          "title": "安徽峆一药业股份有限公司环境信息公开2024年度",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/147.html",
+          "title": "安徽修一制药有限公司环境信息公示",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/146.html",
+          "title": "安徽修一制药有限公司年产198吨普仑司特无水物等十二种医药中间体项目（重新报批）环境影响报告书全本公示",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/145.html",
+          "title": "峆一药业2023年度环境信息公开",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/144.html",
+          "title": "清洁生产审核企业公示",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/143.html",
+          "title": "我公司在北交所成功上市",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/140.html",
+          "title": "安徽峆一药业股份有限公司2022年环境信息公示",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/139.html",
+          "title": "安徽峆一药业股份有限公司污染源委托性监测-2022年12月（废气、废水、噪声）",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/134.html",
+          "title": "安徽峆一药业股份有限公司污染源委托性监测-2022年11月（废气、废水）",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/133.html",
+          "title": "安徽峆一药业股份有限公司污染源委托性监测-2022年10月（废气、废水）",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/136.html",
+          "title": "安徽峆一药业股份有限公司污染源委托性监测-2022年9月（废气、废水）",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/131.html",
+          "title": "安徽峆一药业股份有限公司污染源委托性监测-2022年8月（废气、废水、噪声）",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/130.html",
+          "title": "安徽峆一药业股份有限公司环境信息公开2022年7月",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/129.html",
+          "title": "安徽峆一药业股份有限公司环境信息公开2022年6月",
+          "published_at": null
+        }
+      ]
+    },
+    {
+      "page_index": 2,
+      "is_entry_page": false,
+      "list_page_url": "http://www.heryipharma.com/news?&p=2",
+      "news_count": 20,
+      "news": [
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/128.html",
+          "title": "安徽峆一药业股份有限公司环境信息公开（2022.5）",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/127.html",
+          "title": "安徽峆一药业股份有限公司环境信息公开（2022年3月）",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/126.html",
+          "title": "安徽峆一药业股份有限公司污染源委托性监测-2022年2月（废气、废水）",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/125.html",
+          "title": "安徽峆一药业股份有限公司污染源委托性监测-2022年1月（废气、废水、噪声）",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/120.html",
+          "title": "安徽峆一药业股份有限公司环境信息公开2021年度",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/124.html",
+          "title": "安徽峆一药业股份有限公司在线监测设施超标的公示",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/119.html",
+          "title": "安徽峆一药业股份有限公司环境信息公开",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/117.html",
+          "title": "安徽峆一药业股份有限公司污染源委托性监测-2021年11月（废气、废水）",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/118.html",
+          "title": "清洁生产审核企业公示",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/116.html",
+          "title": "安徽峆一药业股份有限公司污染源委托性监测-2021年10月（废气、废水）",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/115.html",
+          "title": "安徽峆一药业股份有限公司污染源委托性监测-2021年9月（废气、废水）",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/114.html",
+          "title": "安徽峆一药业股份有限公司污染源委托性监测-2021年8月（废气、废水）",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/113.html",
+          "title": "峆一药业污染源委托性检测报告202107",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/112.html",
+          "title": "峆一药业污染源委托性检测报告202106",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/111.html",
+          "title": "峆一药业污染源委托性检测报告202105",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/106.html",
+          "title": "安徽修一制药有限公司年产 198 吨普仑司特无水物等十二种医药中间体项目（阶段性）竣工环境保护验收监测报告书及验收意见",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/105.html",
+          "title": "我公司入选“天长市十佳企业人才中心”",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/110.html",
+          "title": "安徽峆一药业股份有限公司污染源委托性监测公示-2021年4月（废气、废水、噪声）",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/109.html",
+          "title": "安徽峆一药业股份有限公司污染源委托性监测公示-2021年3月（废气、废水）",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/103.html",
+          "title": "安徽修一制药有限公司年产 198 吨普仑 司特无水物等十二种医药中间体项目竣 工环境保护验收监测报告（阶段性）",
+          "published_at": null
+        }
+      ]
+    },
+    {
+      "page_index": 3,
+      "is_entry_page": false,
+      "list_page_url": "http://www.heryipharma.com/news?&p=3",
+      "news_count": 20,
+      "news": [
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/104.html",
+          "title": "安徽修一制药有限公司年产 198 吨普仑司特无水物等 十二种医药中间体项目阶段性竣工环境保护验收意见",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/108.html",
+          "title": "安徽峆一药业股份有限公司污染源委托性监测公示-2021年2月（废气、废水）",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/107.html",
+          "title": "安徽峆一药业股份有限公司污染源委托性监测-公示2021年1月（废气、废水、噪声）",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/102.html",
+          "title": "安徽峆一药业股份有限公司环境信息公开2020年度",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/101.html",
+          "title": "关于安徽峆一药业股份有限公司自动设施超标的情况公示",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/100.html",
+          "title": "安徽峆一药业股份有限公司污染源委托性监测无组织废气202010",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/99.html",
+          "title": "安徽峆一药业股份有限公司污染源委托性监测2020年下半年度（有组织废气）",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/98.html",
+          "title": "安徽峆一药业股份有限公司污染源委托性监测2020年第四季度（废水监测报告）",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/96.html",
+          "title": "安徽峆一药业股份有限公司污染源委托性监测2020年第三季度（废水）",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/94.html",
+          "title": "关于我公司自动监控设施超标的情况说明",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/93.html",
+          "title": "安徽峆一药业股份有限公司污染源委托性监测-2020上半年（有组织废气）",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/92.html",
+          "title": "安徽峆一药业股份有限公司污染源委托性监测-2020上半年（噪声）",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/91.html",
+          "title": "安徽峆一药业股份有限公司污染源委托性监测-2020年二季度（废水）",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/90.html",
+          "title": "市领导送奖牌到公司",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/89.html",
+          "title": "安徽峆一药业股份有限公司污染源委托性检测报告2020年1季度（废水）",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/97.html",
+          "title": "安徽峆一药业股份有限公司2019年度环境信息公开",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/88.html",
+          "title": "我公司废气治理（RTO）及废水优化提升改造项目完成竣工验收",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/87.html",
+          "title": "安徽峆一药业股份有限公司污染源（有组织废气）委托性监测报告",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/86.html",
+          "title": "安徽峆一药业股份有限公司污染源委托性检测报告",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/85.html",
+          "title": "安徽峆一药业股份有限公司关于自动监控设施故障超标情况的环境信息公开",
+          "published_at": null
+        }
+      ]
+    },
+    {
+      "page_index": 4,
+      "is_entry_page": false,
+      "list_page_url": "http://www.heryipharma.com/news?&p=4",
+      "news_count": 20,
+      "news": [
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/82.html",
+          "title": "安徽峆一药业股份有限公司污染源委托性检测报告",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/84.html",
+          "title": "关于7月26日COD在线日均值超标情况的环境信息公开",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/81.html",
+          "title": "安徽峆一药业股份有限公司环境信息公开",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/77.html",
+          "title": "我公司举办2019年年会",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/79.html",
+          "title": "废水委托性检测报告",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/74.html",
+          "title": "安徽峆一药业股份有限公司环境信息公开",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/75.html",
+          "title": "安徽峆一药业股份有限公司2018年4季度委托性检测报告",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/71.html",
+          "title": "关于安徽修一制药有限公司 年产 198 吨普仑司特无水物等十二种医药中间体项目 配套建设环境保护设施的信息公开",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/72.html",
+          "title": "安徽修一制药有限公司厂界大气监测报告公示",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/70.html",
+          "title": "我公司举行2018年度消防演练",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/69.html",
+          "title": "子公司修一制药获得药品生产许可证",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/68.html",
+          "title": "安徽峆一药业股份有限公司环境信息公开",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/67.html",
+          "title": "安徽峆一药业股份有限公司环境信息公开",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/66.html",
+          "title": "安徽峆一药业股份有限公司环境信息公开",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/65.html",
+          "title": "子公司修一制药获得一项发明专利",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/64.html",
+          "title": "凝心聚力 共创未来",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/63.html",
+          "title": "《安徽峆一药业股份有限公司职业病危害现状评价报告》通过公示",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/62.html",
+          "title": "安徽峆一药业股份有限公司环境信息公示",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/61.html",
+          "title": "我公司员工陈岗美荣获“天长市十佳工匠”",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/60.html",
+          "title": "滁州市委副书记、市长张祥安来我公司调研",
+          "published_at": null
+        }
+      ]
+    },
+    {
+      "page_index": 5,
+      "is_entry_page": false,
+      "list_page_url": "http://www.heryipharma.com/news?&p=5",
+      "news_count": 20,
+      "news": [
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/57.html",
+          "title": "公司年会精彩纷呈",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/56.html",
+          "title": "我公司再添一项发明专利",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/55.html",
+          "title": "我公司获得药品生产许可",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/53.html",
+          "title": "公司董事长董来山入选安徽省创新创业领军人才",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/51.html",
+          "title": "我公司又获得一项发明专利",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/49.html",
+          "title": "我公司开展安全消防演练",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/25.html",
+          "title": "我公司召开新春团拜会",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/24.html",
+          "title": "市委书记金维加来我公司调研指导工作",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/23.html",
+          "title": "我公司召开部门绩效考核工作会议，安全环保部荣膺2014年度先进部门",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/22.html",
+          "title": "我公司被认定为省级企业技术中心",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/21.html",
+          "title": "我公司一产品获得国家发明专利",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/20.html",
+          "title": "我公司硅PU球场投入使用",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/19.html",
+          "title": "我公司召开年终工作总结会议",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/18.html",
+          "title": "公司年夜饭 员工喜开颜",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/17.html",
+          "title": "我公司在新三板成功挂牌",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/16.html",
+          "title": "我公司开展安全消防演练",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/15.html",
+          "title": "公司党支部开展红色教育",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/14.html",
+          "title": "滁州市常务副市长章义来我公司视察、指导工作",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/13.html",
+          "title": "我公司首次迈入天长市十强企业行列",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/12.html",
+          "title": "我公司召开迎新春团拜会",
+          "published_at": null
+        }
+      ]
+    },
+    {
+      "page_index": 6,
+      "is_entry_page": false,
+      "list_page_url": "http://www.heryipharma.com/news?&p=6",
+      "news_count": 10,
+      "news": [
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/11.html",
+          "title": "我公司顺利通过质量及环境管理体系认证",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/10.html",
+          "title": "市委书记杨东坡在我公司开展调研帮扶工作",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/9.html",
+          "title": "我公司整体变更为：安徽禾益化学股份有限公司",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/8.html",
+          "title": "滁州市副市长杨寿桃来我公司视察调研工作",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/7.html",
+          "title": "我公司举行安全消防演练",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/6.html",
+          "title": "积极响应公司倡议 踊跃奉献一片爱心",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/5.html",
+          "title": "我公司召开迎新春团拜会",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/4.html",
+          "title": "市委书记杨东坡来我公司调研工作",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/2.html",
+          "title": "我公司开展消防演练",
+          "published_at": null
+        },
+        {
+          "url": "http://www.heryipharma.com/news_detail/id/1.html",
+          "title": "安徽省委常委、组织部长邓向阳莅临禾益调研指导工作",
+          "published_at": null
+        }
+      ]
+    }
+  ],
+  "news_url_count": 110,
+  "errors": [],
+  "exported_at": "2026-09-13T20:44:15"
+}

@@ -1,0 +1,14 @@
+{
+  "stock_code": "920478",
+  "company_name": "峆一药业",
+  "seed_url": "http://www.heryipharma.com/news",
+  "list_pages_fetched": 6,
+  "news_url_count": 110,
+  "errors": [],
+  "agent": {
+    "status": "success",
+    "turns": 14,
+    "cost_usd": 0.493319,
+    "is_error": false
+  }
+}

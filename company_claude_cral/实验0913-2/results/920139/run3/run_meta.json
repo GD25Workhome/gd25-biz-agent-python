@@ -1,0 +1,14 @@
+{
+  "stock_code": "920139",
+  "company_name": "华岭股份",
+  "seed_url": "https://www.sinoictest.com.cn/news/class/?1.html",
+  "list_pages_fetched": 3,
+  "news_url_count": 47,
+  "errors": [],
+  "agent": {
+    "status": "success",
+    "turns": 8,
+    "cost_usd": 0.36207200000000006,
+    "is_error": false
+  }
+}

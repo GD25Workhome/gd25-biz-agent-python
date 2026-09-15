@@ -1,0 +1,14 @@
+{
+  "stock_code": "000955",
+  "company_name": "欣龙控股",
+  "seed_url": "https://www.xinlong-holding.com/news.php?catid=93",
+  "list_pages_fetched": 8,
+  "news_url_count": 160,
+  "errors": [],
+  "agent": {
+    "status": "success",
+    "turns": 18,
+    "cost_usd": 0.813541,
+    "is_error": false
+  }
+}

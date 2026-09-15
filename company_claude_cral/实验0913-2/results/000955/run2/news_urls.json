@@ -1,0 +1,932 @@
+{
+  "stock_code": "000955",
+  "company_name": "欣龙控股",
+  "entry_page": "https://www.xinlong-holding.com/news.php?catid=93",
+  "max_pages": 8,
+  "list_pages": [
+    {
+      "requested_url": "https://www.xinlong-holding.com/news.php?catid=93",
+      "final_url": "https://www.xinlong-holding.com/news.php?catid=93",
+      "http_status": 200,
+      "fetched_at": "2026-09-13T20:41:09",
+      "next_page_url": "https://www.xinlong-holding.com/news.php?catid=93&page=2"
+    },
+    {
+      "requested_url": "https://www.xinlong-holding.com/news.php?catid=93&page=2",
+      "final_url": "https://www.xinlong-holding.com/news.php?catid=93&page=2",
+      "http_status": 200,
+      "fetched_at": "2026-09-13T20:41:14",
+      "next_page_url": "https://www.xinlong-holding.com/news.php?catid=93&page=3"
+    },
+    {
+      "requested_url": "https://www.xinlong-holding.com/news.php?catid=93&page=3",
+      "final_url": "https://www.xinlong-holding.com/news.php?catid=93&page=3",
+      "http_status": 200,
+      "fetched_at": "2026-09-13T20:41:18",
+      "next_page_url": "https://www.xinlong-holding.com/news.php?catid=93&page=4"
+    },
+    {
+      "requested_url": "https://www.xinlong-holding.com/news.php?catid=93&page=4",
+      "final_url": "https://www.xinlong-holding.com/news.php?catid=93&page=4",
+      "http_status": 200,
+      "fetched_at": "2026-09-13T20:41:23",
+      "next_page_url": "https://www.xinlong-holding.com/news.php?catid=93&page=5"
+    },
+    {
+      "requested_url": "https://www.xinlong-holding.com/news.php?catid=93&page=5",
+      "final_url": "https://www.xinlong-holding.com/news.php?catid=93&page=5",
+      "http_status": 200,
+      "fetched_at": "2026-09-13T20:41:27",
+      "next_page_url": "https://www.xinlong-holding.com/news.php?catid=93&page=6"
+    },
+    {
+      "requested_url": "https://www.xinlong-holding.com/news.php?catid=93&page=6",
+      "final_url": "https://www.xinlong-holding.com/news.php?catid=93&page=6",
+      "http_status": 200,
+      "fetched_at": "2026-09-13T20:41:31",
+      "next_page_url": "https://www.xinlong-holding.com/news.php?catid=93&page=7"
+    },
+    {
+      "requested_url": "https://www.xinlong-holding.com/news.php?catid=93&page=7",
+      "final_url": "https://www.xinlong-holding.com/news.php?catid=93&page=7",
+      "http_status": 200,
+      "fetched_at": "2026-09-13T20:41:36",
+      "next_page_url": "https://www.xinlong-holding.com/news.php?catid=93&page=8"
+    },
+    {
+      "requested_url": "https://www.xinlong-holding.com/news.php?catid=93&page=8",
+      "final_url": "https://www.xinlong-holding.com/news.php?catid=93&page=8",
+      "http_status": 200,
+      "fetched_at": "2026-09-13T20:41:40"
+    }
+  ],
+  "pages": [
+    {
+      "page_index": 1,
+      "is_entry_page": true,
+      "list_page_url": "https://www.xinlong-holding.com/news.php?catid=93",
+      "news_count": 20,
+      "news": [
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=319",
+          "title": "欣龙控股入选第四批“工业图强”优秀案例",
+          "published_at": "2026-08-31"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=318",
+          "title": "欣龙控股入选“2026海南省制造业企业50强”榜单",
+          "published_at": "2026-07-31"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=317",
+          "title": "实干为基 创新致远——欣龙33载启新程",
+          "published_at": "2026-07-16"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=316",
+          "title": "赓续红色血脉 实干赋能发展——欣龙集团党委开展“七...",
+          "published_at": "2026-06-27"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=315",
+          "title": "欣龙控股亮相日内瓦国际展 拓展全球市场按下加速键",
+          "published_at": "2026-05-23"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=314",
+          "title": "欣龙控股集团召开2025年度总结表彰会",
+          "published_at": "2026-01-30"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=313",
+          "title": "欣龙控股入选2025海南民营企业100强榜单",
+          "published_at": "2026-01-04"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=312",
+          "title": "新年献词 | 用匠心丈量梦想",
+          "published_at": "2025-12-31"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=311",
+          "title": "转载丨封关首日 澄迈首批货物顺利通关",
+          "published_at": "2025-12-19"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=310",
+          "title": "海南自贸港正式启动封关，欣龙控股迎来发展新机遇",
+          "published_at": "2025-12-18"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=309",
+          "title": "欣龙控股入选海南省数字化转型“小灯塔”企业名录",
+          "published_at": "2025-12-09"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=308",
+          "title": "绿智相融 价值共创——欣龙控股亮相上海国际非织造材...",
+          "published_at": "2025-12-05"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=307",
+          "title": "欣龙控股跨界联动“漓岛音乐节II”，以音乐为媒传递...",
+          "published_at": "2025-11-17"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=306",
+          "title": "欣龙控股召开经营分析会暨百日会战部署会议",
+          "published_at": "2025-09-18"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=305",
+          "title": "欣龙控股入选“2025海南省制造业企业50强”榜单",
+          "published_at": "2025-09-02"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=304",
+          "title": "转载丨海南自贸港加速释放政策红利",
+          "published_at": "2025-08-22"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=302",
+          "title": "红色足迹映初心，党建聚力促发展——欣龙控股集团党委...",
+          "published_at": "2025-06-28"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=301",
+          "title": "欣龙控股：匠心铸品质 诚信赢口碑",
+          "published_at": "2025-03-18"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=300",
+          "title": "欣龙控股召开2025年开年经营调度会",
+          "published_at": "2025-02-07"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=299",
+          "title": "转载丨海南欣龙：用好“纸黄金”拓宽外贸路！",
+          "published_at": "2025-01-17"
+        }
+      ]
+    },
+    {
+      "page_index": 2,
+      "is_entry_page": false,
+      "list_page_url": "https://www.xinlong-holding.com/news.php?catid=93&page=2",
+      "news_count": 20,
+      "news": [
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=298",
+          "title": "欣龙控股集团召开2024年度总结表彰会",
+          "published_at": "2025-01-15"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=297",
+          "title": "跨越山海 只为更好遇见——写在2025年到来之际",
+          "published_at": "2024-12-31"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=296",
+          "title": "转载丨澄迈马村港三期项目开工 总投资约42亿元",
+          "published_at": "2024-12-09"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=295",
+          "title": "转载丨冯飞在澄迈县调研：构建产业创新生态，激发企业...",
+          "published_at": "2024-11-28"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=294",
+          "title": "转载丨超14亿元！",
+          "published_at": "2024-11-15"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=293",
+          "title": "转载丨澄迈企业向“新”而行",
+          "published_at": "2024-10-29"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=292",
+          "title": "欣龙海南基地召开抗击超强台风“摩羯”表彰会",
+          "published_at": "2024-10-15"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=290",
+          "title": "李毅中会长到欣龙控股集团考察调研",
+          "published_at": "2024-10-14"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=286",
+          "title": "欣龙海南基地召开“百日攻坚大会战”经营动员会",
+          "published_at": "2024-09-23"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=285",
+          "title": "欣龙控股亮相中国国际产业用纺织品及非织造布展览会",
+          "published_at": "2024-09-19"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=284",
+          "title": "欣龙控股党建引领聚合力 无惧风雨践初心",
+          "published_at": "2024-09-13"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=283",
+          "title": "欣龙控股用“心”链接  与客户共创共赢共发展",
+          "published_at": "2024-09-12"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=282",
+          "title": "欣龙控股用“新”提质 奋起自贸港",
+          "published_at": "2024-09-11"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=281",
+          "title": "欣龙按下复工“启动键” 全力恢复经营秩序",
+          "published_at": "2024-09-10"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=280",
+          "title": "抢险救灾显大爱冲锋在前勇担当",
+          "published_at": "2024-09-09"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=279",
+          "title": "岗位练兵燃斗志·聚力向上创佳绩—欣龙控股司庆系列活...",
+          "published_at": "2024-08-09"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=278",
+          "title": "集团召开“聚力向上共未来”推进会",
+          "published_at": "2024-07-18"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=277",
+          "title": "集团召开2024年上半年经营工作会议",
+          "published_at": "2024-07-17"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=276",
+          "title": "欣龙控股举办“聚力向上共未来”31周年司庆系列活动",
+          "published_at": "2024-07-16"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=275",
+          "title": "欣龙控股通过海南省专精特新企业认定",
+          "published_at": "2024-07-12"
+        }
+      ]
+    },
+    {
+      "page_index": 3,
+      "is_entry_page": false,
+      "list_page_url": "https://www.xinlong-holding.com/news.php?catid=93&page=3",
+      "news_count": 20,
+      "news": [
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=274",
+          "title": "欣龙控股集团党委开展“传承红色基因 赓续红色力量”...",
+          "published_at": "2024-06-28"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=273",
+          "title": "欣龙集团党委换届大会圆满举行",
+          "published_at": "2024-06-25"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=272",
+          "title": "欣龙控股入选 “2023年中国产业用纺织品行业50...",
+          "published_at": "2024-06-14"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=271",
+          "title": "集团总部召开2024开年动员会",
+          "published_at": "2024-02-20"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=270",
+          "title": "欣龙控股获评2023年度国家级绿色工厂",
+          "published_at": "2024-01-10"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=268",
+          "title": "新年献词 | 欣龙与您携手共创健康美好生活",
+          "published_at": "2023-12-31"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=265",
+          "title": "《2021-2023中国非织造布行业社会责任报告》...",
+          "published_at": "2023-09-28"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=264",
+          "title": "欣龙控股亮相CINTE2023",
+          "published_at": "2023-09-20"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=263",
+          "title": "2023俄罗斯Technotextil展丨欣龙控股...",
+          "published_at": "2023-09-08"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=262",
+          "title": "2023俄罗斯Technotextil展丨欣龙控股...",
+          "published_at": "2023-09-01"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=261",
+          "title": "欣龙控股海南基地举办“职业健康安全及能源管理体系”...",
+          "published_at": "2023-08-30"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=260",
+          "title": "欣龙控股荣获“科技产业发展突出贡献企业”荣誉称号",
+          "published_at": "2023-08-15"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=258",
+          "title": "致敬·传承与发展 | 欣龙控股举办成立30周年庆祝...",
+          "published_at": "2023-07-16"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=257",
+          "title": "欣龙控股集团举办“立足岗位、提升领导力”专题培训",
+          "published_at": "2023-07-14"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=256",
+          "title": "新形象·新征程 | 欣龙控股海口新办公区启用",
+          "published_at": "2023-07-14"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=255",
+          "title": "庆祝建党102周年，欣龙控股党委开展主题党日活动",
+          "published_at": "2023-07-14"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=254",
+          "title": "津市市长彭子晟带队到欣龙控股考察",
+          "published_at": "2023-07-14"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=253",
+          "title": "欣龙控股联合海南第一投资集团开展主题党日活动",
+          "published_at": "2023-06-18"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=252",
+          "title": "转载丨【科创宜都行】科技创新赋能企业 探寻高质量发...",
+          "published_at": "2023-06-09"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=251",
+          "title": "喜迎建厂三十周年丨欣龙控股第十届职工篮球联赛圆满闭...",
+          "published_at": "2023-06-01"
+        }
+      ]
+    },
+    {
+      "page_index": 4,
+      "is_entry_page": false,
+      "list_page_url": "https://www.xinlong-holding.com/news.php?catid=93&page=4",
+      "news_count": 20,
+      "news": [
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=250",
+          "title": "欣龙控股参与起草的行业标准顺利通过审定",
+          "published_at": "2023-05-26"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=249",
+          "title": "欣龙控股参加第30届CIDPEX生活用纸展会",
+          "published_at": "2023-05-15"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=248",
+          "title": "欣龙控股再获国家知识产权优势企业认定",
+          "published_at": "2023-05-11"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=247",
+          "title": "喜讯 | 欣龙控股荣获金桥奖优秀项目奖",
+          "published_at": "2023-05-11"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=246",
+          "title": "中国品牌 世界共享 | 欣龙控股集团亮相中国品牌日...",
+          "published_at": "2023-05-11"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=245",
+          "title": "凝聚合力 携手共创欣龙发展美好未来",
+          "published_at": "2023-04-09"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=243",
+          "title": "欣龙集团海南基地开展三八妇女节庆祝活动",
+          "published_at": "2023-03-09"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=241",
+          "title": "欣龙集团组织召开2022年度表彰会",
+          "published_at": "2023-01-11"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=240",
+          "title": "用责任守护我们的光",
+          "published_at": "2022-12-30"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=239",
+          "title": "欣龙控股入选“2022海南民营企业50强”",
+          "published_at": "2022-12-24"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=236",
+          "title": "集团总裁于春山：贯彻二十大精神，引领欣龙转型再出发",
+          "published_at": "2022-11-09"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=230",
+          "title": "尹丽波书记深入欣龙推动复工复产",
+          "published_at": "2022-09-07"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=229",
+          "title": "抗疫有我  欣龙在行动",
+          "published_at": "2022-08-14"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=228",
+          "title": "我在B3H22等你",
+          "published_at": "2022-07-28"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=227",
+          "title": "澄迈县副县长黎雅一行莅临我司调研",
+          "published_at": "2022-05-10"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=226",
+          "title": "集团公司总部召开2021年度总结表彰会",
+          "published_at": "2022-01-21"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=223",
+          "title": "欣龙控股位列2021海南民营企业研发投入榜单第25...",
+          "published_at": "2021-12-28"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=222",
+          "title": "公司一研发创新项目荣获海南省科学技术进步奖二等奖",
+          "published_at": "2021-12-08"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=218",
+          "title": "欣龙控股位列海南民营百强企业第24位",
+          "published_at": "2021-11-08"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=217",
+          "title": "司迺超到欣龙控股海南基地调研",
+          "published_at": "2021-11-08"
+        }
+      ]
+    },
+    {
+      "page_index": 5,
+      "is_entry_page": false,
+      "list_page_url": "https://www.xinlong-holding.com/news.php?catid=93&page=5",
+      "news_count": 20,
+      "news": [
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=216",
+          "title": "欣龙控股荣登海南百强企业榜单",
+          "published_at": "2021-10-27"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=215",
+          "title": "迎接建党百年|集团党委组织开展主题党日活动",
+          "published_at": "2021-06-27"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=214",
+          "title": "《股东来了》2021海南片区系列活动之走进欣龙控股",
+          "published_at": "2021-06-18"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=213",
+          "title": "庆祝建党100周年 欣龙控股党委举行主题党日活动",
+          "published_at": "2021-06-16"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=212",
+          "title": "我司参加“海南资本市场庆祝建党100周年先进事迹报...",
+          "published_at": "2021-06-09"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=211",
+          "title": "海南欣龙无纺股份召开安全生产月活动动员大会",
+          "published_at": "2021-06-03"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=210",
+          "title": "国家市场监督管理总局刘敏司长一行莅临我司调研",
+          "published_at": "2021-05-08"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=209",
+          "title": "我司木浆复合水刺无纺布项目荣获“卓越贡献奖”",
+          "published_at": "2021-03-31"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=208",
+          "title": "春节前夕公司走访慰问老一辈创业者",
+          "published_at": "2021-02-07"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=207",
+          "title": "公司党委召开2020年度书记抓党建工作述职会及党建...",
+          "published_at": "2021-02-04"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=206",
+          "title": "集团总部召开2020年度总结表彰会",
+          "published_at": "2021-02-02"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=205",
+          "title": "我司荣获2020“金质量”抗疫贡献奖",
+          "published_at": "2020-12-24"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=204",
+          "title": "海南欣龙无纺股份开展户外拓展活动",
+          "published_at": "2020-12-07"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=203",
+          "title": "我司参加2020年度海南证券业界沙滩排球赛",
+          "published_at": "2020-11-30"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=202",
+          "title": "澄迈县辐射事故应急演习在我司举行",
+          "published_at": "2020-11-27"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=201",
+          "title": "表彰！荣誉来之不易  我们继续努力",
+          "published_at": "2020-09-08"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=200",
+          "title": "我司组织“解析海南自由贸易港建设总体方案”专题培训",
+          "published_at": "2020-08-31"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=199",
+          "title": "纪念建党99周年 集团公司党委组织主题党员日活动",
+          "published_at": "2020-07-02"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=198",
+          "title": "海南省人大就业促进法调研组莅临我司检查指导",
+          "published_at": "2020-05-26"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=197",
+          "title": "海南省工信厅到我司调研指导工作",
+          "published_at": "2020-05-09"
+        }
+      ]
+    },
+    {
+      "page_index": 6,
+      "is_entry_page": false,
+      "list_page_url": "https://www.xinlong-holding.com/news.php?catid=93&page=6",
+      "news_count": 20,
+      "news": [
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=196",
+          "title": "中央复工复产调研组莅临我司调研",
+          "published_at": "2020-03-17"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=195",
+          "title": "海南省委常委、常务副省长毛超峰一行调研我司复工复产...",
+          "published_at": "2020-02-29"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=194",
+          "title": "海南省委常委肖杰一行到我司调研指导",
+          "published_at": "2020-02-18"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=193",
+          "title": "简讯|澄迈县总工会到我司看望慰问",
+          "published_at": "2020-02-13"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=192",
+          "title": "我司紧急协调12万只口罩，支援海南疫情防治工作",
+          "published_at": "2020-02-12"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=191",
+          "title": "海南省委书记刘赐贵到我司调研防疫物资生产供应情况",
+          "published_at": "2020-02-03"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=190",
+          "title": "海南省长沈晓明到我司调研防疫物资供应工作",
+          "published_at": "2020-01-31"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=188",
+          "title": "抗击疫情 欣龙湖南基地抓紧生产连夜发货",
+          "published_at": "2020-01-27"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=187",
+          "title": "简讯| 我司组织捐赠一批地方紧缺防疫物资",
+          "published_at": "2020-01-26"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=186",
+          "title": "简讯| 澄迈县委领导到我司检查慰问防疫材料生产组织...",
+          "published_at": "2020-01-23"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=185",
+          "title": "如何正确选择和佩戴口罩",
+          "published_at": "2020-01-22"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=184",
+          "title": "集团公司召开2019年度总结表彰大会",
+          "published_at": "2020-01-22"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=183",
+          "title": "上市二十载，欣龙再出发",
+          "published_at": "2019-12-10"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=182",
+          "title": "海南省副省长沈丹阳一行莅临我司视察调研",
+          "published_at": "2019-12-06"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=181",
+          "title": "我司喜获“建国70周年·海南科技产业发展功勋企业”...",
+          "published_at": "2019-10-14"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=180",
+          "title": "集团公司举办2019年“明月夜·中华情”主题中秋晚...",
+          "published_at": "2019-09-23"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=179",
+          "title": "澄迈县税务局到我司调研",
+          "published_at": "2019-09-03"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=178",
+          "title": "国家非织造材料工程技术研究中心专家研讨会成功举办",
+          "published_at": "2019-08-09"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=177",
+          "title": "简讯| 我司与武汉纺织大学签署产学研合作协议",
+          "published_at": "2019-07-31"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=176",
+          "title": "我司新品牌“麻王棉后”在上海发布",
+          "published_at": "2019-07-23"
+        }
+      ]
+    },
+    {
+      "page_index": 7,
+      "is_entry_page": false,
+      "list_page_url": "https://www.xinlong-holding.com/news.php?catid=93&page=7",
+      "news_count": 20,
+      "news": [
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=175",
+          "title": "欣龙集团成立26周年庆祝大会顺利召开",
+          "published_at": "2019-07-17"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=174",
+          "title": "欣龙集团党委组织开展纪念建党98周年参观学习活动",
+          "published_at": "2019-06-30"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=173",
+          "title": "集团公司党委联合澄迈县税务局开展主题扶贫慰问活动",
+          "published_at": "2019-06-04"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=172",
+          "title": "集团公司海南基地各单位召开“2019年安全生产月动...",
+          "published_at": "2019-06-04"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=171",
+          "title": "简讯| 孝感市国家高新区领导一行莅临我司参观考察",
+          "published_at": "2019-05-23"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=169",
+          "title": "国家统计局副局长鲜祖德一行走访我司",
+          "published_at": "2019-05-13"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=168",
+          "title": "我司开展2019年职业病防治法宣传活动",
+          "published_at": "2019-04-26"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=167",
+          "title": "集团公司海南基地组织开展“无偿献血爱心公益”活动",
+          "published_at": "2019-04-25"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=166",
+          "title": "集团公司组织召开2019年度工作部署会议",
+          "published_at": "2019-02-13"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=165",
+          "title": "公司举办2019年新春团拜会",
+          "published_at": "2019-02-13"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=164",
+          "title": "澄迈县领导调研我司人才工作并慰问高层次人才",
+          "published_at": "2019-01-22"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=163",
+          "title": "集团领导受聘地方政府高质量发展顾问",
+          "published_at": "2018-11-29"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=162",
+          "title": "国家税务总局一行莅临我司调研指导",
+          "published_at": "2018-10-25"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=161",
+          "title": "“欢聚中秋，共庆佳节”主题晚会激情上演",
+          "published_at": "2018-09-27"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=160",
+          "title": "恩兰——高品质卫生巾首选",
+          "published_at": "2018-08-20"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=157",
+          "title": "我司喜获国际汉麻技术创新大奖",
+          "published_at": "2018-08-03"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=154",
+          "title": "陕煤集团董事长杨照乾一行到访我司考察交流",
+          "published_at": "2018-07-26"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=153",
+          "title": "热烈庆祝欣龙集团成立二十五周年",
+          "published_at": "2018-07-18"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=152",
+          "title": "庆祝建党97周年——欣龙集团党委开展“红色之旅”学...",
+          "published_at": "2018-07-01"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=148",
+          "title": "2018欣龙控股第九届员工篮球联赛成功举办",
+          "published_at": "2018-05-04"
+        }
+      ]
+    },
+    {
+      "page_index": 8,
+      "is_entry_page": false,
+      "list_page_url": "https://www.xinlong-holding.com/news.php?catid=93&page=8",
+      "news_count": 20,
+      "news": [
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=147",
+          "title": "美国棉花公司代表莅临我司作专题报告",
+          "published_at": "2018-04-25"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=146",
+          "title": "集团公司工会委员会组织员工参加体检活动",
+          "published_at": "2018-04-25"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=145",
+          "title": "天津市北辰区领导莅临我司参观考察",
+          "published_at": "2018-04-12"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=142",
+          "title": "我司董事长接受中央电视台《大国品牌》栏目组采访",
+          "published_at": "2018-03-13"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=141",
+          "title": "欣龙集团举行2018年新春团拜会",
+          "published_at": "2018-03-01"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=136",
+          "title": "我司“大健康大医疗战略”投资者交流会在沪举行",
+          "published_at": "2017-12-18"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=135",
+          "title": "公司开展“无偿献血·奉献爱心”公益活动",
+          "published_at": "2017-12-15"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=134",
+          "title": "我司受邀出席“2017汉麻产业国际会议”",
+          "published_at": "2017-08-08"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=133",
+          "title": "我司“新品发布媒体见面会暨新品牌揭幕仪式”在上海隆...",
+          "published_at": "2017-07-26"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=132",
+          "title": "庆祝建党96周年——欣龙集团党委赴母瑞山革命圣地参...",
+          "published_at": "2017-07-02"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=131",
+          "title": "公司召开2017年“安全生产月”动员大会",
+          "published_at": "2017-06-27"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=130",
+          "title": "美国棉花公司亚洲之行首场报告会在我司举行",
+          "published_at": "2017-06-27"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=129",
+          "title": "集团2017年企业发展工作会议取得圆满成功",
+          "published_at": "2017-02-28"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=128",
+          "title": "集团非织造材料产业科技创新工作会在海口召开",
+          "published_at": "2017-02-28"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=127",
+          "title": "欣龙集团党委、纪委换届选举圆满完成",
+          "published_at": "2016-12-31"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=126",
+          "title": "大健康、大医疗与非织造材料技术研讨会在海口成功举行",
+          "published_at": "2016-12-06"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=125",
+          "title": "我司荣获全国技术市场领域最高奖金桥奖两项殊荣",
+          "published_at": "2016-11-22"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=124",
+          "title": "长征胜利纪念日，欣龙开启新长征",
+          "published_at": "2016-10-24"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=123",
+          "title": "深入投资合作，实现互利共赢",
+          "published_at": "2016-10-17"
+        },
+        {
+          "url": "https://www.xinlong-holding.com/newsxx.php?catid=93&id=122",
+          "title": "我司医药健康产业布局项目获国家重大项目建设立项",
+          "published_at": "2016-09-19"
+        }
+      ]
+    }
+  ],
+  "news_url_count": 160,
+  "errors": [],
+  "exported_at": "2026-09-13T20:41:45"
+}

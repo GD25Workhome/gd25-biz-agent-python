@@ -1,0 +1,932 @@
+{
+  "stock_code": "300582",
+  "company_name": "英飞特",
+  "entry_page": "https://cn.inventronics-co.com/news_company/1.html",
+  "max_pages": 8,
+  "list_pages": [
+    {
+      "requested_url": "https://cn.inventronics-co.com/news_company/1.html",
+      "final_url": "https://cn.inventronics-co.com/news_company/1.html",
+      "http_status": 200,
+      "fetched_at": "2026-09-13T20:47:06",
+      "next_page_url": "https://cn.inventronics-co.com/news_company/2.html"
+    },
+    {
+      "requested_url": "https://cn.inventronics-co.com/news_company/2.html",
+      "final_url": "https://cn.inventronics-co.com/news_company/2.html",
+      "http_status": 200,
+      "fetched_at": "2026-09-13T20:47:11",
+      "next_page_url": "https://cn.inventronics-co.com/news_company/3.html"
+    },
+    {
+      "requested_url": "https://cn.inventronics-co.com/news_company/3.html",
+      "final_url": "https://cn.inventronics-co.com/news_company/3.html",
+      "http_status": 200,
+      "fetched_at": "2026-09-13T20:47:16",
+      "next_page_url": "https://cn.inventronics-co.com/news_company/4.html"
+    },
+    {
+      "requested_url": "https://cn.inventronics-co.com/news_company/4.html",
+      "final_url": "https://cn.inventronics-co.com/news_company/4.html",
+      "http_status": 200,
+      "fetched_at": "2026-09-13T20:47:21",
+      "next_page_url": "https://cn.inventronics-co.com/news_company/5.html"
+    },
+    {
+      "requested_url": "https://cn.inventronics-co.com/news_company/5.html",
+      "final_url": "https://cn.inventronics-co.com/news_company/5.html",
+      "http_status": 200,
+      "fetched_at": "2026-09-13T20:47:25",
+      "next_page_url": "https://cn.inventronics-co.com/news_company/6.html"
+    },
+    {
+      "requested_url": "https://cn.inventronics-co.com/news_company/6.html",
+      "final_url": "https://cn.inventronics-co.com/news_company/6.html",
+      "http_status": 200,
+      "fetched_at": "2026-09-13T20:47:30",
+      "next_page_url": "https://cn.inventronics-co.com/news_company/7.html"
+    },
+    {
+      "requested_url": "https://cn.inventronics-co.com/news_company/7.html",
+      "final_url": "https://cn.inventronics-co.com/news_company/7.html",
+      "http_status": 200,
+      "fetched_at": "2026-09-13T20:47:35",
+      "next_page_url": "https://cn.inventronics-co.com/news_company/8.html"
+    },
+    {
+      "requested_url": "https://cn.inventronics-co.com/news_company/8.html",
+      "final_url": "https://cn.inventronics-co.com/news_company/8.html",
+      "http_status": 200,
+      "fetched_at": "2026-09-13T20:47:41"
+    }
+  ],
+  "pages": [
+    {
+      "page_index": 1,
+      "is_entry_page": true,
+      "list_page_url": "https://cn.inventronics-co.com/news_company/1.html",
+      "news_count": 20,
+      "news": [
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/2095.html",
+          "title": "",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/2056.html",
+          "title": "",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/2045.html",
+          "title": "",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/2102.html",
+          "title": "英飞特道路与区域照明系统解决方案 | 护航智慧城市，点亮美好出行",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/2101.html",
+          "title": "英飞特植物照明系统解决方案 | 精准照明配方，赋能高效种植",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/2093.html",
+          "title": "英飞特工业照明系统解决方案 | 精准照明，让工业生产更加安全高效",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/2087.html",
+          "title": "新品速递 | 英飞特区域照明非隔离电源 IT 0-10 Non-isolated BRICK",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/2085.html",
+          "title": "新品速递 | 英飞特工业照明圆形工矿灯电源 IT 0-10 DS R P65",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/2059.html",
+          "title": "强强联合，智控未来：英飞特电子与Synapse Wireless战略合作专题页正式上线!",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/2055.html",
+          "title": "新品资讯 | 英飞特体育照明超宽压RGBW可调光驱动电源 EFM-Q/T",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/2047.html",
+          "title": "展会现场 | 英飞特电子深度分享，以技术链接全球伙伴",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/2046.html",
+          "title": "展会现场 | 英飞特电子亮相香港国际秋季灯饰展",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/2041.html",
+          "title": "应用案例丨点亮世界屋脊：英飞特为拉萨民族塔构建光影盛景",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/2025.html",
+          "title": "新品资讯 | 英飞特户外照明LED驱动电源 IT DEXAL系列",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/2023.html",
+          "title": "新品资讯 | 英飞特道路照明全能型电源 IT 0-10 P67",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1966.html",
+          "title": "新品资讯 | 英飞特非隔离体育照明电源NFS",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1964.html",
+          "title": "新品资讯 | 英飞特非隔离体育照明电源NFM",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1953.html",
+          "title": "新品资讯 | 英飞特增强版DALI-2驱动电源EUM-Ex",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/2006.html",
+          "title": "展会现场 | 英飞特电子邀您共聚2024宁波国际照明展览会",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/2005.html",
+          "title": "英飞特电子资深标准专家周自斌先生受邀担任新版控制装置标准培训讲师",
+          "published_at": null
+        }
+      ]
+    },
+    {
+      "page_index": 2,
+      "is_entry_page": false,
+      "list_page_url": "https://cn.inventronics-co.com/news_company/2.html",
+      "news_count": 20,
+      "news": [
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/2004.html",
+          "title": "DALI首届中国互通测试plugfest在英飞特电子园区成功举办",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/2003.html",
+          "title": "展会现场 | 英飞特电子亮相香港国际春季灯饰展",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/2002.html",
+          "title": "英飞特电子参加第十九届中国道路照明论坛",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/2001.html",
+          "title": "英飞特电子受邀参加杭州第19届亚运会照明建设工程与设计成果分享大会",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/2000.html",
+          "title": "展会现场 | 英飞特电子邀您共聚第30届古镇国际灯饰博览会",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1999.html",
+          "title": "业内首款DALI+认证无线LED驱动电源",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1998.html",
+          "title": "展会现场 | 英飞特电子亮相2024法兰克福照明与建筑技术展",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1997.html",
+          "title": "展会预告 | 英飞特电子邀您参加2024法兰克福照明与建筑技术展",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1993.html",
+          "title": "展会现场 | 英飞特电子亮相2024中东（迪拜）国际城市、建筑和商业照明展览会",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1992.html",
+          "title": "展会预告 | 英飞特电子邀您参加2024法兰克福照明与建筑技术展",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1991.html",
+          "title": "2023年度英飞特电子大事记",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1990.html",
+          "title": "英飞特电子参加2023浙江省照明电器协会会员代表大会暨六届四次理事会暨亚运之光专题论坛",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1947.html",
+          "title": "携光而至，循光前行——英飞特原Inventronics品牌产品logo全线焕新",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1940.html",
+          "title": "携手同创，共筑辉煌——英飞特电子2023年第一届全球供应商合作伙伴大会圆满召开",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1908.html",
+          "title": "新品资讯 | 英飞特IP66/IP67电流可调电源EUM-SV",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1928.html",
+          "title": "英飞特电子参加2023中国（浙江）照明产业供应链配套会暨LED照明创新论坛",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1927.html",
+          "title": "展会现场 | 英飞特电子亮相2023荷兰国际园艺展（Greentech）",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1926.html",
+          "title": "展会现场 | 英飞特电子以全新品牌形象亮相2023广州国际照明展",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1924.html",
+          "title": "展会预告 | 英飞特电子即将亮相2023荷兰国际园艺展（Greentech）",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1923.html",
+          "title": "展会预告 | 英飞特电子与您相约2023广州国际照明展",
+          "published_at": null
+        }
+      ]
+    },
+    {
+      "page_index": 3,
+      "is_entry_page": false,
+      "list_page_url": "https://cn.inventronics-co.com/news_company/3.html",
+      "news_count": 20,
+      "news": [
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1922.html",
+          "title": "展会现场 | 英飞特电子亮相2023美国国际照明展览会（LightFair International）",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1921.html",
+          "title": "喜讯 | 英飞特电子荣获2022年度中国照明电器行业“电源/智能控制20强企业”荣誉",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1920.html",
+          "title": "展会回顾 | 英飞特电子亮相阿根廷国际照明及建筑展览会",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1892.html",
+          "title": "英飞特电子品牌LOGO焕新升级！",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1890.html",
+          "title": "英飞特收购欧司朗欧亚数字系统业务，巩固照明行业地位",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1867.html",
+          "title": "应用案例 | 英飞特电源助力卡塔尔世界杯",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1866.html",
+          "title": "喜讯 | 积微成著，厚积薄发——英飞特电子荣获“国家级制造业单项冠军示范企业”",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1865.html",
+          "title": "英飞特电子亮相Asia International Hemp Expo",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1860.html",
+          "title": "展会现场 | 英飞特精彩亮相美国2022 MJBizCon展览会",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1859.html",
+          "title": "展会现场 | 英飞特电子亮相2022法兰克福照明与建筑技术展",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1858.html",
+          "title": "展会现场 | 英飞特精彩亮相2022泰国国际照明展",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1857.html",
+          "title": "展会预告 | 英飞特电子即将亮相2022法兰克福展",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1856.html",
+          "title": "喜讯 | 国际国内双循环，内贸外贸齐驱动，英飞特电子获评浙江省内外贸一体化“领跑者”企业",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1854.html",
+          "title": "展会预告 | 英飞特电子即将亮相2022泰国国际照明展",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1853.html",
+          "title": "喜讯 | 科技兴企，创新兴业——英飞特电子入选2022全国首批“科创中国”创新基地",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1852.html",
+          "title": "喜讯 | 英飞特电子荣获2021年度中国LED行业营收50强",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1851.html",
+          "title": "展会现场 | 英飞特精彩亮相2022光亚展",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1850.html",
+          "title": "展会预告 | 英飞特电子即将亮相2022巴西国际照明展（EXPOLUX）",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1849.html",
+          "title": "展会预告 | 英飞特电子即将亮相2022广州国际照明展览会",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1848.html",
+          "title": "英飞特电子参加2022中国（浙江）照明产业供应链配套会暨LED照明创新论坛",
+          "published_at": null
+        }
+      ]
+    },
+    {
+      "page_index": 4,
+      "is_entry_page": false,
+      "list_page_url": "https://cn.inventronics-co.com/news_company/4.html",
+      "news_count": 20,
+      "news": [
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1847.html",
+          "title": "应用案例 | 英飞特电源点亮刚果（金）五旬节烈士体育场",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1846.html",
+          "title": "展会现场 | 英飞特电子亮相2022美国国际照明展览会（LightFair International）",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1771.html",
+          "title": "英飞特与艾迈斯欧司朗达成协议，英飞特将收购艾迈斯欧亚数字系统业务",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1743.html",
+          "title": "英飞特电子成为DALI联盟全权会员",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1740.html",
+          "title": "标准制定 | 英飞特电子参与制定的国家标准GB/T 17743-2021获准发布实施",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1739.html",
+          "title": "新规解读 | ErP新规对LED驱动电源的要求",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1738.html",
+          "title": "喜讯 | 深耕易耨 奋楫争先 英飞特电子入选省级重点企业研究院",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1737.html",
+          "title": "应用案例 | 英飞特电子助力点亮世界最大起重机Big Carl",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1736.html",
+          "title": "英飞特电子亮相2021美国国际照明展览会（LightFair International）",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1735.html",
+          "title": "喜讯 | 英飞特EUW双色温电源入选美国 2021 IES成果报告",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1734.html",
+          "title": "英飞特提案获美国标准UL8750标委会采纳",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1732.html",
+          "title": "喜讯 | 英飞特再添一项重量级“商标品牌”荣誉",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1236.html",
+          "title": "新品资讯 | 植物照明电源推荐——英飞特EUM超大功率系列",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1231.html",
+          "title": "喜讯 | 破10亿美金！英飞特电子全球销售规模稳居行业前列",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1216.html",
+          "title": "英飞特推出新品EUM-Mx系列，联合超大功率EFD/EBM家族，为LED植物照明领域再添助力",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1245.html",
+          "title": "新规解读 | ErP新规对LED驱动电源的要求",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1244.html",
+          "title": "标准制定 | 英飞特电子参与制定的国家标准GB/T 17743-2021获准发布实施",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1243.html",
+          "title": "喜讯 | 深耕易耨 奋楫争先 英飞特电子入选省级重点企业研究院",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1242.html",
+          "title": "应用案例 | 英飞特电子助力点亮世界最大起重机Big Carl",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1241.html",
+          "title": "英飞特电子受邀参加2021意法半导体工业峰会（ST Industrial Summit 2021)",
+          "published_at": null
+        }
+      ]
+    },
+    {
+      "page_index": 5,
+      "is_entry_page": false,
+      "list_page_url": "https://cn.inventronics-co.com/news_company/5.html",
+      "news_count": 20,
+      "news": [
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1240.html",
+          "title": "英飞特电子亮相2021美国国际照明展览会（LightFair International）",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1239.html",
+          "title": "喜讯 | 英飞特EUW双色温电源入选美国 2021 IES成果报告",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1238.html",
+          "title": "英飞特提案获美国标准UL8750标委会采纳",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1237.html",
+          "title": "喜讯 | 英飞特再添一项重量级“商标品牌”荣誉",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1235.html",
+          "title": "应用案例 | 江南大道——夜幕下坐落于滨江的银色光河",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1234.html",
+          "title": "展会现场 | 英飞特电子线上线下同步开展 # 2021广州国际照明展",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1233.html",
+          "title": "英飞特电子参加2021中国（浙江）照明产业供应链配套会暨LED照明创新论坛",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1232.html",
+          "title": "英飞特电源有多可靠，来看2009年的项目！",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1230.html",
+          "title": "英飞特电子受邀参加中国电源学会2021年电源云讲坛",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1229.html",
+          "title": "同心同行，融合共赢——英飞特销售团队召开经销商表彰及培训大会",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1228.html",
+          "title": "英飞特桐庐生产基地第四届运动会圆满落幕",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1227.html",
+          "title": "喜讯 | 欧洲市场持续增长，英飞特欧洲公司再升级",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1218.html",
+          "title": "喜讯 | 英飞特EUM-680SxxxMx荣获2021第九届阿拉丁神灯奖优秀奖",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1189.html",
+          "title": "英飞特参加中国照明电器协会成立三十周年庆祝大会暨第八届四次理事会",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1217.html",
+          "title": "喜讯 | 英飞特EUM家族再创佳绩！荣获第六届“中国电源学会科学技术奖”",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1226.html",
+          "title": "常州市邹区镇党委书记、区委办主任万建新一行赴英飞特电子考察调研",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1223.html",
+          "title": "英飞特积极参与北美植物照明标准制定，推动LED植物照明规范化发展",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1224.html",
+          "title": "省政协副主席陈铁雄一行莅临英飞特走访调研",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1225.html",
+          "title": "喜讯 | 英飞特电子荣获湖南省照明行业2020年度“优秀企业” 称号",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1222.html",
+          "title": "植树节特别活动 | 拥抱春天，播种希望",
+          "published_at": null
+        }
+      ]
+    },
+    {
+      "page_index": 6,
+      "is_entry_page": false,
+      "list_page_url": "https://cn.inventronics-co.com/news_company/6.html",
+      "news_count": 20,
+      "news": [
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1221.html",
+          "title": "Women's Day | 愿你眼里总有光芒，不惧未来",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1220.html",
+          "title": "猜灯谜、吃汤圆，英飞特多彩活动闹元宵",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1219.html",
+          "title": "喜讯 | 英飞特荣膺滨江区“2020年度工业龙头企业”",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1209.html",
+          "title": "展会现场 | 英飞特精彩亮相，全新产品备受关注",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1202.html",
+          "title": "新品资讯 | 圆形工矿灯电源——英飞特EUR家族LED驱动电源",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1201.html",
+          "title": "喜讯 | 英飞特EUM-150SxxxDG系列荣获江苏省照明电器协会产品奖",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1200.html",
+          "title": "喜讯 | 英飞特EUM-150SxxxDG系列突出重围荣获阿拉丁神灯奖最佳技术奖",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1199.html",
+          "title": "喜讯 | 英飞特成为首批通过NOM认证的中国LED电源企业之一！",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1198.html",
+          "title": "选用英飞特UL Class P认证电源，轻松实现LED灯具的电源互换",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1197.html",
+          "title": "英飞特推出满足T/CSA 051标准的LED驱动电源EUM-Lx系列",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1196.html",
+          "title": "英飞特EUM驱动电源顺利通过DALI-2 & D4i 认证",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1195.html",
+          "title": "英飞特EUM荣获2020第八届阿拉丁神灯奖优秀奖",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1193.html",
+          "title": "新品资讯 | 英飞特NFC可编程电源—LUN系列",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1194.html",
+          "title": "英飞特荣膺滨江区“2019年度工业龙头企业”",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1192.html",
+          "title": "捷报 | 英飞特印度工厂首批产品上周顺利出货！",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1187.html",
+          "title": "领导关怀暖人心 英飞特复工防疫两手抓",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1186.html",
+          "title": "科学复工，精准战“疫”，英飞特准备好了！",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1185.html",
+          "title": "英飞特EUM系列驱动电源荣获美国 “蓝宝石奖”",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1188.html",
+          "title": "英飞特加入UL标委会，代表中国照明企业发声",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1191.html",
+          "title": "省委常委、市委书记周江勇一行莅临英飞特走访新的社会阶层代表人士",
+          "published_at": null
+        }
+      ]
+    },
+    {
+      "page_index": 7,
+      "is_entry_page": false,
+      "list_page_url": "https://cn.inventronics-co.com/news_company/7.html",
+      "news_count": 20,
+      "news": [
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1190.html",
+          "title": "新品资讯 | 英飞特EUM紧凑型可编程电源",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1177.html",
+          "title": "英飞特荣获国家半导体照明工程研发及产业联盟“标准贡献奖”、“ 第四届优秀成员单位”等荣誉",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1184.html",
+          "title": "英飞特参加中国照明电器协会成立三十周年庆祝大会暨第八届四次理事会",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1183.html",
+          "title": "英飞特出席照明设计师第九届交流年会暨产品应用展",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1178.html",
+          "title": "中国工程院外籍院士李泽元教授莅临英飞特指导",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1181.html",
+          "title": "展会现场|英飞特在2019香港秋灯展恭候您的莅临！",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1180.html",
+          "title": "英飞特应邀出席2019中国LED智慧照明应用与推广研讨会",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1182.html",
+          "title": "英飞特海外同事Landon Miles 荣获NALMCO照明控制专家资格认证",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1179.html",
+          "title": "英飞特精彩亮相2019广州国际照明展览会",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1176.html",
+          "title": "展会现场|英飞特精彩亮相2019瑞典国际电子工程展览会",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1174.html",
+          "title": "英飞特电子荣获“杭州市高新区（滨江）优秀瞪羚企业”荣誉称号",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1175.html",
+          "title": "英飞特电子荣获“杭州市模范集体”荣誉称号",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1173.html",
+          "title": "那些你需要知道的私募基金投资真相",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1172.html",
+          "title": "杭城论道，共探防爆灯具产品出口技术规范",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1171.html",
+          "title": "英飞特应邀出席2018中国LED智慧照明应用与推广研讨会·道路照明专场",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1170.html",
+          "title": "英飞特闪耀亮相光亚展",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1168.html",
+          "title": "英飞特荣获上合组织青岛峰会照明优质产品供应商奖",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1169.html",
+          "title": "英飞特荣获“2017年度行业优秀新产品、新技术和新材料评选”一等奖",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1167.html",
+          "title": "英飞特新推出超低THD户外小功率LED驱动电源",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1166.html",
+          "title": "浙江省副省长冯飞莅临英飞特桐庐生产基地进行深度调研",
+          "published_at": null
+        }
+      ]
+    },
+    {
+      "page_index": 8,
+      "is_entry_page": false,
+      "list_page_url": "https://cn.inventronics-co.com/news_company/8.html",
+      "news_count": 20,
+      "news": [
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1165.html",
+          "title": "喜报丨英飞特荣膺“LED行业十大技术领军企业”",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1164.html",
+          "title": "聚势待发 赢战鸡年丨英飞特销售中心2016年终总结暨表彰大会",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1160.html",
+          "title": "现场直播 | 英飞特今敲响深交所开市钟",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1161.html",
+          "title": "品牌战略出成果，创牌之路有收获—英飞特电子斩获浙江出口名牌称号",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1162.html",
+          "title": "世界级大师倾情献艺见证爱与责任的绽放 ——2015英飞特电子年会顺利举行",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1163.html",
+          "title": "董事长华桂潮博士荣获CSA十年贡献奖",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1158.html",
+          "title": "回顾&展望丨英飞特成功召开2016年度经销商会议",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1159.html",
+          "title": "大咖齐聚 | 英飞特科技园上演商业思维年终盛宴",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1157.html",
+          "title": "英飞特获得2016年照明行业设计师优选十大创新品牌",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1156.html",
+          "title": "《照明用LED驱动电源》“浙江制造”标准评审会召开",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1155.html",
+          "title": "今日快讯 | 英飞特顺利通过“杭州市院士工作站”评审",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1154.html",
+          "title": "为您服务，是我们的荣幸",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1153.html",
+          "title": "浙江省外国专家局局长厉勇一行调研英飞特",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1140.html",
+          "title": "智能照明革新力量 英飞特闪耀亮相光亚展",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1144.html",
+          "title": "大周末的，为何300多位杭商精英齐聚英飞特科技园？",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1141.html",
+          "title": "欢声笑语| 英飞特FAMILY DAY大团圆",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1148.html",
+          "title": "为爱代言丨英飞特党总支&工会大型公益助学活动",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1147.html",
+          "title": "展会年中总结丨让英飞特与您更近一步",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1146.html",
+          "title": "一盏路灯除了照明还能做什么？——“和光•同程”照明专题研讨会在杭举行",
+          "published_at": null
+        },
+        {
+          "url": "https://cn.inventronics-co.com/news_info/33/1145.html",
+          "title": "半导体照明节能产业发展“十三五”规划编制调研组莅临公司调研",
+          "published_at": null
+        }
+      ]
+    }
+  ],
+  "news_url_count": 160,
+  "errors": [],
+  "exported_at": "2026-09-13T20:47:45"
+}

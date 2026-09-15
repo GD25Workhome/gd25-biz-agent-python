@@ -1,0 +1,33 @@
+{
+  "code": "920478",
+  "company_name": "峆一药业",
+  "run": "run2",
+  "passed": true,
+  "pages_ok": true,
+  "later_ok": true,
+  "list_pages_fetched": 6,
+  "list_page_urls": [
+    "http://www.heryipharma.com/news",
+    "http://www.heryipharma.com/news?&p=2",
+    "http://www.heryipharma.com/news?&p=3",
+    "http://www.heryipharma.com/news?&p=4",
+    "http://www.heryipharma.com/news?&p=5",
+    "http://www.heryipharma.com/news?&p=6"
+  ],
+  "agent_url_count": 110,
+  "hit_page1": 20,
+  "truth_page1_count": 20,
+  "later_page_unique_urls": 90,
+  "truth_later_only_count": 90,
+  "hit_rate": 1.0,
+  "recall_later": 1.0,
+  "noise_count": 0,
+  "agent_turns": 14,
+  "cost_usd": 0.576052,
+  "agent_is_error": false,
+  "tool_errors": 0,
+  "truth_errors": [],
+  "reason": "通过",
+  "expect": "pass",
+  "note": "服务端翻页 ?&p=N（共6页），规则版翻页失效（无增量）"
+}

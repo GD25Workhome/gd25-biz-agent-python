@@ -22,11 +22,31 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPATH=/app \
     ENABLE_DATABASE=false \
     LANGFUSE_ENABLED=false \
-    PROMPT_SOURCE_MODE=local
+    PROMPT_SOURCE_MODE=local \
+    HOME=/app
 
 # 系统依赖：尽量精简；httpx/ssl 用镜像自带证书
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Node.js + claude CLI（新闻 URL 抓取 Agent 的运行时依赖）
+# ⚠️ SDK 是 CLI 子进程模型，镜像里必须有 claude 可执行文件（见
+#    华院Agent设计/260914-整体重构/02-gd25侧详细设计.md §6.1）。
+#   - Node 从 npmmirror 二进制镜像装（deb.nodesource.com 脚本国内构建机常不通）
+#   - npm 源同样切 npmmirror；CLI 版本钉在与 SDK 0.2.152 联调验证过的 2.1.272
+#   - claude-code 2.1.x 要求 Node >= 22（设计文档早期写的 20 已过时）
+#   - HOME=/app：CLI 会把 ~/.claude 配置与缓存写到工作目录
+ARG NODE_VERSION=22.20.0
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl xz-utils \
+    && curl -fsSL -o /tmp/node.tar.xz \
+       "https://registry.npmmirror.com/-/binary/node/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" \
+    && tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 \
+    && rm /tmp/node.tar.xz \
+    && npm config set registry https://registry.npmmirror.com \
+    && npm install -g @anthropic-ai/claude-code@2.1.272 \
+    && claude --version \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements-huayuan.txt .

@@ -1,0 +1,14 @@
+{
+  "stock_code": "000001",
+  "company_name": "平安银行",
+  "seed_url": "http://bank.pingan.com/bankPingAnCom/about/news",
+  "list_pages_fetched": 8,
+  "news_url_count": 200,
+  "errors": [],
+  "agent": {
+    "status": "success",
+    "turns": 18,
+    "cost_usd": 1.0534139999999999,
+    "is_error": false
+  }
+}
