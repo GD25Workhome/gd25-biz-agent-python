@@ -59,7 +59,7 @@ class CrawlStore:
     company_name: str = ""
     stock_code: str = ""
     seed_url: str = ""
-    max_pages: int = 8
+    max_pages: int = 3
     known_norm: set[str] = field(default_factory=set)
     list_pages: list[dict[str, Any]] = field(default_factory=list)
     news_items: list[NewsItem] = field(default_factory=list)

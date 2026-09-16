@@ -37,6 +37,12 @@ nodes:
         timeout: 300
         thinking:
           type: disabled
+      # 知识库按需拉全文（01 文档 §3.3 / 03 文档 T2.4）：
+      # 仅本次 gather 从 Milvus 召回的 doc_id 可拉（白名单，请求级 contextvars），
+      # max_load_times 默认 3、单次 maxChars 默认 12000；
+      # 知识库开关关闭（context.knowledge.enabled=false）时调用一律被拒，不影响其它 flow 的 summarizer。
+      tools:
+        - load_news_document
       persist_to_persistence_edges_var:
         - radar_event_score
 

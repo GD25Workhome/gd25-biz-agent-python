@@ -77,7 +77,7 @@ class TestRequestValidation:
     def test_defaults(self):
         r = NewsUrlCrawlRequest(news_list_url=SEED)
         assert r.known_urls == []      # 空 = 首次抓取（全量）
-        assert r.max_pages == 8
+        assert r.max_pages == 3        # 默认 3 页，可不传
         assert r.trace_id is None
 
 

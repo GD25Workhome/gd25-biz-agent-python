@@ -21,7 +21,7 @@ StopReason = Literal[
 # known_urls 上限：实验单站最大 174 条，给 500 足够宽松并防滥用
 MAX_KNOWN_URLS = 500
 
-# max_pages 上限：实验最多 8 页；20 页单次成本可能 $2+
+# max_pages 上限：默认 3 页；20 页单次成本可能 $2+
 MAX_PAGES_LIMIT = 20
 
 
@@ -47,7 +47,8 @@ class NewsUrlCrawlRequest(BaseModel):
         None, max_length=16, description="证券代码，辅助站点消歧"
     )
     max_pages: int = Field(
-        8, ge=1, le=MAX_PAGES_LIMIT, description="列表页抓取上限"
+        3, ge=1, le=MAX_PAGES_LIMIT,
+        description="列表页抓取上限，默认 3 页，可不传",
     )
     trace_id: Optional[str] = Field(
         None, max_length=64, description="链路追踪 ID，便于双边日志串联"

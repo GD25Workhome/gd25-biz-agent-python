@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import secrets
 from datetime import datetime
@@ -17,6 +18,9 @@ from fastapi import APIRouter, HTTPException
 from langchain_core.messages import AIMessage, HumanMessage
 
 from backend.app.api.schemas.huayuan_radar_event import (
+    DEFAULT_KNOWLEDGE_MAX_CHARS,
+    DEFAULT_KNOWLEDGE_MAX_DOCS,
+    DEFAULT_KNOWLEDGE_MAX_LOAD_TIMES,
     DEFAULT_MAX_ANYSEARCH,
     DEFAULT_MAX_BOCHA,
     DEFAULT_MAX_EXTRACT_TIMES,
@@ -34,6 +38,7 @@ from backend.app.api.schemas.huayuan_radar_event import (
 from backend.domain.flows.manager import FlowManager
 from backend.domain.state import FlowState
 from backend.domain.tools.huayuan_radar_event_context import (
+    MAX_KNOWLEDGE_DOCS_LIMIT,
     HuayuanRadarEventContext,
     build_radar_event_context_from_request,
     classify_authority_tier,
@@ -103,6 +108,43 @@ def resolve_radar_tool_quotas(
     return int(max_bocha), int(max_anysearch), int(max_extract_times), int(max_results)
 
 
+def resolve_radar_knowledge_config(ctx_body: Any) -> Dict[str, Any]:
+    """
+        解析知识库开关与限额（请求可选 `context.knowledge`）。
+
+        ⚠️ A/B 契约：未传 knowledge 或 enabled=false 时**一律按关闭返回** —— gather 节点
+        不做任何 Milvus 检索、也不会有可加载的 doc_id 白名单，评分行为与改造前完全一致。
+        `max_load_times` 为 load_news_document 的调用上限（缺省 3）。
+
+        Args:
+            ctx_body: 请求 context
+
+        Returns:
+            {"enabled": bool, "max_docs": int, "max_load_times": int}
+    """
+    cfg = getattr(ctx_body, "knowledge", None)
+    if cfg is None or not bool(getattr(cfg, "enabled", False)):
+        return {
+            "enabled": False,
+            "max_docs": DEFAULT_KNOWLEDGE_MAX_DOCS,
+            "max_load_times": DEFAULT_KNOWLEDGE_MAX_LOAD_TIMES,
+        }
+
+    raw_docs = getattr(cfg, "max_docs", None)
+    raw_loads = getattr(cfg, "max_load_times", None)
+    max_docs = (
+        int(raw_docs) if raw_docs is not None else DEFAULT_KNOWLEDGE_MAX_DOCS
+    )
+    max_load_times = (
+        int(raw_loads) if raw_loads is not None else DEFAULT_KNOWLEDGE_MAX_LOAD_TIMES
+    )
+    return {
+        "enabled": True,
+        "max_docs": max(1, min(MAX_KNOWLEDGE_DOCS_LIMIT, max_docs)),
+        "max_load_times": max(0, max_load_times),
+    }
+
+
 def build_radar_event_initial_state(
     request: HuayuanRadarEventRequest,
     trace_id: str,
@@ -120,6 +162,7 @@ def build_radar_event_initial_state(
     ctx = request.context
     query_hint = (ctx.query_hint or "").strip() or DEFAULT_QUERY_HINT
     max_bocha, max_anysearch, max_extract_times, _ = resolve_radar_tool_quotas(ctx)
+    knowledge = resolve_radar_knowledge_config(ctx)
     return {
         "current_message": HumanMessage(
             content=(
@@ -147,6 +190,10 @@ def build_radar_event_initial_state(
             "max_bocha": str(max_bocha),
             "max_anysearch": str(max_anysearch),
             "max_extract_times": str(max_extract_times),
+            # 知识库开关（终评模板用 knowledge_max_load_times 说明调用上限）
+            "knowledge_enabled": "true" if knowledge["enabled"] else "false",
+            "knowledge_max_docs": str(knowledge["max_docs"]),
+            "knowledge_max_load_times": str(knowledge["max_load_times"]),
             # 采集节点写入前给占位，避免终评模板残留未替换花括号
             "evidence_briefs": "[]",
             "discarded_briefs": "[]",
@@ -310,6 +357,7 @@ def _parse_evidences(raw: Any) -> List[RadarEventEvidenceItem]:
         tier = ev.get("authority_tier") or ev.get("authorityTier")
         if not tier and url_str:
             tier = classify_authority_tier(url_str)
+        source_level = ev.get("source_level") or ev.get("sourceLevel")
         items.append(
             RadarEventEvidenceItem(
                 title=ev.get("title"),
@@ -319,6 +367,8 @@ def _parse_evidences(raw: Any) -> List[RadarEventEvidenceItem]:
                 publish_date=ev.get("publish_date") or ev.get("publishDate"),
                 source_host=str(host) if host else None,
                 authority_tier=str(tier) if tier else None,
+                # 知识库召回=P0、网络搜索=P2（归一为大写；缺省 None 由调用方兜底）
+                source_level=str(source_level).strip().upper() if source_level else None,
                 kept=_as_bool(ev.get("kept", True), True),
             )
         )
@@ -524,12 +574,23 @@ async def huayuan_radar_event_score(
     max_bocha, max_anysearch, max_extract_times, max_results = resolve_radar_tool_quotas(
         ctx_body
     )
+    knowledge = resolve_radar_knowledge_config(ctx_body)
+    # 知识库工具回调基址（与画像工具共用同一环境变量；请求不带 base_url）
+    document_tool_base_url = (os.getenv("HUAYUAN_DOCUMENT_TOOL_BASE_URL") or "").strip()
+    if knowledge["enabled"] and not document_tool_base_url:
+        logger.warning(
+            "知识库已开启，但未配置 HUAYUAN_DOCUMENT_TOOL_BASE_URL："
+            "Milvus 检索不受影响，load_news_document 将无法回调 exhibition"
+        )
 
     logger.info(
         f"[华院RadarEvent请求开始] trace_id={trace_id}, "
         f"company={company.company_name}, stock_code={company.stock_code}, "
         f"event_job_id={ctx_body.event_job_id}, "
-        f"max_bocha={max_bocha}, max_anysearch={max_anysearch}"
+        f"max_bocha={max_bocha}, max_anysearch={max_anysearch}, "
+        f"knowledge_enabled={knowledge['enabled']}, "
+        f"knowledge_max_docs={knowledge['max_docs']}, "
+        f"knowledge_max_load_times={knowledge['max_load_times']}"
     )
 
     runtime_ctx = build_radar_event_context_from_request(
@@ -543,6 +604,12 @@ async def huayuan_radar_event_score(
         max_extract_chars=DEFAULT_MAX_EXTRACT_CHARS,
         event_job_id=ctx_body.event_job_id,
         trace_id=trace_id,
+        company_id=company.company_id,
+        knowledge_enabled=knowledge["enabled"],
+        knowledge_max_docs=knowledge["max_docs"],
+        knowledge_max_load_times=knowledge["max_load_times"],
+        knowledge_max_chars=DEFAULT_KNOWLEDGE_MAX_CHARS,
+        document_tool_base_url=document_tool_base_url,
     )
 
     try:
@@ -581,7 +648,11 @@ async def huayuan_radar_event_score(
             f"exhibition_related={score_result.exhibition_related}, "
             f"total_score={score_result.total_score}, "
             f"search_count={score_result.search_count}, "
-            f"bocha={runtime_ctx.bocha_count}, anysearch={runtime_ctx.anysearch_count}"
+            f"bocha={runtime_ctx.bocha_count}, anysearch={runtime_ctx.anysearch_count}, "
+            f"knowledge_enabled={runtime_ctx.knowledge.enabled}, "
+            f"knowledge_hit_rate={runtime_ctx.knowledge.hit_rate:.2f}, "
+            f"knowledge_whitelist={len(runtime_ctx.knowledge.recalled_doc_ids)}, "
+            f"knowledge_load_count={runtime_ctx.knowledge.load_count}"
         )
         return HuayuanRadarEventResponse(
             trace_id=trace_id,

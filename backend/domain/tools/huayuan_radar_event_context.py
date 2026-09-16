@@ -9,13 +9,21 @@ from __future__ import annotations
 import contextvars
 import threading
 from dataclasses import dataclass, field
-from typing import List, Optional, Set
+from typing import Any, List, Optional, Set
 from urllib.parse import urlparse
 
 
 _radar_event_ctx: contextvars.ContextVar[Optional["HuayuanRadarEventContextData"]] = (
     contextvars.ContextVar("huayuan_radar_event_ctx", default=None)
 )
+
+# ---------------- 知识库（Milvus 检索 + load_news_document）默认值 ----------------
+# 设计文档：exhibition projectDocs/技术设计-260915/02-知识库的构建/01-Claude的思考.md §3.3
+DEFAULT_KNOWLEDGE_MAX_DOCS = 20
+DEFAULT_KNOWLEDGE_MAX_LOAD_TIMES = 3
+DEFAULT_KNOWLEDGE_MAX_CHARS = 12000
+# max_docs 合理区间（防止请求误传导致 briefs 爆炸）
+MAX_KNOWLEDGE_DOCS_LIMIT = 50
 
 # 监管/交易所类主机后缀（启发式，可后续扩展）
 _REGULATOR_HOST_SUFFIXES = (
@@ -41,12 +49,120 @@ _UGC_HOST_FRAGMENTS = (
 
 
 @dataclass
+class RadarKnowledgeState:
+    """
+    单次规则二请求的知识库状态（请求级，对齐 HuayuanPortraitContext 的用法）。
+
+    - `recalled_doc_ids`：本次 gather 从 Milvus 召回的 doc_id 白名单，
+      **由 gather 节点写入、由 load_news_document 工具校验**；空集 = 未召回，
+      此时一律拒绝加载（防乱拉，不允许「空=全放行」）。
+    - 召回观测计数：区分「检索调用失败」与「调用成功但零命中」（01 文档 §8 风险 9）。
+    """
+
+    enabled: bool = False
+    max_docs: int = DEFAULT_KNOWLEDGE_MAX_DOCS
+    max_load_times: int = DEFAULT_KNOWLEDGE_MAX_LOAD_TIMES
+    max_chars: int = DEFAULT_KNOWLEDGE_MAX_CHARS
+    document_tool_base_url: str = ""
+    recalled_doc_ids: Set[str] = field(default_factory=set)
+    loaded_doc_ids: Set[str] = field(default_factory=set)
+    load_count: int = 0
+    recall_query_count: int = 0
+    recall_error_queries: int = 0
+    recall_hit_queries: int = 0
+    recall_zero_hit_queries: int = 0
+    recalled_doc_count: int = 0
+    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False, compare=False)
+
+    @property
+    def hit_rate(self) -> float:
+        """命中率 = 有命中的 query 数 / 已发起检索的 query 数（无检索时为 0）。"""
+        if self.recall_query_count <= 0:
+            return 0.0
+        return self.recall_hit_queries / self.recall_query_count
+
+    def register_recalled(self, doc_ids: Any) -> int:
+        """
+            记录本次 gather 召回命中的 doc_id（并入白名单）。
+
+            Args:
+                doc_ids: doc_id 序列（int/str 混合）
+
+            Returns:
+                白名单新增条数
+        """
+        added = 0
+        with self._lock:
+            for doc_id in doc_ids or []:
+                s = str(doc_id).strip()
+                if not s or s in self.recalled_doc_ids:
+                    continue
+                self.recalled_doc_ids.add(s)
+                added += 1
+            self.recalled_doc_count = len(self.recalled_doc_ids)
+        return added
+
+    def mark_recall_result(self, *, hit_count: int, failed: bool = False) -> None:
+        """
+            记录单条 query 的检索结果（供命中率统计）。
+
+            Args:
+                hit_count: 该 query 召回条数（failed=True 时忽略）
+                failed: 是否「检索调用失败」（区别于调用成功但零命中）
+        """
+        with self._lock:
+            self.recall_query_count += 1
+            if failed:
+                self.recall_error_queries += 1
+            elif hit_count > 0:
+                self.recall_hit_queries += 1
+            else:
+                self.recall_zero_hit_queries += 1
+
+    def can_load(self, doc_id: Any) -> tuple[bool, str]:
+        """
+            判断是否允许用 load_news_document 拉取指定 doc_id 的全文。
+
+            Args:
+                doc_id: 知识库文档 ID（≡ radar_company_news_document.id）
+
+            Returns:
+                (是否允许, 不允许时的原因文案)
+        """
+        did = str(doc_id).strip()
+        if not did:
+            return False, "doc_id 为空"
+        if not self.enabled:
+            return False, "本次请求未启用知识库（context.knowledge.enabled=false）"
+        with self._lock:
+            # 白名单严格校验：未在本次召回结果内一律拒绝（不允许空集放行）
+            if did not in self.recalled_doc_ids:
+                return False, (
+                    f"doc_id={did} 不在本次召回白名单内，"
+                    "只能加载 briefs 中 tool_name=knowledge_base 且给出了 doc_id 的条目"
+                )
+            if did in self.loaded_doc_ids:
+                return False, f"doc_id={did} 已加载过，请复用已有正文，勿重复请求"
+            if self.load_count >= self.max_load_times:
+                return False, f"已达加载上限 max_load_times={self.max_load_times}"
+        return True, ""
+
+    def mark_loaded(self, doc_id: Any) -> None:
+        """记录一次已发起的全文加载（计入次数与去重集合）。"""
+        did = str(doc_id).strip()
+        with self._lock:
+            self.loaded_doc_ids.add(did)
+            self.load_count += 1
+
+
+@dataclass
 class HuayuanRadarEventContextData:
-    """单次规则二评分请求的可变运行时状态（分工具配额）。"""
+    """单次规则二评分请求的可变运行时状态（分工具配额 + 知识库开关）。"""
 
     company_name: str = ""
     stock_code: str = ""
     aliases: List[str] = field(default_factory=list)
+    company_id: Optional[int] = None
     max_bocha: int = 10
     max_anysearch: int = 10
     max_extract_times: int = 8
@@ -60,6 +176,7 @@ class HuayuanRadarEventContextData:
     searched_bocha_queries: Set[str] = field(default_factory=set)
     searched_anysearch_queries: Set[str] = field(default_factory=set)
     extracted_urls: Set[str] = field(default_factory=set)
+    knowledge: RadarKnowledgeState = field(default_factory=RadarKnowledgeState)
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False, compare=False)
 
     @property
@@ -227,6 +344,12 @@ def build_radar_event_context_from_request(
     max_extract_chars: int,
     event_job_id: Optional[int],
     trace_id: str,
+    company_id: Optional[int] = None,
+    knowledge_enabled: bool = False,
+    knowledge_max_docs: int = DEFAULT_KNOWLEDGE_MAX_DOCS,
+    knowledge_max_load_times: int = DEFAULT_KNOWLEDGE_MAX_LOAD_TIMES,
+    knowledge_max_chars: int = DEFAULT_KNOWLEDGE_MAX_CHARS,
+    document_tool_base_url: str = "",
 ) -> HuayuanRadarEventContextData:
     """
         根据请求字段构造规则二上下文数据。
@@ -242,6 +365,12 @@ def build_radar_event_context_from_request(
             max_extract_chars: 抽取正文最大字符数
             event_job_id: 业务任务 ID（可选）
             trace_id: 追踪 ID
+            company_id: 企业 ID（知识库 Milvus 按 company_id 过滤；可选）
+            knowledge_enabled: 知识库开关（缺省 False = 旧行为不变）
+            knowledge_max_docs: 知识库召回条数上限
+            knowledge_max_load_times: load_news_document 最大调用次数
+            knowledge_max_chars: 单次拉取正文最大字符数
+            document_tool_base_url: 工具回调基址（缺省回退环境变量）
 
         Returns:
             HuayuanRadarEventContextData 实例
@@ -250,6 +379,7 @@ def build_radar_event_context_from_request(
         company_name=(company_name or "").strip(),
         stock_code=(stock_code or "").strip(),
         aliases=[str(a).strip() for a in (aliases or []) if str(a).strip()],
+        company_id=_coerce_optional_int(company_id),
         max_bocha=max(0, int(max_bocha)),
         max_anysearch=max(0, int(max_anysearch)),
         max_extract_times=max(0, int(max_extract_times)),
@@ -257,7 +387,39 @@ def build_radar_event_context_from_request(
         max_extract_chars=max(1, int(max_extract_chars)),
         event_job_id=event_job_id,
         trace_id=trace_id,
+        knowledge=RadarKnowledgeState(
+            enabled=bool(knowledge_enabled),
+            max_docs=max(1, min(MAX_KNOWLEDGE_DOCS_LIMIT, int(knowledge_max_docs))),
+            max_load_times=max(0, int(knowledge_max_load_times)),
+            max_chars=max(1, int(knowledge_max_chars)),
+            document_tool_base_url=(document_tool_base_url or "").strip().rstrip("/"),
+        ),
     )
+
+
+def _coerce_optional_int(value: Any) -> Optional[int]:
+    """
+        宽松解析可选整数（company_id 可能以 int/str 传入）。
+
+        Args:
+            value: 原始值
+
+        Returns:
+            int；无法解析或为空时返回 None
+    """
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    s = str(value).strip()
+    if not s:
+        return None
+    try:
+        return int(s)
+    except (TypeError, ValueError):
+        return None
 
 
 def extract_source_host(url: str) -> str:

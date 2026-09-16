@@ -183,6 +183,192 @@ class Settings(BaseSettings):
         description="博查 AI Web Search API Key",
     )
 
+    # ---------------- 新闻知识库 embedding（公司统一 LLM 网关，OpenAI 兼容模式） ----------------
+    # 设计文档：exhibition projectDocs/技术设计-260915/02-知识库的构建/01-Claude的思考.md
+    # .env 键名按现网：HUAYUAN_API_KEY / HUAYUAN_API_URL_embeddings
+    HUAYUAN_API_KEY: Optional[str] = Field(
+        default=None,
+        description="公司统一 LLM 网关鉴权 key（embedding 等 OpenAI 兼容接口共用）",
+    )
+    HUAYUAN_API_URL_embeddings: Optional[str] = Field(
+        default=None,
+        description="公司网关 embedding 完整端点（以 /embeddings 结尾）",
+    )
+    EMBEDDING_MODEL: str = Field(
+        default="unidt/embedding-bge-m3",
+        description="embedding 模型：unidt/embedding-bge-m3 / unidt/embedding-qwen3",
+    )
+    EMBEDDING_DIM: Optional[int] = Field(
+        default=None,
+        description="embedding 维度；None 时以接口返回为准（建 Milvus collection 前必须确认）",
+    )
+    EMBEDDING_TIMEOUT_SECONDS: int = Field(
+        default=60, description="单次 embedding 请求超时（秒）"
+    )
+    EMBEDDING_BATCH_SIZE: int = Field(
+        default=16, description="批量 embedding 单请求条数"
+    )
+
+    @property
+    def is_embedding_enabled(self) -> bool:
+        """知识库 embedding 可用性：显式配置端点 + 有鉴权 key。"""
+        return bool(self.HUAYUAN_API_URL_embeddings and self.HUAYUAN_API_KEY)
+
+    # ---------------- 新闻知识库 Milvus 向量库 ----------------
+    MILVUS_URI: Optional[str] = Field(
+        default=None, description="Milvus 连接地址，如 http://host:port"
+    )
+    MILVUS_USER: Optional[str] = Field(
+        default=None, description="Milvus 用户名（与 TOKEN 二选一）"
+    )
+    MILVUS_PASSWORD: Optional[str] = Field(
+        default=None, description="Milvus 密码"
+    )
+    MILVUS_TOKEN: Optional[str] = Field(
+        default=None, description="Milvus token（与 USER/PASSWORD 二选一）"
+    )
+    MILVUS_DB_NAME: str = Field(
+        default="exhibition_test", description="Milvus 数据库名（现网 exhibition_test 是库名，非 collection 名）"
+    )
+    MILVUS_COLLECTION: str = Field(
+        default="radar_company_news_doc",
+        description="新闻知识库 collection 名（建在 MILVUS_DB_NAME 库内，不与库内其它项目 collection 混用）",
+    )
+
+    @property
+    def is_milvus_enabled(self) -> bool:
+        """Milvus 可用性：有地址 + 有 user/password 或 token。"""
+        return bool(self.MILVUS_URI and (self.MILVUS_TOKEN or (self.MILVUS_USER and self.MILVUS_PASSWORD)))
+
+    # ---------------- 雷达新闻知识库（exhibition MySQL，仅两张表） ----------------
+    # 设计文档：exhibition projectDocs/技术设计-260915/02-知识库的构建/01-Claude的思考.md
+    #          §3.1（两段式 worker）/ §4.1、§4.2（两表定义）
+    #
+    # ⚠️ 访问边界（硬性）：gd25 对 exhibition MySQL 只碰两张表
+    #    - radar_news_content_task        SELECT / UPDATE（抢锁、回写状态）
+    #    - radar_company_news_document    INSERT / UPDATE / SELECT（写正文、补跑扫描）
+    #    其余 exhibition 表零接触；DDL 归 exhibition Java SQL 脚本
+    #    （projectDocs/技术设计文档-0905/SQL脚本/17_radar_news_content_schema.sql）。
+    #
+    # ⚠️ 与 gd25 主库（PostgreSQL，DATABASE_URL）完全独立：本组配置只服务
+    #    news_content_worker 常驻进程，不参与 FastAPI 请求链路。
+    EXHIBITION_MYSQL_HOST: Optional[str] = Field(
+        default=None, description="exhibition MySQL 主机（雷达新闻知识库写链路）"
+    )
+    EXHIBITION_MYSQL_PORT: int = Field(default=3306, description="exhibition MySQL 端口")
+    EXHIBITION_MYSQL_USER: Optional[str] = Field(
+        default=None, description="exhibition MySQL 用户名"
+    )
+    EXHIBITION_MYSQL_PASSWORD: Optional[str] = Field(
+        default=None, description="exhibition MySQL 密码（只落 .env，禁止入库/入库代码）"
+    )
+    EXHIBITION_MYSQL_DB: Optional[str] = Field(
+        default=None, description="exhibition MySQL 库名（unidt_exhibition）"
+    )
+    EXHIBITION_MYSQL_CHARSET: str = Field(
+        default="utf8mb4", description="连接字符集（表为 utf8mb4，勿改）"
+    )
+    EXHIBITION_MYSQL_CONNECT_TIMEOUT: int = Field(
+        default=10, description="建连超时（秒）"
+    )
+    EXHIBITION_MYSQL_POOL_SIZE: int = Field(
+        default=4, description="worker 侧连接池大小（单进程串行处理，无需很大）"
+    )
+
+    @property
+    def is_exhibition_mysql_enabled(self) -> bool:
+        """exhibition MySQL 可用性：host / user / db 三项齐备即可判定。"""
+        return bool(
+            (self.EXHIBITION_MYSQL_HOST or "").strip()
+            and (self.EXHIBITION_MYSQL_USER or "").strip()
+            and (self.EXHIBITION_MYSQL_DB or "").strip()
+        )
+
+    def require_exhibition_mysql(self) -> dict:
+        """
+            返回 exhibition MySQL 连接参数；未配置时抛出明确错误。
+
+            ⚠️ 返回值含密码，只允许传给建连函数，禁止打日志。
+
+            Returns:
+                dict: host / port / user / password / database / charset 等
+
+            Raises:
+                RuntimeError: 未配置 exhibition MySQL
+        """
+        if not self.is_exhibition_mysql_enabled:
+            raise RuntimeError(
+                "未配置 exhibition MySQL（雷达新闻知识库写链路）。"
+                "请在 .env 设置 EXHIBITION_MYSQL_HOST / EXHIBITION_MYSQL_USER / "
+                "EXHIBITION_MYSQL_PASSWORD / EXHIBITION_MYSQL_DB。"
+            )
+        return {
+            "host": (self.EXHIBITION_MYSQL_HOST or "").strip(),
+            "port": int(self.EXHIBITION_MYSQL_PORT),
+            "user": (self.EXHIBITION_MYSQL_USER or "").strip(),
+            "password": self.EXHIBITION_MYSQL_PASSWORD or "",
+            "database": (self.EXHIBITION_MYSQL_DB or "").strip(),
+            "charset": self.EXHIBITION_MYSQL_CHARSET,
+            "connect_timeout": int(self.EXHIBITION_MYSQL_CONNECT_TIMEOUT),
+        }
+
+    # ---------------- 雷达新闻知识库 worker 调参 ----------------
+    # 与 NEWS_CRAWL_* 同风格：全部可用环境变量覆盖，默认值面向「常驻单实例」。
+    NEWS_CONTENT_WORKER_ID: Optional[str] = Field(
+        default=None,
+        description="worker 实例标识；None 时用 hostname:pid 自动生成（写入 task.locked_by）",
+    )
+    NEWS_CONTENT_BATCH_SIZE: int = Field(
+        default=5, description="每轮领取任务数上限（N）"
+    )
+    NEWS_CONTENT_POLL_INTERVAL_SECONDS: float = Field(
+        default=15.0, description="无任务时的轮询间隔（秒）"
+    )
+    NEWS_CONTENT_LOCK_TIMEOUT_SECONDS: int = Field(
+        default=1800, description="RUNNING 超时（秒）；超时未回写视为 worker 挂死，重置回 PENDING"
+    )
+    NEWS_CONTENT_SITE_MIN_INTERVAL_SECONDS: float = Field(
+        default=2.0,
+        description="同站（source_url_id 维度）最小抓取间隔（秒），网站礼貌抓取",
+    )
+    NEWS_CONTENT_HTTP_TIMEOUT_SECONDS: float = Field(
+        default=25.0, description="详情页单次抓取超时（秒）"
+    )
+    NEWS_CONTENT_HTTP_MAX_RETRIES: int = Field(
+        default=1, description="详情页规则抓取重试次数（总尝试 = 1 + 本值）"
+    )
+    NEWS_CONTENT_FETCH_MIN_CHARS: int = Field(
+        default=120, description="正文最短字符数；低于此值视为规则抓取失败（走 Agent 兜底）"
+    )
+    NEWS_CONTENT_SUMMARY_MAX_LENGTH: int = Field(
+        default=200, description="content_summary 摘要字数"
+    )
+    NEWS_CONTENT_EMBED_TEXT_MAX_CHARS: int = Field(
+        default=2000, description="实际嵌入文本 = title + 正文前 N 字（V1 不分 chunk）"
+    )
+    NEWS_CONTENT_AGENT_FALLBACK_ENABLED: bool = Field(
+        default=True, description="规则失败时是否启用 Agent 兜底"
+    )
+    NEWS_CONTENT_AGENT_DAILY_QUOTA: int = Field(
+        default=30,
+        description="Agent 兜底日配额（硬约束，按进程内自然日计数）；对齐 news-url-crawl 成本纪律",
+    )
+    NEWS_CONTENT_AGENT_MAX_CONSECUTIVE_FAILURES: int = Field(
+        default=5, description="Agent 兜底连续失败 N 次后熔断（当日不再兜底）"
+    )
+    NEWS_CONTENT_AGENT_TIMEOUT_SECONDS: int = Field(
+        default=180, description="单次 Agent 兜底墙钟超时（秒）"
+    )
+    NEWS_CONTENT_EMBED_BACKFILL_BATCH_SIZE: int = Field(
+        default=10, description="补跑循环每轮扫描的 document 条数"
+    )
+    NEWS_CONTENT_EMBED_BACKFILL_INTERVAL_SECONDS: float = Field(
+        default=120.0, description="补跑循环触发间隔（秒）"
+    )
+    NEWS_CONTENT_EMBED_MAX_ATTEMPTS: int = Field(
+        default=3, description="单篇 embedding 最大尝试次数；超过后保持 embed_status=2 不再重试"
+    )
+
     # 默认模型配置（可选）
     LLM_MODEL: str = Field(default="doubao-seed-1-6-251015", description="默认模型名称")
     LLM_TEMPERATURE: float = Field(default=0.7, description="默认温度参数")

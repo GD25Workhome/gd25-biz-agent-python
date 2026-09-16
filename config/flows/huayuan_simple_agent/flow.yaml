@@ -9,7 +9,7 @@ nodes:
     config:
       prompt: prompts/simple_reply.md
       model:
-        provider: doubao
+        provider: huayuan
         temperature: 0.7
         thinking:
           type: disabled

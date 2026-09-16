@@ -1,15 +1,51 @@
 """
 文章内容提取器
 """
+from dataclasses import dataclass
 from typing import Optional, Tuple
+import hashlib
 import trafilatura
 from selectolax.parser import HTMLParser
 import re
 
 
+@dataclass(frozen=True)
+class ExtractedArticle:
+    """
+    服务化输出：一篇详情页文章的抽取结果（雷达新闻知识库写链路用）。
+
+    ⚠️ 与 `ContentExtractor.extract()` 的三元组返回值并存，不改原签名 ——
+    原三元组是 news 抓取链路（`pipeline/crawl_one.py`）在用的，动了会破坏调用方。
+
+    字段与 exhibition `radar_company_news_document` 表对齐（§4.2）：
+        title / published_at / content_text / content_summary / content_hash
+    """
+
+    url: str
+    title: Optional[str]
+    published_at: Optional[str]
+    content_text: Optional[str]
+    content_summary: str
+    content_hash: Optional[str]
+
+    @property
+    def ok(self) -> bool:
+        """是否具备入库条件（至少要有正文）。"""
+        return bool(self.content_text and self.content_text.strip())
+
+    def satisfies(self, min_chars: int) -> bool:
+        """
+        是否满足最小正文长度要求。
+
+        Args:
+            min_chars: 正文最少字符数（低于此值判定为规则抓取失败，交给 Agent 兜底）
+        """
+        return bool(self.content_text) and len(self.content_text.strip()) >= int(min_chars)
+
+
 class ContentExtractor:
     """文章内容提取器"""
-    
+
     @staticmethod
     def extract(html: str, url: str, list_title: Optional[str] = None, 
                 list_date: Optional[str] = None) -> Tuple[Optional[str], Optional[str], Optional[str]]:
@@ -231,17 +267,82 @@ class ContentExtractor:
     def generate_summary(content: str, max_length: int = 200) -> str:
         """
         生成内容摘要
-        
+
         简单截取前 N 个字符
         """
         if not content:
             return ""
-        
+
         # 清理多余空白
         summary = " ".join(content.split())
-        
+
         if len(summary) <= max_length:
             return summary
-        
+
         # 截断并添加省略号
         return summary[:max_length].rsplit(" ", 1)[0] + "..."
+
+    # ------------------------------------------------------------ 服务化入口
+    # 以下为「雷达新闻知识库写链路」（gd25 news_content_worker）新增：
+    # 原地服务化，不移植代码 —— 抽取器只有这一份实现。
+
+    @staticmethod
+    def compute_content_hash(content: Optional[str]) -> Optional[str]:
+        """
+        计算正文哈希：空白归一后取 **sha1**（十六进制，40 字符）。
+
+        ⚠️ 与 `models.ArticleRecord.compute_content_hash` 的差别只在摘要算法：
+        那边是 sha256（64 字符，供文件/接口用），这边是 sha1 —— 因为
+        exhibition `radar_company_news_document.content_hash` 是 `char(40)`。
+        归一化口径（`" ".join(content.split())`）两者一致，勿改。
+
+        Args:
+            content: 正文；空则返回 None
+
+        Returns:
+            sha1 十六进制串，或 None
+        """
+        if not content:
+            return None
+        normalized = " ".join(str(content).split())
+        if not normalized:
+            return None
+        return hashlib.sha1(normalized.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def extract_article(
+        html: str,
+        url: str,
+        list_title: Optional[str] = None,
+        list_date: Optional[str] = None,
+        summary_max_length: int = 200,
+    ) -> ExtractedArticle:
+        """
+        抽取一篇详情页文章并补齐知识库所需字段（worker 直接调用）。
+
+        与 `extract()` 共用同一套抽取逻辑（trafilatura 主 + selectolax 回退），
+        只是把输出补成 `ExtractedArticle`：多生成 200 字摘要与 sha1 正文哈希。
+
+        Args:
+            html: 详情页 HTML
+            url: 详情页 URL
+            list_title: 列表页标题（回退用，任务表快照里没有时为 None）
+            list_date: 列表页日期（回退用）
+            summary_max_length: 摘要字数（默认 200）
+
+        Returns:
+            ExtractedArticle（正文可能为 None，由调用方按 min_chars 判定成败）
+        """
+        title, published_at, content = ContentExtractor.extract(
+            html, url, list_title=list_title, list_date=list_date
+        )
+        return ExtractedArticle(
+            url=url,
+            title=(title or "").strip() or None,
+            published_at=(published_at or "").strip() or None,
+            content_text=content,
+            content_summary=ContentExtractor.generate_summary(
+                content or "", max_length=summary_max_length
+            ),
+            content_hash=ContentExtractor.compute_content_hash(content),
+        )

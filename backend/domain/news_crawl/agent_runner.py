@@ -49,12 +49,16 @@ _SDK_ENV_KEYS = (
 )
 
 
-def _sdk_env() -> dict[str, str]:
+def build_sdk_env() -> dict[str, str]:
     """
     组装传给 CLI 子进程的 Anthropic 凭证。
 
     优先取 settings（项目约定配置过 settings），回退到 os.environ
     以兼容本地开发时直接用 shell 变量的场景。
+
+    ⚠️ 公开函数：雷达新闻知识库的详情页兜底 Agent
+    （`backend/domain/news_content/agent_fallback.py`）复用同一套凭证组装，
+    避免两处各写一份导致「一边能跑一边 401」。
     """
     env: dict[str, str] = {}
     for key in _SDK_ENV_KEYS:
@@ -62,6 +66,10 @@ def _sdk_env() -> dict[str, str]:
         if value:
             env[key] = str(value)
     return env
+
+
+# 兼容旧名（本模块历史内部引用）
+_sdk_env = build_sdk_env
 
 
 async def check_cli_available() -> bool:
@@ -129,7 +137,7 @@ async def run_news_crawl_agent(
     known_urls: list[str],
     company_name: str = "",
     stock_code: str = "",
-    max_pages: int = 8,
+    max_pages: int = 3,
     trace_id: Optional[str] = None,
 ) -> dict[str, Any]:
     """

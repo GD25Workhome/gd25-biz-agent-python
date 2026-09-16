@@ -25,3 +25,9 @@ providers:
     api_key: "${DEEPSEEK_API_KEY}"  # 从环境变量读取
     base_url: "https://api.deepseek.com"
 
+  - provider: "huayuan"
+    api_key: "${HUAYUAN_API_KEY}"
+    # SDK 会自己拼 /chat/completions，这里只能写到 /v1
+    base_url: "https://ai-api.unidtai.com/openapi/llm/compatible-mode/v1"
+    # 网关实测可用：qwen-plus / qwen3-max / deepseek-v3 / deepseek-chat
+    default_model: "deepseek/deepseek-v4.1-flash"

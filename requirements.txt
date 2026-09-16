@@ -64,3 +64,18 @@ volcengine-python-sdk[ark]>=5.0.0,<6.0.0
 # ⚠️ SDK 是 CLI 子进程模型：跑起来还需要镜像/主机里有 claude 可执行文件
 #    （Dockerfile 中通过 Node.js + npm i -g @anthropic-ai/claude-code 提供）
 claude-agent-sdk>=0.1.0,<1.0.0
+
+# 雷达新闻知识库写入链路（scripts/news_content_worker.py）
+# ⚠️ exhibition MySQL 是**独立于主库 PG 的另一个实例**，只读写
+#    radar_news_content_task / radar_company_news_document 两张表。
+#    选同步 pymysql + asyncio.to_thread（而非 aiomysql）的理由见
+#    backend/infrastructure/database/mysql_connection.py 模块 docstring。
+pymysql>=1.1.0,<2.0.0
+# ⚠️ MySQL 8 默认认证插件是 caching_sha2_password，PyMySQL 处理该插件
+#    必须要有 cryptography，缺了会直接报 "cryptography package is required"
+cryptography>=41.0.0
+# ⚠️ 勿降级到 2.x：pymilvus 3.x 与 2.4 有三处 API 差异（schema 路径不自动建索引、
+#    query(count(*)) 不能带 limit、drop_collection 异步），代码按 3.x 写，
+#    服务端为 Milvus v2.5.0。差异细节见
+#    backend/infrastructure/milvus/radar_news_doc_store.py 模块 docstring。
+pymilvus>=3.0.1,<4.0.0

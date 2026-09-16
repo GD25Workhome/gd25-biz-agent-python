@@ -165,6 +165,62 @@ def create_langfuse_handler(
         return None
 
 
+def record_observation_span(
+    name: str,
+    *,
+    input_data: Optional[Any] = None,
+    output_data: Optional[Any] = None,
+    metadata: Optional[Dict[str, Any]] = None,
+    trace_id: Optional[str] = None,
+    level: Optional[str] = None,
+) -> None:
+    """
+        记录一次手工观测 span（用于非 LangChain 调用链路的指标，如知识库召回命中率）。
+
+        ⚠️ 观测是旁路：未启用/未安装/任何异常都只打日志，**绝不向调用方抛异常**，
+        以免可观测性故障影响评分主链路。
+
+        Args:
+            name: span 名称
+            input_data: 输入（可选）
+            output_data: 输出/指标（可选）
+            metadata: 元数据（可选）
+            trace_id: 归属 trace（可选；传入则并入同一 trace）
+            level: 级别（DEBUG/DEFAULT/WARNING/ERROR，可选）
+    """
+    if not is_langfuse_available():
+        logger.debug("[Langfuse] 观测 span 跳过（Langfuse 不可用）: name=%s", name)
+        return
+
+    client = get_langfuse_client()
+    if client is None:
+        return
+
+    trace_context = None
+    if trace_id:
+        try:
+            trace_context = {"trace_id": normalize_langfuse_trace_id(str(trace_id))}
+        except Exception:
+            trace_context = None
+
+    kwargs: Dict[str, Any] = {
+        "name": name,
+        "input": input_data,
+        "metadata": metadata or {},
+    }
+    if trace_context:
+        kwargs["trace_context"] = trace_context
+    if level:
+        kwargs["level"] = level
+
+    try:
+        with client.start_as_current_span(**kwargs) as span:
+            if output_data is not None:
+                span.update(output=output_data)
+    except Exception as e:
+        logger.warning(f"[Langfuse] 观测 span 记录失败（已降级忽略）: name={name}, err={e}")
+
+
 def normalize_langfuse_trace_id(trace_id: str) -> str:
     """
         将 trace_id 转为 Langfuse 要求的 32 位小写十六进制。

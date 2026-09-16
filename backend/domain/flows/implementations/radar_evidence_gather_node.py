@@ -1,7 +1,8 @@
 """
 展厅发觉：证据采集 Function 节点
 
-按 planner 产出的 queries，节点内 asyncio.gather 并行调用博查 + AnySearch，
+按 planner 产出的 queries，节点内 asyncio.gather 并行调用博查 + AnySearch
+（知识库开关开启时**并列**加挂 Milvus 知识库检索，见 01 文档 §3.3 / 03 文档 T2.3），
 压缩为 evidence_briefs / discarded_briefs **仅写入 prompt_vars 一份**，供终评占位符使用；
 避免在 edges_var / persistence / flow_msgs 中重复塞同一份全量列表。
 """
@@ -18,11 +19,20 @@ from backend.domain.state import FlowState
 from backend.domain.tools.bocha_tool import bocha_web_search
 from backend.domain.tools.anysearch_tool import anysearch_web_search, anysearch_extract
 from backend.domain.tools.huayuan_radar_event_context import (
+    MAX_KNOWLEDGE_DOCS_LIMIT,
     extract_source_host,
     get_huayuan_radar_event_context,
+    text_mentions_subject,
 )
+from backend.infrastructure.observability.langfuse_handler import record_observation_span
 
 logger = logging.getLogger(__name__)
+
+# 知识库召回条目的契约字段（与 app/api/schemas/huayuan_radar_event.py 的常量保持一致）
+_KNOWLEDGE_TOOL_NAME = "knowledge_base"
+_KNOWLEDGE_SOURCE_LEVEL = "P0"
+# 知识库召回条目在 briefs 中的来源权威档（公司官网新闻）
+_KNOWLEDGE_AUTHORITY_TIER = "company_official"
 
 
 async def invoke_registered_tool(tool_obj: Any, payload: Dict[str, Any]) -> str:
@@ -79,7 +89,9 @@ _ACTION_HINT_KEYWORDS = (
 
 def _brief_priority(brief: Dict[str, Any]) -> tuple:
     """
-        终评入模排序：主体命中优先，其次含动作/空间关键词，再次有 quote。
+        终评入模排序：知识库（P0）优先，其次主体命中，再次含动作/空间关键词与 quote。
+
+        注：知识库未开启时 briefs 中不存在 knowledge_base 条目，排序结果与改造前一致。
 
         Args:
             brief: 单条 brief
@@ -96,6 +108,7 @@ def _brief_priority(brief: Dict[str, Any]) -> tuple:
     )
     kw_hits = sum(1 for kw in _ACTION_HINT_KEYWORDS if kw in text)
     return (
+        1 if brief.get("tool_name") == _KNOWLEDGE_TOOL_NAME else 0,
         1 if brief.get("subject_match") else 0,
         kw_hits,
         1 if brief.get("quote") else 0,
@@ -117,19 +130,26 @@ def _compact_briefs_for_prompt(briefs: List[Dict[str, Any]]) -> List[Dict[str, A
     selected = ranked[:_MAX_BRIEFS_FOR_PROMPT]
     compact: List[Dict[str, Any]] = []
     for b in selected:
-        compact.append(
-            {
-                "title": b.get("title"),
-                "url": b.get("url"),
-                "summary": _clip(str(b.get("summary") or ""), 160),
-                "quote": _clip(str(b.get("quote") or ""), 160) or None,
-                "why_evidential": _clip(str(b.get("why_evidential") or ""), 120),
-                "tool_name": b.get("tool_name"),
-                "source_host": b.get("source_host"),
-                "subject_match": bool(b.get("subject_match")),
-                "query": b.get("query"),
-            }
-        )
+        item = {
+            "title": b.get("title"),
+            "url": b.get("url"),
+            "summary": _clip(str(b.get("summary") or ""), 160),
+            "quote": _clip(str(b.get("quote") or ""), 160) or None,
+            "why_evidential": _clip(str(b.get("why_evidential") or ""), 120),
+            "tool_name": b.get("tool_name"),
+            "source_host": b.get("source_host"),
+            "subject_match": bool(b.get("subject_match")),
+            "query": b.get("query"),
+        }
+        # 知识库条目额外带 doc_id / source_level / score：
+        # doc_id 供 load_news_document 按需拉全文（白名单），source_level 供 evidences 落库
+        if b.get("doc_id"):
+            item["doc_id"] = str(b.get("doc_id"))
+        if b.get("source_level"):
+            item["source_level"] = b.get("source_level")
+        if b.get("score") is not None:
+            item["score"] = b.get("score")
+        compact.append(item)
     return compact
 
 
@@ -319,6 +339,246 @@ class EvidenceGatherNode(BaseFunctionNode):
         payload["query"] = query
         return payload
 
+    async def _knowledge_search_one(self, query: str) -> Dict[str, Any]:
+        """
+            单条 query 的知识库检索：query embedding（bge-m3，同写链路模型）→ Milvus 检索。
+
+            降级约定：任何失败都返回 `ok=False`（不抛异常），由调用方跳过该 query，
+            主链路（博查/AnySearch/终评）不受影响。
+
+            Args:
+                query: 检索式
+
+            Returns:
+                含 ok/results/query/error 的字典；results 项为
+                {"doc_id","title","summary","url","score"}
+        """
+        payload: Dict[str, Any] = {
+            "ok": False,
+            "query": query,
+            "results": [],
+            "error": "",
+        }
+        ctx = get_huayuan_radar_event_context()
+        if ctx is None or not ctx.knowledge.enabled:
+            payload["error"] = "知识库未启用"
+            return payload
+        if ctx.company_id is None:
+            # 缺 company_id 时不过滤会跨企业召回（幻觉/串证据风险），宁可跳过
+            payload["error"] = "缺少 company_id，已跳过知识库检索（避免跨企业召回）"
+            return payload
+
+        top_k = max(1, min(MAX_KNOWLEDGE_DOCS_LIMIT, int(ctx.knowledge.max_docs)))
+        # 延迟导入：开关关闭的请求完全不加载 pymilvus / embedding 依赖
+        try:
+            from backend.infrastructure.llm.huayuan_embedding_client import (
+                HuayuanEmbeddingClient,
+            )
+            from backend.infrastructure.milvus.radar_news_doc_store import (
+                get_milvus_store,
+            )
+
+            embedder = HuayuanEmbeddingClient()
+            try:
+                vector = await embedder.embed_one(query)
+            finally:
+                await embedder.aclose()
+            hits = await get_milvus_store().search_async(
+                vector, company_id=int(ctx.company_id), top_k=top_k
+            )
+        except Exception as e:
+            payload["error"] = f"{type(e).__name__}: {e}"
+            return payload
+
+        payload["ok"] = True
+        payload["results"] = [h for h in (hits or []) if isinstance(h, dict)]
+        return payload
+
+    def _merge_knowledge_results(
+        self,
+        ctx: Any,
+        knowledge_queries: List[str],
+        knowledge_results: List[Any],
+        briefs: List[Dict[str, Any]],
+        discarded: List[Dict[str, Any]],
+        seen_urls: Set[str],
+    ) -> None:
+        """
+            合并知识库检索结果：去重后按相似度取 top max_docs 并入 briefs（P0），
+            记录召回白名单，并输出命中率日志 + Langfuse 观测。
+
+            ⚠️ 「检索调用失败」与「调用成功但零命中」必须在日志/观测里可区分
+            （01 文档 §8 风险 9），否则无法判断「知识库没用」还是「知识库没接上」。
+
+            Args:
+                ctx: 规则二请求上下文
+                knowledge_queries: 本次知识库检索的 query 列表
+                knowledge_results: 与 queries 对齐的检索结果（或异常）
+                briefs: 可变 briefs 列表（知识库条目 append 在前）
+                discarded: 可变 discarded 列表（检索降级时补一条可读原因）
+                seen_urls: URL 去重集合（与两源共用）
+        """
+        knowledge = ctx.knowledge
+        candidates: List[Tuple[float, Dict[str, Any], str]] = []
+        first_error = ""
+        failed_queries = 0
+        # 先按相似度取 top max_docs，再与两源去重合并（对齐 03 文档 T2.3）
+        max_docs = max(1, min(MAX_KNOWLEDGE_DOCS_LIMIT, int(knowledge.max_docs)))
+
+        for query, result in zip(knowledge_queries, knowledge_results):
+            if isinstance(result, Exception):
+                knowledge.mark_recall_result(hit_count=0, failed=True)
+                failed_queries += 1
+                first_error = first_error or f"{type(result).__name__}: {result}"
+                continue
+            if not result.get("ok"):
+                knowledge.mark_recall_result(hit_count=0, failed=True)
+                failed_queries += 1
+                first_error = first_error or str(result.get("error") or "未知错误")
+                continue
+            hits = [h for h in (result.get("results") or []) if isinstance(h, dict)]
+            # 检索调用成功：命中数决定「命中」还是「零命中」（两者都计入命中率分母）
+            knowledge.mark_recall_result(hit_count=len(hits))
+            for hit in hits:
+                if not str(hit.get("doc_id") or "").strip():
+                    continue
+                try:
+                    score_value = float(hit.get("score"))
+                except (TypeError, ValueError):
+                    score_value = 0.0
+                candidates.append((score_value, hit, query))
+
+        candidates.sort(key=lambda x: x[0], reverse=True)
+        merged: List[Dict[str, Any]] = []
+        merged_doc_ids: List[str] = []
+        seen_doc_ids: Set[str] = set()
+        for _, hit, query in candidates:
+            if len(merged) >= max_docs:
+                break
+            doc_id = str(hit.get("doc_id") or "").strip()
+            url = str(hit.get("url") or "").strip()
+            if doc_id in seen_doc_ids:
+                continue
+            if not url.startswith("http") or url in seen_urls:
+                continue
+            seen_doc_ids.add(doc_id)
+            seen_urls.add(url)
+            merged.append(self._knowledge_brief(hit, query, ctx.subject_keywords()))
+            merged_doc_ids.append(doc_id)
+
+        briefs.extend(merged)
+        # 白名单 = 本次真正并入 briefs 的 doc_ids（load_news_document 只认这些）
+        knowledge.register_recalled(merged_doc_ids)
+
+        if failed_queries:
+            discarded.append(
+                {
+                    "title": None,
+                    "url": None,
+                    "reason": (
+                        f"知识库检索降级跳过（{failed_queries}/{len(knowledge_queries)} 条 query）："
+                        f"{first_error}"
+                    ),
+                }
+            )
+
+        logger.info(
+            f"[evidence_gather][knowledge] 召回统计 "
+            f"queries={knowledge.recall_query_count}, "
+            f"命中query={knowledge.recall_hit_queries}, "
+            f"零命中query={knowledge.recall_zero_hit_queries}, "
+            f"检索失败query={knowledge.recall_error_queries}, "
+            f"命中率={knowledge.hit_rate:.2f}, "
+            f"候选doc={len(candidates)}, 并入briefs={len(merged)}/{max_docs}, "
+            f"白名单={len(knowledge.recalled_doc_ids)}"
+        )
+        if knowledge.recall_query_count and knowledge.recall_hit_queries == 0:
+            logger.warning(
+                f"[evidence_gather][knowledge] 本次检索零命中："
+                f"失败query={knowledge.recall_error_queries}（0=调用成功但知识库内无该公司文档）；"
+                f"first_error={first_error or '(无)'}"
+            )
+
+        record_observation_span(
+            "knowledge_base_recall",
+            input_data={
+                "queries": knowledge_queries,
+                "company_id": ctx.company_id,
+                "max_docs": max_docs,
+            },
+            output_data={
+                "recall_query_count": knowledge.recall_query_count,
+                "hit_queries": knowledge.recall_hit_queries,
+                "zero_hit_queries": knowledge.recall_zero_hit_queries,
+                "error_queries": knowledge.recall_error_queries,
+                "hit_rate": round(knowledge.hit_rate, 4),
+                "candidate_docs": len(candidates),
+                "merged_briefs": len(merged),
+                "whitelist_size": len(knowledge.recalled_doc_ids),
+            },
+            metadata={
+                "flow": "huayuan_radar_event_agent",
+                "tool_name": _KNOWLEDGE_TOOL_NAME,
+                "source_level": _KNOWLEDGE_SOURCE_LEVEL,
+                "failed_queries": failed_queries,
+                "first_error": first_error[:200],
+            },
+            trace_id=(ctx.trace_id or None),
+            level=(
+                "WARNING"
+                if knowledge.recall_query_count and knowledge.recall_hit_queries == 0
+                else None
+            ),
+        )
+
+    def _knowledge_brief(
+        self,
+        hit: Dict[str, Any],
+        query: str,
+        subject_keywords: List[str],
+    ) -> Dict[str, Any]:
+        """
+            将一条 Milvus 召回命中转为 brief（tool_name=knowledge_base、source_level=P0）。
+
+            Args:
+                hit: Milvus 命中（doc_id/title/summary/url/score）
+                query: 命中的检索式
+                subject_keywords: 公司主体关键词（判定 subject_match）
+
+            Returns:
+                brief 字典（含 doc_id 供 load_news_document 使用）
+        """
+        doc_id = str(hit.get("doc_id") or "").strip()
+        title = hit.get("title")
+        summary = _clip(str(hit.get("summary") or ""))
+        url = str(hit.get("url") or "").strip()
+        score = hit.get("score")
+        try:
+            score_text = f"{float(score):.3f}"
+        except (TypeError, ValueError):
+            score_text = "未知"
+        return {
+            "title": title,
+            "url": url,
+            "summary": summary,
+            "quote": None,
+            "why_evidential": (
+                f"公司新闻知识库（官网新闻）召回，相似度 {score_text}；"
+                f"doc_id={doc_id}（可用 load_news_document 拉取全文核对原文）"
+            ),
+            "tool_name": _KNOWLEDGE_TOOL_NAME,
+            "source_level": _KNOWLEDGE_SOURCE_LEVEL,
+            "doc_id": doc_id,
+            "score": score,
+            "publish_date": None,
+            "source_host": extract_source_host(url),
+            "authority_tier": _KNOWLEDGE_AUTHORITY_TIER,
+            "subject_match": text_mentions_subject(
+                f"{title or ''}\n{summary}", subject_keywords
+            ),
+            "query": query,
+        }
+
     async def _maybe_extract(
         self,
         briefs: List[Dict[str, Any]],
@@ -336,6 +596,8 @@ class EvidenceGatherNode(BaseFunctionNode):
             for b in briefs
             if b.get("url")
             and not b.get("quote")
+            # 知识库条目走 load_news_document 按需拉全文，不占用 anysearch 抽取配额
+            and b.get("tool_name") != _KNOWLEDGE_TOOL_NAME
             and len(str(b.get("summary") or "")) < 80
         ][:_MAX_EXTRACT_CANDIDATES]
         if not candidates:
@@ -404,7 +666,7 @@ class EvidenceGatherNode(BaseFunctionNode):
                 f"anysearch={ctx.anysearch_count}/{ctx.max_anysearch}"
             )
 
-        # 2. 构造并行任务：每条 query ×（博查 + AnySearch）
+        # 2. 构造并行任务：每条 query ×（博查 + AnySearch）[+ 知识库检索（开关开时）]
         tasks_meta: List[Tuple[str, str]] = []
         coros = []
         for q in queries:
@@ -412,14 +674,40 @@ class EvidenceGatherNode(BaseFunctionNode):
                 tasks_meta.append((tool_name, q))
                 coros.append(self._search_one(tool_name, q))
 
+        web_task_count = len(coros)
+        knowledge_enabled = bool(ctx is not None and ctx.knowledge.enabled)
+        knowledge_queries: List[str] = []
+        if knowledge_enabled:
+            # 知识库检索与两源搜索**并列**（同一个 gather 内并行，互不阻塞）
+            for q in queries:
+                knowledge_queries.append(q)
+                coros.append(self._knowledge_search_one(q))
+            logger.info(
+                f"[evidence_gather][knowledge] 已并列挂载知识库检索 "
+                f"queries={len(knowledge_queries)}, company_id={ctx.company_id}, "
+                f"max_docs={ctx.knowledge.max_docs}, "
+                f"max_load_times={ctx.knowledge.max_load_times}"
+            )
+        else:
+            logger.info("[evidence_gather][knowledge] 知识库开关关闭，本次不做任何 Milvus 检索")
+
         results = await asyncio.gather(*coros, return_exceptions=True)
+        web_results = results[:web_task_count]
+        knowledge_results = results[web_task_count:]
 
         # 3. 归一为 briefs / discarded，URL 去重
         briefs: List[Dict[str, Any]] = []
         discarded: List[Dict[str, Any]] = []
         seen_urls: Set[str] = set()
 
-        for meta, result in zip(tasks_meta, results):
+        # 3.1 知识库条目优先入 briefs（P0 优先保住配额）；召回 doc_id 记入白名单
+        if knowledge_enabled and ctx is not None:
+            self._merge_knowledge_results(
+                ctx, knowledge_queries, knowledge_results, briefs, discarded, seen_urls
+            )
+
+        # 3.2 两源搜索结果（与知识库条目按 URL 去重，重复的跳过）
+        for meta, result in zip(tasks_meta, web_results):
             tool_name, query = meta
             if isinstance(result, Exception):
                 discarded.append(
@@ -515,6 +803,14 @@ class EvidenceGatherNode(BaseFunctionNode):
             "prompt_brief_count": len(prompt_briefs),
             "discarded_count": len(discarded),
         }
+        # 知识库开关开启时附加召回指标（开关关闭时不写，保持旧行为逐字节一致）
+        if knowledge_enabled and ctx is not None:
+            new_state["edges_var"]["knowledge_brief_count"] = sum(
+                1 for b in briefs if b.get("tool_name") == _KNOWLEDGE_TOOL_NAME
+            )
+            new_state["edges_var"]["knowledge_recall_hit_rate"] = round(
+                ctx.knowledge.hit_rate, 4
+            )
         # 保留规划 queries 供排障，但不复制 briefs
         persistence = dict(new_state.get("persistence_edges_var") or {})
         persistence["queries"] = queries
@@ -543,7 +839,10 @@ class EvidenceGatherNode(BaseFunctionNode):
             f"discarded={len(discarded)} (prompt用{len(prompt_discarded)}), "
             f"prompt_briefs_chars={len(briefs_json)}, "
             f"bocha={getattr(ctx, 'bocha_count', None)}, "
-            f"anysearch={getattr(ctx, 'anysearch_count', None)}"
+            f"anysearch={getattr(ctx, 'anysearch_count', None)}, "
+            f"knowledge_briefs="
+            f"{sum(1 for b in briefs if b.get('tool_name') == _KNOWLEDGE_TOOL_NAME)}, "
+            f"knowledge_enabled={knowledge_enabled}"
         )
         if briefs:
             # 仅日志保留前 3 条 URL，便于对照，不进 state

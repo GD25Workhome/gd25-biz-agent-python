@@ -35,6 +35,44 @@ DEFAULT_QUERY_HINT = (
     "展厅/展馆/展示中心/体验中心/长期展示空间等需求与招采、立项、改造信号"
 )
 
+# ---------------- 知识库（Milvus 检索 + 按需拉全文）默认值 ----------------
+# 设计文档：exhibition projectDocs/技术设计-260915/02-知识库的构建/01-Claude的思考.md §3.3
+#          / 03-子模块2-使用链路.md T2.2~T2.4
+DEFAULT_KNOWLEDGE_MAX_DOCS = 20
+DEFAULT_KNOWLEDGE_MAX_LOAD_TIMES = 3
+# 单次 load_news_document 拉取正文的最大字符数（工具内固定，不接受请求覆盖）
+DEFAULT_KNOWLEDGE_MAX_CHARS = 12000
+# 知识库召回条目的来源层级（官网新闻权威性高于 P2 网络搜索）
+SOURCE_LEVEL_KNOWLEDGE_BASE = "P0"
+# 知识库证据在 briefs / evidences 中的工具名
+TOOL_NAME_KNOWLEDGE_BASE = "knowledge_base"
+
+
+class RadarEventKnowledgeConfig(BaseModel):
+    """
+    知识库使用开关（请求可选）。
+
+    ⚠️ A/B 契约：**不传 / enabled=false 时，雷达事件评分与改造前完全一致**
+    （gather 不做任何 Milvus 调用，也不挂 load_news_document）。
+    需要开启知识库时必须显式传 `enabled=true`。
+    """
+
+    enabled: bool = Field(
+        default=False,
+        description="是否启用知识库（Milvus 检索 + 按需拉全文）；缺省 false=旧行为不变",
+    )
+    max_docs: Optional[int] = Field(
+        default=None,
+        description=f"本次并入 briefs 的知识库召回条数上限；缺省 {DEFAULT_KNOWLEDGE_MAX_DOCS}",
+    )
+    max_load_times: Optional[int] = Field(
+        default=None,
+        description=(
+            "本次 load_news_document 最大拉取次数；"
+            f"缺省 {DEFAULT_KNOWLEDGE_MAX_LOAD_TIMES}"
+        ),
+    )
+
 
 class RadarEventEvidenceItem(BaseModel):
     """单条可追溯证据。"""
@@ -46,6 +84,10 @@ class RadarEventEvidenceItem(BaseModel):
     publish_date: Optional[str] = Field(default=None, description="发布日期（原文表述）")
     source_host: Optional[str] = Field(default=None, description="来源主机")
     authority_tier: Optional[str] = Field(default=None, description="启发式权威档")
+    source_level: Optional[str] = Field(
+        default=None,
+        description="来源层级 P0/P1/P2（知识库召回=P0）；缺省 None 由调用方兜底",
+    )
     kept: bool = Field(default=True, description="是否纳入计分证据")
 
 
@@ -137,6 +179,10 @@ class HuayuanRadarEventRequestContext(BaseModel):
     max_anysearch: Optional[int] = Field(default=None, description="AnySearch 搜索次数上限")
     max_extract_times: Optional[int] = None
     max_results_per_search: Optional[int] = None
+    knowledge: Optional[RadarEventKnowledgeConfig] = Field(
+        default=None,
+        description="知识库使用开关（可选）；不传=禁用，旧请求行为完全不变",
+    )
 
 
 class HuayuanRadarEventRequest(BaseModel):

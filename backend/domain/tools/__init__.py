@@ -27,6 +27,8 @@ def init_tools() -> None:
     """
     # 1. 导入华院工具模块（触发自动注册）
     from backend.domain.tools import huayuan_document_tool  # noqa: F401
+    # 规则二知识库：按 doc_id 拉新闻正文（白名单=本次召回 doc_ids，受 max_load_times 限制）
+    from backend.domain.tools import load_news_document_tool  # noqa: F401
     from backend.domain.tools import anysearch_tool  # noqa: F401
     from backend.domain.tools import bocha_tool  # noqa: F401
 
