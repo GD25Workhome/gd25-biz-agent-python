@@ -24,6 +24,8 @@ from backend.domain.tools.huayuan_radar_event_context import (
     get_huayuan_radar_event_context,
     text_mentions_subject,
 )
+from backend.app.config import settings
+from backend.domain.news_content.chunking import strip_title_prefix
 from backend.infrastructure.observability.langfuse_handler import record_observation_span
 
 logger = logging.getLogger(__name__)
@@ -145,6 +147,14 @@ def _compact_briefs_for_prompt(briefs: List[Dict[str, Any]]) -> List[Dict[str, A
         # doc_id 供 load_news_document 按需拉全文（白名单），source_level 供 evidences 落库
         if b.get("doc_id"):
             item["doc_id"] = str(b.get("doc_id"))
+            # 知识库 quote 用策略 C 配置长度，避免压成 160 字丢掉命中片段
+            item["quote"] = (
+                _clip(
+                    str(b.get("quote") or ""),
+                    int(settings.KNOWLEDGE_BRIEF_QUOTE_MAX_CHARS),
+                )
+                or None
+            )
         if b.get("source_level"):
             item["source_level"] = b.get("source_level")
         if b.get("score") is not None:
@@ -368,15 +378,16 @@ class EvidenceGatherNode(BaseFunctionNode):
             payload["error"] = "缺少 company_id，已跳过知识库检索（避免跨企业召回）"
             return payload
 
-        top_k = max(1, min(MAX_KNOWLEDGE_DOCS_LIMIT, int(ctx.knowledge.max_docs)))
+        max_docs = max(1, min(MAX_KNOWLEDGE_DOCS_LIMIT, int(ctx.knowledge.max_docs)))
+        factor = max(1, int(settings.KNOWLEDGE_SEARCH_CHUNK_TOP_K_FACTOR))
+        # 候选按 chunk 放大，减轻长文占满 topK（策略 C）
+        top_k = min(128, max(max_docs * factor, max_docs + 8))
         # 延迟导入：开关关闭的请求完全不加载 pymilvus / embedding 依赖
         try:
             from backend.infrastructure.llm.huayuan_embedding_client import (
                 HuayuanEmbeddingClient,
             )
-            from backend.infrastructure.milvus.radar_news_doc_store import (
-                get_milvus_store,
-            )
+            from backend.infrastructure.milvus import get_milvus_store
 
             embedder = HuayuanEmbeddingClient()
             try:
@@ -448,26 +459,58 @@ class EvidenceGatherNode(BaseFunctionNode):
                     score_value = 0.0
                 candidates.append((score_value, hit, query))
 
+        # 1. 按 score 降序，为每个 doc 保留 best / second（second 需 index 间隔≥2）
         candidates.sort(key=lambda x: x[0], reverse=True)
+        best_by_doc: Dict[str, Dict[str, Any]] = {}
+        for score_value, hit, query in candidates:
+            doc_id = str(hit.get("doc_id") or "").strip()
+            entry = best_by_doc.get(doc_id)
+            if entry is None:
+                best_by_doc[doc_id] = {
+                    "best": hit,
+                    "best_score": score_value,
+                    "second": None,
+                    "second_score": None,
+                    "query": query,
+                }
+                continue
+            if entry.get("second") is not None:
+                continue
+            if not self._can_attach_second_chunk(
+                entry["best"], hit, entry["best_score"], score_value
+            ):
+                continue
+            entry["second"] = hit
+            entry["second_score"] = score_value
+
+        # 2. 按 best.score 取文档，URL 去重
+        ranked_docs = sorted(
+            best_by_doc.items(),
+            key=lambda kv: float(kv[1]["best_score"]),
+            reverse=True,
+        )
         merged: List[Dict[str, Any]] = []
         merged_doc_ids: List[str] = []
-        seen_doc_ids: Set[str] = set()
-        for _, hit, query in candidates:
+        for doc_id, entry in ranked_docs:
             if len(merged) >= max_docs:
                 break
-            doc_id = str(hit.get("doc_id") or "").strip()
+            hit = entry["best"]
             url = str(hit.get("url") or "").strip()
-            if doc_id in seen_doc_ids:
-                continue
             if not url.startswith("http") or url in seen_urls:
                 continue
-            seen_doc_ids.add(doc_id)
             seen_urls.add(url)
-            merged.append(self._knowledge_brief(hit, query, ctx.subject_keywords()))
+            merged.append(
+                self._knowledge_brief(
+                    hit,
+                    entry["query"],
+                    ctx.subject_keywords(),
+                    second_hit=entry.get("second"),
+                    second_score=entry.get("second_score"),
+                )
+            )
             merged_doc_ids.append(doc_id)
 
         briefs.extend(merged)
-        # 白名单 = 本次真正并入 briefs 的 doc_ids（load_news_document 只认这些）
         knowledge.register_recalled(merged_doc_ids)
 
         if failed_queries:
@@ -489,7 +532,8 @@ class EvidenceGatherNode(BaseFunctionNode):
             f"零命中query={knowledge.recall_zero_hit_queries}, "
             f"检索失败query={knowledge.recall_error_queries}, "
             f"命中率={knowledge.hit_rate:.2f}, "
-            f"候选doc={len(candidates)}, 并入briefs={len(merged)}/{max_docs}, "
+            f"候选chunk={len(candidates)}, 聚合doc={len(best_by_doc)}, "
+            f"并入briefs={len(merged)}/{max_docs}, "
             f"白名单={len(knowledge.recalled_doc_ids)}"
         )
         if knowledge.recall_query_count and knowledge.recall_hit_queries == 0:
@@ -512,7 +556,8 @@ class EvidenceGatherNode(BaseFunctionNode):
                 "zero_hit_queries": knowledge.recall_zero_hit_queries,
                 "error_queries": knowledge.recall_error_queries,
                 "hit_rate": round(knowledge.hit_rate, 4),
-                "candidate_docs": len(candidates),
+                "candidate_chunks": len(candidates),
+                "aggregated_docs": len(best_by_doc),
                 "merged_briefs": len(merged),
                 "whitelist_size": len(knowledge.recalled_doc_ids),
             },
@@ -531,22 +576,47 @@ class EvidenceGatherNode(BaseFunctionNode):
             ),
         )
 
+    @staticmethod
+    def _can_attach_second_chunk(
+        best: Dict[str, Any],
+        candidate: Dict[str, Any],
+        best_score: float,
+        cand_score: float,
+    ) -> bool:
+        """判断次优 chunk 是否可附到同一 brief（分数接近且 index 间隔≥2）。"""
+        if not bool(settings.KNOWLEDGE_BRIEF_SECOND_CHUNK_ENABLED):
+            return False
+        close = cand_score >= best_score * 0.95 or abs(best_score - cand_score) < 0.03
+        if not close:
+            return False
+        try:
+            i1 = int(best.get("chunk_index"))
+            i2 = int(candidate.get("chunk_index"))
+        except (TypeError, ValueError):
+            return False
+        return abs(i1 - i2) >= 2
+
     def _knowledge_brief(
         self,
         hit: Dict[str, Any],
         query: str,
         subject_keywords: List[str],
+        *,
+        second_hit: Optional[Dict[str, Any]] = None,
+        second_score: Optional[float] = None,
     ) -> Dict[str, Any]:
         """
-            将一条 Milvus 召回命中转为 brief（tool_name=knowledge_base、source_level=P0）。
+            将文档级聚合命中转为 brief（注入最佳 chunk 的 quote）。
 
             Args:
-                hit: Milvus 命中（doc_id/title/summary/url/score）
+                hit: 最高分 chunk
                 query: 命中的检索式
-                subject_keywords: 公司主体关键词（判定 subject_match）
+                subject_keywords: 公司主体关键词
+                second_hit: 可选第二段 chunk
+                second_score: 第二段分数
 
             Returns:
-                brief 字典（含 doc_id 供 load_news_document 使用）
+                brief 字典
         """
         doc_id = str(hit.get("doc_id") or "").strip()
         title = hit.get("title")
@@ -557,15 +627,51 @@ class EvidenceGatherNode(BaseFunctionNode):
             score_text = f"{float(score):.3f}"
         except (TypeError, ValueError):
             score_text = "未知"
+
+        quote_limit = int(settings.KNOWLEDGE_BRIEF_QUOTE_MAX_CHARS)
+        quote_body = strip_title_prefix(str(hit.get("embed_text") or ""), title)
+        quote = _clip(quote_body, quote_limit)
+        if second_hit is not None:
+            second_body = strip_title_prefix(
+                str(second_hit.get("embed_text") or ""), title
+            )
+            second_clip = _clip(second_body, max(80, quote_limit // 2))
+            if second_clip:
+                quote = f"{quote}\n【相关段落2】{second_clip}" if quote else second_clip
+
+        try:
+            chunk_index = int(hit.get("chunk_index"))
+        except (TypeError, ValueError):
+            chunk_index = -1
+        try:
+            chunk_count = int(hit.get("chunk_count"))
+        except (TypeError, ValueError):
+            chunk_count = 0
+        chunk_label = (
+            f"命中第 {chunk_index + 1}/{chunk_count} 段"
+            if chunk_index >= 0 and chunk_count > 0
+            else "命中知识库分段"
+        )
+        why = (
+            f"公司新闻知识库召回，相似度 {score_text}；{chunk_label}；"
+            f"doc_id={doc_id}（可用 load_news_document 拉全文核对原文）"
+        )
+        if second_hit is not None and second_score is not None:
+            try:
+                why += (
+                    f"；附带第 {int(second_hit.get('chunk_index')) + 1} 段"
+                    f"（{float(second_score):.3f}）"
+                )
+            except (TypeError, ValueError):
+                why += "；附带相关段落2"
+
+        subject_blob = f"{title or ''}\n{summary}\n{quote}"
         return {
             "title": title,
             "url": url,
             "summary": summary,
-            "quote": None,
-            "why_evidential": (
-                f"公司新闻知识库（官网新闻）召回，相似度 {score_text}；"
-                f"doc_id={doc_id}（可用 load_news_document 拉取全文核对原文）"
-            ),
+            "quote": quote or None,
+            "why_evidential": why,
             "tool_name": _KNOWLEDGE_TOOL_NAME,
             "source_level": _KNOWLEDGE_SOURCE_LEVEL,
             "doc_id": doc_id,
@@ -573,10 +679,9 @@ class EvidenceGatherNode(BaseFunctionNode):
             "publish_date": None,
             "source_host": extract_source_host(url),
             "authority_tier": _KNOWLEDGE_AUTHORITY_TIER,
-            "subject_match": text_mentions_subject(
-                f"{title or ''}\n{summary}", subject_keywords
-            ),
+            "subject_match": text_mentions_subject(subject_blob, subject_keywords),
             "query": query,
+            "chunk_index": chunk_index if chunk_index >= 0 else None,
         }
 
     async def _maybe_extract(

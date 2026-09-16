@@ -8,14 +8,12 @@
     1. 规则抓取（`content_fetcher`，零 LLM 成本）
     2. 规则失败 → Agent 兜底一次（`agent_fallback`，allow → try_consume_quota → Agent → mark_result）
     3. 拿到正文 → **先落 document 行**（`fetch_status=1`、`embed_status=0`）拿主键
-    4. embedding（公司网关，单条）
-    5. 写 Milvus（`doc_id` ≡ `document.id`）
-    6. 回写 document 的 `embed_status`/`vector_id`
-    7. 回写 task（SUCCESS/FAILED + `actual_channel` + `document_id`）
+    4. 全文切分 → 写前降 embed_status=0 → 删旧 chunk → 批量 embedding → 写 Milvus chunks
+    5. 回写 document 的 `embed_status`/`vector_id`（vector_id 仍为 document.id，逻辑锚点）
+    6. 回写 task（SUCCESS/FAILED + `actual_channel` + `document_id`）
 
-    ⚠️ 第 3 步必须在第 5 步之前：Milvus 主键就是 document.id，
-    不先落库拿不到 id。设计文档「先插 Milvus 再写 document」是**逻辑顺序**，
-    物理上只能是「插 document（embed_status=0）→ 插 Milvus → 回写 embed_status」。
+    ⚠️ 第 3 步必须在第 4 步之前：chunk 的 doc_id 外键就是 document.id。
+    设计文档：ai_docs/26091607-新闻知识库全文切分与召回策略C设计.md
 
 分步记状态（§3.2，两者互不覆盖）
     下载失败            → task.status=FAILED + `error_message`；document 占位 `fetch_status=2`
@@ -44,13 +42,12 @@ from backend.domain.news_content.constants import (
     EMBED_STATUS_PENDING,
     FETCH_STATUS_OK,
 )
+from backend.domain.news_content.chunking import split_embed_chunks
 from backend.domain.news_content.content_fetcher import fetch_article_by_rule
 from backend.domain.news_content.rate_limiter import SiteRateLimiter
 from backend.infrastructure.llm.huayuan_embedding_client import HuayuanEmbeddingClient
-from backend.infrastructure.milvus.radar_news_doc_store import (
-    MilvusUnavailableError,
-    RadarNewsDocStore,
-)
+from backend.infrastructure.milvus.radar_news_chunk_store import RadarNewsChunkStore
+from backend.infrastructure.milvus.radar_news_doc_store import MilvusUnavailableError
 from backend.domain.news_crawl.url_norm import normalize as normalize_url
 
 logger = logging.getLogger(__name__)
@@ -62,15 +59,15 @@ def build_embed_text(
     max_chars: int,
 ) -> str:
     """
-    组装实际嵌入文本：`title + 正文前 N 字`（V1 不分 chunk，见 §3.2）。
+        【兼容保留】V1 单段截断；新代码请用 split_embed_chunks。
 
-    Args:
-        title: 标题
-        content_text: 正文
-        max_chars: 正文截断长度（默认 2000）
+        Args:
+            title: 标题
+            content_text: 正文
+            max_chars: 正文截断长度
 
-    Returns:
-        嵌入文本；标题与正文都为空时返回空串（调用方应判空）
+        Returns:
+            嵌入文本；标题与正文都为空时返回空串
     """
     head = (content_text or "")[: max(0, int(max_chars))]
     title_text = (title or "").strip()
@@ -94,10 +91,9 @@ class ProcessOutcome:
 
 class NewsContentProcessor:
     """
-    任务处理器（worker 内单例；内部状态只有限速器与成本闸门）。
+        任务处理器（worker 内单例；内部状态只有限速器与成本闸门）。
 
-    ⚠️ 串行使用：设计是「一条一条处理」（§3.2 worker 内串行），
-    本类不做并发控制，由 worker 主循环保证。
+        ⚠️ 串行使用：设计是「一条一条处理」，本类不做并发控制，由 worker 主循环保证。
     """
 
     def __init__(
@@ -107,7 +103,7 @@ class NewsContentProcessor:
         limiter: Optional[SiteRateLimiter] = None,
         guard: Optional[AgentFallbackGuard] = None,
         embedder: Optional[HuayuanEmbeddingClient] = None,
-        milvus: Optional[RadarNewsDocStore] = None,
+        milvus: Optional[RadarNewsChunkStore] = None,
     ) -> None:
         self.worker_id = worker_id
         self.limiter = limiter or SiteRateLimiter(settings.NEWS_CONTENT_SITE_MIN_INTERVAL_SECONDS)
@@ -118,7 +114,7 @@ class NewsContentProcessor:
             max_content_failures_per_site=settings.NEWS_CONTENT_AGENT_MAX_CONTENT_FAILURES_PER_SITE,
         )
         self.embedder = embedder or HuayuanEmbeddingClient()
-        self.milvus = milvus or RadarNewsDocStore()
+        self.milvus = milvus or RadarNewsChunkStore()
 
     async def aclose(self) -> None:
         """释放外部资源（worker 优雅退出时调用）。"""
@@ -334,59 +330,142 @@ class NewsContentProcessor:
         url: str,
     ) -> tuple[int, Optional[str]]:
         """
-        向量段：embedding → 写 Milvus → 回写 document。**不抛异常**。
+            向量段（V2）：切分 → 降状态 → 删旧 chunk → 批量 embedding → 写 Milvus → 回写。
 
-        Returns:
-            (embed_status, error_message)；成功为 (1, None)
+            ⚠️ 不抛异常；失败落 embed_status=2，并尽量清半成品 chunk。
+
+            Returns:
+                (embed_status, error_message)；成功为 (1, None)
         """
-        embed_text = build_embed_text(
-            title, content_text, settings.NEWS_CONTENT_EMBED_TEXT_MAX_CHARS
+        # 1. 全文切分
+        split = split_embed_chunks(
+            title,
+            content_text,
+            chunk_size=settings.NEWS_CONTENT_CHUNK_SIZE,
+            chunk_overlap=settings.NEWS_CONTENT_CHUNK_OVERLAP,
+            max_per_doc=settings.NEWS_CONTENT_CHUNK_MAX_PER_DOC,
         )
-        if not embed_text.strip():
+        if not split.chunks:
             await self._mark_embed_failed(document_id, "嵌入文本为空（标题与正文皆空）")
             return EMBED_STATUS_FAILED, "嵌入文本为空"
 
+        # 2. 写前降状态（崩溃后补跑可回收，避免假 embed_status=1）
         try:
-            vector = await self.embedder.embed_one(embed_text)
+            await repo.mark_document_embed_pending(document_id, worker_id=self.worker_id)
         except Exception as exc:
-            message = f"embedding 失败: {type(exc).__name__}: {exc}"
+            message = f"降状态失败: {type(exc).__name__}: {exc}"
             logger.error("[news-content] %s document_id=%s", message, document_id)
             await self._mark_embed_failed(document_id, message)
             return EMBED_STATUS_FAILED, message
 
+        # 3. 删该文档旧 chunk
         try:
-            # Milvus 主键 = document.id（§4.3 doc_id ≡ radar_company_news_document.id）
-            await self.milvus.upsert_document_async(
-                doc_id=int(document_id),
-                company_id=int(company_id),
-                title=title or "",
-                summary=build_summary(content_text),
-                url=url,
-                embed_text=embed_text,
-                embedding=vector,
+            await self.milvus.delete_by_doc_id_async(int(document_id))
+        except MilvusUnavailableError as exc:
+            message = f"Milvus 不可用(删旧): {exc}"
+            logger.error("[news-content] %s document_id=%s", message, document_id)
+            await self._mark_embed_failed(document_id, message)
+            return EMBED_STATUS_FAILED, message
+        except Exception as exc:
+            message = f"删除旧 chunk 失败: {type(exc).__name__}: {exc}"
+            logger.exception("[news-content] %s document_id=%s", message, document_id)
+            await self._mark_embed_failed(document_id, message)
+            return EMBED_STATUS_FAILED, message
+
+        # 4. 分批 embedding
+        texts = [c.text for c in split.chunks]
+        batch_size = max(1, int(settings.NEWS_CONTENT_EMBED_BATCH_SIZE))
+        vectors: list[list[float]] = []
+        try:
+            for i in range(0, len(texts), batch_size):
+                batch = texts[i : i + batch_size]
+                # 调用公司网关批量嵌入
+                part = await self.embedder.embed_texts(batch)
+                vectors.extend(part)
+        except Exception as exc:
+            message = f"embedding 失败: {type(exc).__name__}: {exc}"
+            logger.error("[news-content] %s document_id=%s", message, document_id)
+            await self._cleanup_chunks_best_effort(document_id)
+            await self._mark_embed_failed(document_id, message)
+            return EMBED_STATUS_FAILED, message
+
+        if len(vectors) != len(split.chunks):
+            message = (
+                f"embedding 条数不匹配: chunks={len(split.chunks)} vectors={len(vectors)}"
             )
+            await self._cleanup_chunks_best_effort(document_id)
+            await self._mark_embed_failed(document_id, message)
+            return EMBED_STATUS_FAILED, message
+
+        # 5. 写 Milvus chunks
+        summary = build_summary(content_text)
+        chunk_count = len(split.chunks)
+        rows = [
+            {
+                "doc_id": int(document_id),
+                "company_id": int(company_id),
+                "chunk_index": chunk.index,
+                "chunk_count": chunk_count,
+                "char_start": chunk.char_start,
+                "char_end": chunk.char_end,
+                "title": title or "",
+                "summary": summary,
+                "url": url,
+                "embed_text": chunk.text,
+                "embedding": vectors[idx],
+            }
+            for idx, chunk in enumerate(split.chunks)
+        ]
+        try:
+            await self.milvus.upsert_chunks_async(rows)
         except MilvusUnavailableError as exc:
             message = f"Milvus 不可用: {exc}"
             logger.error("[news-content] %s document_id=%s", message, document_id)
+            await self._cleanup_chunks_best_effort(document_id)
             await self._mark_embed_failed(document_id, message)
             return EMBED_STATUS_FAILED, message
         except Exception as exc:
             message = f"Milvus 写入失败: {type(exc).__name__}: {exc}"
             logger.exception("[news-content] Milvus 写入异常 document_id=%s", document_id)
+            await self._cleanup_chunks_best_effort(document_id)
             await self._mark_embed_failed(document_id, message)
             return EMBED_STATUS_FAILED, message
 
+        # 6. 回写成功状态
         try:
             await repo.mark_document_embed_ok(
-                document_id, worker_id=self.worker_id, vector_id=int(document_id)
+                document_id,
+                worker_id=self.worker_id,
+                vector_id=int(document_id),
+                extra_patch={
+                    "chunk_count": chunk_count,
+                    "chunk_truncated": bool(split.truncated),
+                },
             )
         except Exception as exc:
-            # 向量已进 Milvus，只是状态没回写 —— 补跑会重做一次（upsert 幂等），不致命
             logger.error(
                 "[news-content] embed_status 回写失败 document_id=%s: %s", document_id, exc
             )
             return EMBED_STATUS_FAILED, f"状态回写失败: {exc}"
+
+        logger.info(
+            "[news-content] 向量化成功 document_id=%s chunks=%d truncated=%s",
+            document_id,
+            chunk_count,
+            split.truncated,
+        )
         return EMBED_STATUS_OK, None
+
+    async def _cleanup_chunks_best_effort(self, document_id: int) -> None:
+        """失败后尽量再删一次该 doc 的半成品 chunk（忽略二次异常）。"""
+        try:
+            await self.milvus.delete_by_doc_id_async(int(document_id))
+        except Exception:
+            logger.debug(
+                "[news-content] 清理半成品 chunk 失败 document_id=%s",
+                document_id,
+                exc_info=True,
+            )
 
     async def _mark_embed_failed(self, document_id: int, message: str) -> None:
         """把向量段失败落到 document（累计尝试次数，供补跑限量）。"""
@@ -545,4 +624,10 @@ def build_summary(content_text: Optional[str]) -> str:
     )
 
 
-__all__ = ["NewsContentProcessor", "ProcessOutcome", "build_embed_text", "build_summary"]
+__all__ = [
+    "NewsContentProcessor",
+    "ProcessOutcome",
+    "build_embed_text",
+    "build_summary",
+    "split_embed_chunks",
+]

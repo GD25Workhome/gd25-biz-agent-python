@@ -149,7 +149,12 @@ async def run_dry_run(batch_size: int) -> int:
     print(f"  INFO embedding 模型={settings.EMBEDDING_MODEL} 端点="
           f"{'已配置' if settings.HUAYUAN_API_URL_embeddings else '未配置'}")
     print(f"  INFO Milvus collection={settings.MILVUS_COLLECTION} "
-          f"db={settings.MILVUS_DB_NAME} uri={'已配置' if settings.MILVUS_URI else '未配置'}")
+          f"db={settings.MILVUS_DB_NAME} uri={'已配置' if settings.MILVUS_URI else '未配置'} "
+          f"（V2 chunk schema）")
+    print(f"  INFO 切分 CHUNK_SIZE={settings.NEWS_CONTENT_CHUNK_SIZE} "
+          f"OVERLAP={settings.NEWS_CONTENT_CHUNK_OVERLAP} "
+          f"MAX_PER_DOC={settings.NEWS_CONTENT_CHUNK_MAX_PER_DOC} "
+          f"EMBED_BATCH={settings.NEWS_CONTENT_EMBED_BATCH_SIZE}")
     print(f"  INFO 每轮领取数={batch_size} 轮询间隔={settings.NEWS_CONTENT_POLL_INTERVAL_SECONDS}s "
           f"锁超时={settings.NEWS_CONTENT_LOCK_TIMEOUT_SECONDS}s "
           f"同站最小间隔={settings.NEWS_CONTENT_SITE_MIN_INTERVAL_SECONDS}s")
@@ -223,15 +228,20 @@ async def run_dry_run(batch_size: int) -> int:
 
     print("\n[5/5] Milvus collection 概况（只读；collection 不存在也不会被创建）")
     if settings.is_milvus_enabled:
-        from backend.infrastructure.milvus.radar_news_doc_store import RadarNewsDocStore
+        from backend.infrastructure.milvus.radar_news_chunk_store import RadarNewsChunkStore
 
-        store = RadarNewsDocStore()
+        store = RadarNewsChunkStore()
         try:
             info = await store.describe_async()
             print(f"  uri={info.get('uri')} db={info.get('db_name')} "
-                  f"collection={info.get('collection')} dim={info.get('dim')}")
+                  f"collection={info.get('collection')} dim={info.get('dim')} "
+                  f"schema={info.get('schema_version')}")
             if info.get("exists"):
-                print(f"  OK   collection 存在；row_count={info.get('row_count', 'N/A')}")
+                if info.get("schema_ok") is False:
+                    print(f"  FAIL schema 不匹配：{info.get('schema_error')}")
+                    hard_fail = True
+                else:
+                    print(f"  OK   collection 存在；row_count={info.get('row_count', 'N/A')}")
                 for field in info.get("fields", []):
                     flags = []
                     if field.get("is_primary"):

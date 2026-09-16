@@ -450,18 +450,124 @@ async def upsert_document(doc: dict[str, Any], worker_id: str) -> int:
     return await run_db(run_in_transaction, _document_upsert_sync, doc, worker_id)
 
 
-async def mark_document_embed_ok(
-    doc_id: int, *, worker_id: str, vector_id: int
-) -> None:
-    """向量化成功回写：`embed_status=1` + `vector_id`（Milvus 主键）。"""
+async def mark_document_embed_pending(doc_id: int, *, worker_id: str) -> None:
+    """
+        向量段开始前降状态为 `embed_status=0`（写前降状态，崩溃后补跑可回收）。
+
+        Args:
+            doc_id: document 主键
+            worker_id: 操作者标识
+    """
     await run_db(
         execute,
         f"""
         UPDATE radar_company_news_document
-        SET embed_status = %s, vector_id = %s, updater = %s, update_time = NOW()
+        SET embed_status = %s, updater = %s, update_time = NOW()
         WHERE id = %s AND {_NOT_DELETED}
         """,
-        (EMBED_STATUS_OK, int(vector_id), worker_id, int(doc_id)),
+        (EMBED_STATUS_PENDING, worker_id, int(doc_id)),
+    )
+
+
+def _mark_document_embed_ok_sync(
+    conn: pymysql.connections.Connection,
+    doc_id: int,
+    worker_id: str,
+    vector_id: int,
+    extra_patch: Optional[dict[str, Any]],
+) -> None:
+    """
+        同步：置 embed_status=1 + vector_id，可选合并 extra_json 字段。
+
+        Args:
+            conn: 事务连接
+            doc_id: document 主键
+            worker_id: 操作者
+            vector_id: 逻辑锚点（V2 仍写 document.id，≠ Milvus PK）
+            extra_patch: 合并进 extra_json 的键值（如 chunk_count）
+    """
+    now = datetime.now()
+    with conn.cursor() as cur:
+        extra_json_value: Optional[str] = None
+        if extra_patch:
+            cur.execute(
+                f"""
+                SELECT extra_json FROM radar_company_news_document
+                WHERE id = %s AND {_NOT_DELETED}
+                FOR UPDATE
+                """,
+                (int(doc_id),),
+            )
+            row = cur.fetchone() or {}
+            raw = row.get("extra_json")
+            extra: dict[str, Any] = {}
+            if isinstance(raw, dict):
+                extra = dict(raw)
+            elif raw:
+                try:
+                    parsed = json.loads(raw) if isinstance(raw, str) else {}
+                    if isinstance(parsed, dict):
+                        extra = parsed
+                except Exception:
+                    extra = {}
+            extra.update(extra_patch)
+            extra_json_value = json.dumps(extra, ensure_ascii=False)
+
+        if extra_json_value is not None:
+            cur.execute(
+                f"""
+                UPDATE radar_company_news_document
+                SET embed_status = %s, vector_id = %s, extra_json = %s,
+                    updater = %s, update_time = %s
+                WHERE id = %s AND {_NOT_DELETED}
+                """,
+                (
+                    EMBED_STATUS_OK,
+                    int(vector_id),
+                    extra_json_value,
+                    worker_id,
+                    now,
+                    int(doc_id),
+                ),
+            )
+        else:
+            cur.execute(
+                f"""
+                UPDATE radar_company_news_document
+                SET embed_status = %s, vector_id = %s, updater = %s, update_time = %s
+                WHERE id = %s AND {_NOT_DELETED}
+                """,
+                (EMBED_STATUS_OK, int(vector_id), worker_id, now, int(doc_id)),
+            )
+    # ⚠️ 必须 commit：连接池 release 时会 rollback 未提交事务，
+    # 缺 commit 会导致「日志显示向量化成功、Milvus 已写入，但 embed_status 仍为 0」，
+    # 补跑循环永久扫到同一批文档。
+    conn.commit()
+
+
+async def mark_document_embed_ok(
+    doc_id: int,
+    *,
+    worker_id: str,
+    vector_id: int,
+    extra_patch: Optional[dict[str, Any]] = None,
+) -> None:
+    """
+        向量化成功回写：`embed_status=1` + `vector_id`（逻辑锚点）。
+
+        Args:
+            doc_id: document 主键
+            worker_id: 操作者
+            vector_id: 仍写 document.id（V2 不再等于 Milvus PK）
+            extra_patch: 可选合并进 extra_json（chunk_count / chunk_truncated）
+    """
+    await run_db(
+        run_in_transaction,
+        _mark_document_embed_ok_sync,
+        doc_id,
+        worker_id,
+        vector_id,
+        extra_patch,
     )
 
 
@@ -783,6 +889,7 @@ __all__ = [
     "upsert_document",
     "mark_document_fetch_failed",
     "mark_document_embed_ok",
+    "mark_document_embed_pending",
     "mark_document_embed_failed",
     "find_task_by_document_id",
     "parse_embed_attempts",

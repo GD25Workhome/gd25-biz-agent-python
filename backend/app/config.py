@@ -231,8 +231,11 @@ class Settings(BaseSettings):
         default="exhibition_test", description="Milvus 数据库名（现网 exhibition_test 是库名，非 collection 名）"
     )
     MILVUS_COLLECTION: str = Field(
-        default="radar_company_news_doc",
-        description="新闻知识库 collection 名（建在 MILVUS_DB_NAME 库内，不与库内其它项目 collection 混用）",
+        default="radar_company_news_chunk",
+        description=(
+            "新闻知识库 collection 名（V2 一行一 chunk；"
+            "建在 MILVUS_DB_NAME 库内，不与库内其它项目 collection 混用）"
+        ),
     )
 
     @property
@@ -354,7 +357,31 @@ class Settings(BaseSettings):
         default=200, description="content_summary 摘要字数"
     )
     NEWS_CONTENT_EMBED_TEXT_MAX_CHARS: int = Field(
-        default=2000, description="实际嵌入文本 = title + 正文前 N 字（V1 不分 chunk）"
+        default=2000,
+        description="【已废弃】V1 单向量截断；V2 请用 CHUNK_*，本字段读入后忽略",
+    )
+    NEWS_CONTENT_CHUNK_SIZE: int = Field(
+        default=1000, description="V2 正文切分窗口字符数（不含 title 前缀）"
+    )
+    NEWS_CONTENT_CHUNK_OVERLAP: int = Field(
+        default=200, description="V2 相邻 chunk 重叠字符数"
+    )
+    NEWS_CONTENT_CHUNK_MAX_PER_DOC: int = Field(
+        default=50, description="V2 单篇最大 chunk 数；超出截断并打日志"
+    )
+    NEWS_CONTENT_EMBED_BATCH_SIZE: int = Field(
+        default=16, description="V2 单次调用 embedding 网关的文本条数上限"
+    )
+    KNOWLEDGE_SEARCH_CHUNK_TOP_K_FACTOR: int = Field(
+        default=8,
+        description="召回候选 chunk 数 ≈ min(128, max(max_docs*factor, max_docs+8))",
+    )
+    KNOWLEDGE_BRIEF_QUOTE_MAX_CHARS: int = Field(
+        default=500, description="知识库 brief.quote 最大字符数"
+    )
+    KNOWLEDGE_BRIEF_SECOND_CHUNK_ENABLED: bool = Field(
+        default=True,
+        description="策略 C：是否在 quote 中附非近邻第二高分 chunk（index 间隔≥2）",
     )
     NEWS_CONTENT_AGENT_FALLBACK_ENABLED: bool = Field(
         default=True, description="规则失败时是否启用 Agent 兜底"
