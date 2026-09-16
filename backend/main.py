@@ -106,6 +106,8 @@ async def lifespan(app: FastAPI):
     """应用生命周期管理（替代已弃用的 on_event）"""
     import asyncio
     consumer_tasks = []
+    news_content_stop = None
+    news_content_task = None
     # 启动时执行
     logger.info("=" * 60)
     logger.info("系统启动中...")
@@ -178,6 +180,27 @@ async def lifespan(app: FastAPI):
                 "（NEWS_CRAWL_ENABLED=false 或未配置 Anthropic 凭证）"
             )
 
+        # 8. 新闻知识库写入主循环（方案 A′：与脚本共用 worker_loop，仍扫表抢锁）
+        #    默认关闭；开启后与 Rewritten 消费者并存，互不共用队列。
+        if settings.NEWS_CONTENT_WORKER_IN_APP:
+            logger.info("8. 启动新闻知识库写入 worker（应用内）...")
+            if settings.is_exhibition_mysql_enabled:
+                from backend.domain.news_content.worker_loop import (
+                    start_news_content_worker_in_app,
+                )
+                news_content_stop, news_content_task = start_news_content_worker_in_app()
+                logger.info("   ✓ 新闻知识库 worker 已启动（扫表抢锁，非内存队列）")
+            else:
+                logger.error(
+                    "   ✗ NEWS_CONTENT_WORKER_IN_APP=true 但未配置 exhibition MySQL，"
+                    "跳过启动（请配置 EXHIBITION_MYSQL_HOST/USER/PASSWORD/DB）"
+                )
+        else:
+            logger.info(
+                "8. 跳过新闻知识库写入 worker"
+                "（NEWS_CONTENT_WORKER_IN_APP=false；可用 scripts/news_content_worker.py）"
+            )
+
         logger.info("=" * 60)
         logger.info("系统启动完成！")
         logger.info("=" * 60)
@@ -188,7 +211,13 @@ async def lifespan(app: FastAPI):
 
     yield  # 应用运行期间
 
-    # 关闭时取消消费者任务
+    # 关闭时：先停新闻 worker（优雅 stop），再 cancel Rewritten 消费者
+    if news_content_stop is not None and news_content_task is not None:
+        from backend.domain.news_content.worker_loop import (
+            stop_news_content_worker_in_app,
+        )
+        await stop_news_content_worker_in_app(news_content_stop, news_content_task)
+
     if consumer_tasks:
         for t in consumer_tasks:
             t.cancel()

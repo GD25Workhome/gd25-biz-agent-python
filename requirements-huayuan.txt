@@ -1,5 +1,8 @@
-# 华院最小后端运行时依赖（小镜像）
-# 刻意排除：torch / sentence-transformers / autogen / pandas / sqlalchemy / psycopg / pgvector / alembic / volcengine
+# 华院最小后端运行时依赖（小镜像）—— Dockerfile 唯一安装此文件
+# 裁剪清单：ai_docs/26091601-华院方案A依赖裁剪清单.md
+# 刻意排除：torch / sentence-transformers / autogen / pandas / sqlalchemy /
+#           psycopg / pgvector / alembic / volcengine / pymysql
+# （pymysql 仅 news_content_worker 需要，不进本 API 镜像）
 
 # Web
 fastapi>=0.100.0,<1.0.0

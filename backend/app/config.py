@@ -250,8 +250,9 @@ class Settings(BaseSettings):
     #    其余 exhibition 表零接触；DDL 归 exhibition Java SQL 脚本
     #    （projectDocs/技术设计文档-0905/SQL脚本/17_radar_news_content_schema.sql）。
     #
-    # ⚠️ 与 gd25 主库（PostgreSQL，DATABASE_URL）完全独立：本组配置只服务
-    #    news_content_worker 常驻进程，不参与 FastAPI 请求链路。
+    # ⚠️ 与 gd25 主库（PostgreSQL，DATABASE_URL）完全独立。
+    #    默认由 scripts/news_content_worker.py 常驻；也可设 NEWS_CONTENT_WORKER_IN_APP=true
+    #    在 FastAPI lifespan 内拉起同一主循环（方案 A′，仍扫表抢锁，非 Rewritten 内存队列）。
     EXHIBITION_MYSQL_HOST: Optional[str] = Field(
         default=None, description="exhibition MySQL 主机（雷达新闻知识库写链路）"
     )
@@ -314,6 +315,14 @@ class Settings(BaseSettings):
 
     # ---------------- 雷达新闻知识库 worker 调参 ----------------
     # 与 NEWS_CRAWL_* 同风格：全部可用环境变量覆盖，默认值面向「常驻单实例」。
+    NEWS_CONTENT_WORKER_IN_APP: bool = Field(
+        default=False,
+        description=(
+            "是否在 FastAPI lifespan 内启动新闻知识库写入主循环；"
+            "默认 false（避免本地起 API 即扫库）；生产单 Deployment 可开。"
+            "需同时配置 EXHIBITION_MYSQL_*；未配齐时只告警不阻断启动。"
+        ),
+    )
     NEWS_CONTENT_WORKER_ID: Optional[str] = Field(
         default=None,
         description="worker 实例标识；None 时用 hostname:pid 自动生成（写入 task.locked_by）",

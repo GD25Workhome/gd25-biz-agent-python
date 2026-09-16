@@ -10,6 +10,7 @@
     content_fetcher.py  规则版详情页抓取（复用 company_news_crawl 的抽取器）
     agent_fallback.py   规则失败后的 Agent 兜底（日配额 + 熔断）
     pipeline.py         单任务编排 + 补跑循环
+    worker_loop.py      扫表抢锁主循环（CLI 与 FastAPI lifespan 共用）
 
 ⚠️ `__init__` 刻意保持轻量：不在这里 import pipeline/agent_fallback，
 避免「只想读常量却拉起 pymilvus / claude_agent_sdk」的副作用。

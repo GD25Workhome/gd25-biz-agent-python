@@ -1,36 +1,51 @@
-# Web 框架
+# =============================================================================
+# requirements.txt — 全量 / 遗留开发依赖
+# =============================================================================
+# 华院生产镜像请用：requirements-huayuan.txt（见 Dockerfile）
+# 依赖裁剪说明：ai_docs/26091601-华院方案A依赖裁剪清单.md
+#
+# 分区约定：
+#   [华院保留]  — 华院运行时也需要（与 requirements-huayuan 对齐）
+#   [华院可删]  — 仅医疗 / RAG / AutoGen / 主库 PG；华院镜像不得安装
+#   [worker]    — news_content_worker 需要；华院 API 镜像可不装
+#   [开发]      — 测试与 lint，不进运行镜像
+# =============================================================================
+
+# ---------- [华院保留] Web ----------
 fastapi>=0.100.0,<1.0.0
 uvicorn[standard]>=0.23.0,<1.0.0
 
-# LangGraph 和 LangChain
+# ---------- [华院保留] LangGraph / LangChain ----------
 langgraph>=1.0.0,<2.0.0
 langchain>=1.0.0,<2.0.0
 langchain-core>=1.0.0,<2.0.0
 langchain-openai>=1.0.0,<2.0.0
+
+# ---------- [华院可删] RAG 文本切分 ----------
 langchain-text-splitters>=1.0.0,<2.0.0
 
-# AutoGen AgentChat（多 Agent Team，与 LangGraph 外层编排融合）
+# ---------- [华院可删] AutoGen ----------
 autogen-agentchat>=0.7.0,<1.0.0
 autogen-core>=0.7.0,<1.0.0
 autogen-ext[openai]>=0.7.0,<1.0.0
 
-# 数据库
+# ---------- [华院可删] 主库 PostgreSQL ----------
 sqlalchemy>=2.0.0,<3.0.0
 psycopg[binary]>=3.1.0,<4.0.0
 psycopg-pool>=3.2.0,<4.0.0
 alembic>=1.12.0,<2.0.0
 
-# 配置管理
+# ---------- [华院保留] 配置 ----------
 pydantic>=2.0.0,<3.0.0
 pydantic-settings>=2.0.0,<3.0.0
+# python-dotenv 仅写在 requirements-huayuan.txt；全量环境常已间接具备
 
-# HTTP 客户端
+# ---------- [华院保留] HTTP / YAML / 条件边 ----------
 httpx>=0.24.0,<1.0.0
-
-# YAML 配置
 pyyaml>=6.0.0,<7.0.0
+simpleeval>=0.9.13,<1.0.0
 
-# 开发工具
+# ---------- [开发] ----------
 pytest>=7.4.0,<8.0.0
 pytest-asyncio>=0.21.0,<1.0.0
 pytest-mock>=3.11.0,<4.0.0
@@ -39,43 +54,30 @@ black>=23.0.0,<24.0.0
 ruff>=0.1.0,<1.0.0
 mypy>=1.5.0,<2.0.0
 
-# 测试数据库支持
+# ---------- [华院可删] 测试用 SQLite ----------
 aiosqlite>=0.19.0,<1.0.0
 
-# Langfuse 可观测性平台
+# ---------- [可选] 可观测（华院镜像默认不装；代码 lazy import） ----------
 langfuse>=3.0.0,<4.0.0
 
-# ID 生成
+# ---------- [华院可删] 主库 ID ----------
 python-ulid>=1.1.0,<2.0.0
 
-# 表达式评估
-simpleeval>=0.9.13,<1.0.0
-
-# RAG数据导入
+# ---------- [华院可删] RAG 导入 / 本地 embedding / pgvector ----------
 pandas>=2.0.0,<3.0.0
 openpyxl>=3.1.0,<4.0.0
 sentence-transformers>=2.2.0,<3.0.0
 pgvector>=0.2.0,<1.0.0
-
-# 豆包 Embedding API
 volcengine-python-sdk[ark]>=5.0.0,<6.0.0
 
-# 新闻 URL 抓取 Agent（Claude Agent SDK）
-# ⚠️ SDK 是 CLI 子进程模型：跑起来还需要镜像/主机里有 claude 可执行文件
-#    （Dockerfile 中通过 Node.js + npm i -g @anthropic-ai/claude-code 提供）
+# ---------- [华院保留] 新闻 URL 抓取 ----------
+# SDK 是 CLI 子进程模型：还需主机/镜像内有 claude 可执行文件（见 Dockerfile）
 claude-agent-sdk>=0.1.0,<1.0.0
 
-# 雷达新闻知识库写入链路（scripts/news_content_worker.py）
-# ⚠️ exhibition MySQL 是**独立于主库 PG 的另一个实例**，只读写
-#    radar_news_content_task / radar_company_news_document 两张表。
-#    选同步 pymysql + asyncio.to_thread（而非 aiomysql）的理由见
-#    backend/infrastructure/database/mysql_connection.py 模块 docstring。
+# ---------- [worker] 雷达新闻知识库写入（scripts/news_content_worker.py） ----------
+# exhibition MySQL 与主库 PG 是不同实例；华院 API 镜像可不装本组。
 pymysql>=1.1.0,<2.0.0
-# ⚠️ MySQL 8 默认认证插件是 caching_sha2_password，PyMySQL 处理该插件
-#    必须要有 cryptography，缺了会直接报 "cryptography package is required"
+# MySQL 8 caching_sha2_password 需要 cryptography
 cryptography>=41.0.0
-# ⚠️ 勿降级到 2.x：pymilvus 3.x 与 2.4 有三处 API 差异（schema 路径不自动建索引、
-#    query(count(*)) 不能带 limit、drop_collection 异步），代码按 3.x 写，
-#    服务端为 Milvus v2.5.0。差异细节见
-#    backend/infrastructure/milvus/radar_news_doc_store.py 模块 docstring。
+# ---------- [华院保留 + worker] Milvus（勿降到 2.x） ----------
 pymilvus>=3.0.1,<4.0.0
