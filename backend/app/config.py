@@ -240,15 +240,16 @@ class Settings(BaseSettings):
         """Milvus 可用性：有地址 + 有 user/password 或 token。"""
         return bool(self.MILVUS_URI and (self.MILVUS_TOKEN or (self.MILVUS_USER and self.MILVUS_PASSWORD)))
 
-    # ---------------- 雷达新闻知识库（exhibition MySQL，仅两张表） ----------------
+    # ---------------- 雷达新闻知识库（exhibition MySQL，三张表） ----------------
     # 设计文档：exhibition projectDocs/技术设计-260915/02-知识库的构建/01-Claude的思考.md
-    #          §3.1（两段式 worker）/ §4.1、§4.2（两表定义）
+    #          §3.1（两段式 worker）/ §4.1、§4.2；闸门见 ai_docs/26091605
     #
-    # ⚠️ 访问边界（硬性）：gd25 对 exhibition MySQL 只碰两张表
+    # ⚠️ 访问边界（硬性）：gd25 对 exhibition MySQL 只碰三张表
     #    - radar_news_content_task        SELECT / UPDATE（抢锁、回写状态）
     #    - radar_company_news_document    INSERT / UPDATE / SELECT（写正文、补跑扫描）
+    #    - radar_news_agent_guard         Agent 兜底闸门按日计数（DDL: scripts/sql/18_...）
     #    其余 exhibition 表零接触；DDL 归 exhibition Java SQL 脚本
-    #    （projectDocs/技术设计文档-0905/SQL脚本/17_radar_news_content_schema.sql）。
+    #    （projectDocs/.../17_radar_news_content_schema.sql + 18_radar_news_agent_guard.sql）。
     #
     # ⚠️ 与 gd25 主库（PostgreSQL，DATABASE_URL）完全独立。
     #    默认由 scripts/news_content_worker.py 常驻；也可设 NEWS_CONTENT_WORKER_IN_APP=true
@@ -360,10 +361,18 @@ class Settings(BaseSettings):
     )
     NEWS_CONTENT_AGENT_DAILY_QUOTA: int = Field(
         default=30,
-        description="Agent 兜底日配额（硬约束，按进程内自然日计数）；对齐 news-url-crawl 成本纪律",
+        description="Agent 兜底日配额（硬约束，落库原子扣减，多实例共享）；对齐 news-url-crawl 成本纪律",
     )
     NEWS_CONTENT_AGENT_MAX_CONSECUTIVE_FAILURES: int = Field(
-        default=5, description="Agent 兜底连续失败 N 次后熔断（当日不再兜底）"
+        default=5,
+        description="Agent 兜底连续系统失败（system）N 次后全局熔断（当日不再兜底）；内容失败不计入",
+    )
+    NEWS_CONTENT_AGENT_MAX_CONTENT_FAILURES_PER_SITE: int = Field(
+        default=1,
+        description=(
+            "同一 source_url_id 下，可计入跳过的内容失败连续 N 次后，"
+            "当日跳过该信息源 Agent 兜底（默认 1，更省配额）"
+        ),
     )
     NEWS_CONTENT_AGENT_TIMEOUT_SECONDS: int = Field(
         default=180, description="单次 Agent 兜底墙钟超时（秒）"

@@ -1,8 +1,9 @@
 """
-雷达新闻知识库写链路的 MySQL 仓储（**只碰两张表**）。
+雷达新闻知识库写链路的 MySQL 仓储（**只碰三张表**）。
 
     radar_news_content_task          抢锁 / 回写状态与结果（SELECT + UPDATE）
     radar_company_news_document      正文落库 / 向量状态回写 / 补跑扫描（SELECT + INSERT + UPDATE）
+    radar_news_agent_guard           Agent 兜底闸门按日计数（见 agent_guard_store.py）
 
 ⚠️ 硬性边界
     - 其余 exhibition 表零接触（不读 `radar_company_news_url`、不读 `radar_company_source_url`，

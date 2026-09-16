@@ -5,7 +5,8 @@ exhibition MySQL 连接与查询封装（雷达新闻知识库写链路专用）
           §3.1（gd25 常驻 worker 直连 MySQL 扫表抢锁）/ §3.2（写入链）
 
 ⚠️ 访问边界（硬性）
-    本模块只服务 `radar_news_content_task` / `radar_company_news_document` 两张表。
+    本模块只服务 `radar_news_content_task` / `radar_company_news_document` /
+    `radar_news_agent_guard` 三张表。
     其余 exhibition 表零接触；DDL 归 exhibition Java SQL 脚本，本侧绝不执行 DDL/DCL。
     与 gd25 主库（PostgreSQL，`connection.py`）完全独立，互不影响。
 

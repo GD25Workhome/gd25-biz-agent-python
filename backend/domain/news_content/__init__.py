@@ -5,10 +5,11 @@
 
 模块划分
     constants.py        状态/通道常量（数值与 exhibition DDL 严格对齐）
-    repository.py       两张表的 SQL（radar_news_content_task / radar_company_news_document）
+    repository.py       三张表的 SQL（task / document；闸门见 agent_guard_store.py）
+    agent_guard_store.py Agent 兜底闸门落库（radar_news_agent_guard）
     rate_limiter.py     同站最小间隔限速
     content_fetcher.py  规则版详情页抓取（复用 company_news_crawl 的抽取器）
-    agent_fallback.py   规则失败后的 Agent 兜底（日配额 + 熔断）
+    agent_fallback.py   规则失败后的 Agent 兜底（日配额 + 分类熔断）
     pipeline.py         单任务编排 + 补跑循环
     worker_loop.py      扫表抢锁主循环（CLI 与 FastAPI lifespan 共用）
 

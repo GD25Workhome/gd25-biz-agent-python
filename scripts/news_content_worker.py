@@ -154,7 +154,8 @@ async def run_dry_run(batch_size: int) -> int:
           f"锁超时={settings.NEWS_CONTENT_LOCK_TIMEOUT_SECONDS}s "
           f"同站最小间隔={settings.NEWS_CONTENT_SITE_MIN_INTERVAL_SECONDS}s")
     print(f"  INFO Agent 兜底：日配额={settings.NEWS_CONTENT_AGENT_DAILY_QUOTA} "
-          f"熔断阈值={settings.NEWS_CONTENT_AGENT_MAX_CONSECUTIVE_FAILURES} "
+          f"系统熔断阈值={settings.NEWS_CONTENT_AGENT_MAX_CONSECUTIVE_FAILURES} "
+          f"按源内容跳过阈值={settings.NEWS_CONTENT_AGENT_MAX_CONTENT_FAILURES_PER_SITE} "
           f"超时={settings.NEWS_CONTENT_AGENT_TIMEOUT_SECONDS}s")
 
     print("\n[2/5] exhibition MySQL 连通性")

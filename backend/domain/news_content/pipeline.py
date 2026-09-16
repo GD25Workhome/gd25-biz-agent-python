@@ -6,7 +6,7 @@
 
 写入顺序（**顺序是设计定死的，不要调换**）
     1. 规则抓取（`content_fetcher`，零 LLM 成本）
-    2. 规则失败 → Agent 兜底一次（`agent_fallback`，受日配额/熔断约束）
+    2. 规则失败 → Agent 兜底一次（`agent_fallback`，allow → try_consume_quota → Agent → mark_result）
     3. 拿到正文 → **先落 document 行**（`fetch_status=1`、`embed_status=0`）拿主键
     4. embedding（公司网关，单条）
     5. 写 Milvus（`doc_id` ≡ `document.id`）
@@ -115,6 +115,7 @@ class NewsContentProcessor:
             enabled=settings.NEWS_CONTENT_AGENT_FALLBACK_ENABLED,
             daily_quota=settings.NEWS_CONTENT_AGENT_DAILY_QUOTA,
             max_consecutive_failures=settings.NEWS_CONTENT_AGENT_MAX_CONSECUTIVE_FAILURES,
+            max_content_failures_per_site=settings.NEWS_CONTENT_AGENT_MAX_CONTENT_FAILURES_PER_SITE,
         )
         self.embedder = embedder or HuayuanEmbeddingClient()
         self.milvus = milvus or RadarNewsDocStore()
@@ -141,7 +142,8 @@ class NewsContentProcessor:
         started = time.monotonic()
         task_id = int(task["id"])
         url = (task.get("url") or "").strip()
-        site_key = str(task.get("source_url_id") or "")
+        source_url_id = int(task.get("source_url_id") or 0)
+        site_key = str(source_url_id or "")
 
         logger.info(
             "[news-content] 开始处理 task_id=%s company_id=%s url=%s source_level=%s",
@@ -179,25 +181,42 @@ class NewsContentProcessor:
 
         # ---------- 第 2 段：Agent 兜底（仅规则失败时，每 URL 最多一次） ----------
         if article is None:
-            allowed, reason = self.guard.allow()
+            # 1. 只读闸门（开关 / 系统熔断 / 按源跳过）
+            allowed, reason = await self.guard.allow(source_url_id)
             if not allowed:
                 logger.warning("[news-content] 跳过 Agent 兜底 task_id=%s 原因=%s", task_id, reason)
                 error_message = f"{error_message}；Agent 兜底未执行：{reason}"
             else:
-                self.guard.mark_used()
-                agent_result = await self._run_agent_with_timeout(task, site_key)
-                self.guard.mark_result(agent_result.ok)
-                agent_trace_id = agent_result.trace_id or None
-                if agent_result.ok and agent_result.article is not None:
-                    article = agent_result.article
-                    channel = CHANNEL_AGENT
-                    error_message = None
-                    logger.info(
-                        "[news-content] Agent 兜底成功 task_id=%s chars=%d cost=%s",
-                        task_id, len(article.content_text or ""), agent_result.agent_cost_usd,
+                # 2. 原子扣配额；失败则不得跑 Agent
+                quota_ok, quota_reason = await self.guard.try_consume_quota()
+                if not quota_ok:
+                    logger.warning(
+                        "[news-content] 跳过 Agent 兜底 task_id=%s 原因=%s",
+                        task_id, quota_reason,
                     )
+                    error_message = f"{error_message}；Agent 兜底未执行：{quota_reason}"
                 else:
-                    error_message = f"{error_message}；Agent 兜底失败：{agent_result.error}"
+                    agent_result = await self._run_agent_with_timeout(task, site_key)
+                    # 3. 按 failure_kind 回写闸门
+                    await self.guard.mark_result(
+                        success=agent_result.ok,
+                        source_url_id=source_url_id,
+                        failure_kind=agent_result.failure_kind,
+                        content_streak_eligible=bool(
+                            agent_result.content_streak_eligible
+                        ),
+                    )
+                    agent_trace_id = agent_result.trace_id or None
+                    if agent_result.ok and agent_result.article is not None:
+                        article = agent_result.article
+                        channel = CHANNEL_AGENT
+                        error_message = None
+                        logger.info(
+                            "[news-content] Agent 兜底成功 task_id=%s chars=%d cost=%s",
+                            task_id, len(article.content_text or ""), agent_result.agent_cost_usd,
+                        )
+                    else:
+                        error_message = f"{error_message}；Agent 兜底失败：{agent_result.error}"
 
         # ---------- 下载彻底失败：task FAILED + document 占位 ----------
         if article is None or not article.content_text:
@@ -264,6 +283,8 @@ class NewsContentProcessor:
             return AgentFallbackResult(
                 ok=False, article=None, error=f"Agent 兜底超时（>{timeout}s）",
                 trace_id=trace_id, duration_ms=int(timeout * 1000),
+                failure_kind="system",
+                content_streak_eligible=False,
             )
 
     async def _write_document(self, task: dict[str, Any], article, channel: str) -> Optional[int]:

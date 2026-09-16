@@ -15,25 +15,23 @@ Agent 兜底：规则版抓不到正文时，让 Agent 抓详情页 + 抽取正�
     news_crawl 的工具是「列表页发现入口 URL」，明令禁止打开详情页；
     本模块的工具反过来：只服务**一个已知详情页 URL**，目标是把正文抠出来。
 
-三道成本闸门（硬约束，对齐 news-url-crawl 成本纪律）
+三道成本闸门（硬约束，见 `ai_docs/26091605-Agent兜底闸门改造设计.md`）
     1. 开关：`NEWS_CONTENT_AGENT_FALLBACK_ENABLED`
-    2. 日配额：`NEWS_CONTENT_AGENT_DAILY_QUOTA`（进程内自然日计数，跨日自动重置）
-    3. 熔断：连续失败 `NEWS_CONTENT_AGENT_MAX_CONSECUTIVE_FAILURES` 次则当日闭闸
+    2. 日配额：`NEWS_CONTENT_AGENT_DAILY_QUOTA`（表 `radar_news_agent_guard` 原子扣减，多实例共享）
+    3. 熔断：仅 **system** 连续失败达阈 → 当日全局闭闸；
+       内容失败按 `source_url_id` 跳过（不打穿其它信息源）
     另有墙钟超时 `NEWS_CONTENT_AGENT_TIMEOUT_SECONDS` 兜底（CLI 子进程卡死不拖垮 worker）。
 
-⚠️ 配额是**进程内**计数：多实例部署时等效配额 = 配置值 × 实例数。
-   当前设计是单 worker 常驻，够用；上多实例时需改为共享计数（如落库）。
+⚠️ 闸门状态落库；多实例共享同一配额与熔断位。DDL 见 `scripts/sql/18_radar_news_agent_guard.sql`。
 """
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import re
 import time
 from dataclasses import dataclass, field
-from datetime import date
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 from urllib.parse import urljoin
 
 import httpx
@@ -43,6 +41,11 @@ from claude_agent_sdk.types import ResultMessage
 from backend.app.config import settings
 from backend.domain.news_crawl.agent_runner import build_sdk_env
 from backend.domain.news_crawl.crawl_tools import USER_AGENT, normalize_date, normalize_url
+from backend.domain.news_content.agent_guard_store import (
+    AgentGuardStore,
+    MysqlAgentGuardStore,
+    today_stat_date,
+)
 from backend.domain.news_content.rate_limiter import SiteRateLimiter
 from company_news_crawl.adapters.content_extractor import ContentExtractor, ExtractedArticle
 
@@ -53,6 +56,8 @@ HTTP_TIMEOUT = 25.0
 _TOOL_TEXT_MAX_CHARS = 8000
 # 反幻觉校验时用于比对的正文前缀长度
 _VERIFY_PREFIX_CHARS = 120
+
+FailureKind = Literal["content", "system"]
 
 SYSTEM_PROMPT = """
 你是企业官网新闻详情页的正文抽取助手。只做一件事：把给定详情页 URL 的新闻正文抠出来。
@@ -180,9 +185,10 @@ class DetailAgentStore:
 
 class AgentFallbackGuard:
     """
-    Agent 兜底的三道闸门：开关 / 日配额 / 连续失败熔断。
+        Agent 兜底三道闸门：开关 / 日配额（原子） / 系统熔断 + 按源内容跳过。
 
-    进程内单例（worker 内共享），跨自然日自动重置。
+        权威状态在 `AgentGuardStore`（默认 MySQL）；调用序必须为：
+        allow → try_consume_quota → Agent → mark_result。
     """
 
     def __init__(
@@ -191,64 +197,126 @@ class AgentFallbackGuard:
         enabled: bool,
         daily_quota: int,
         max_consecutive_failures: int,
+        max_content_failures_per_site: int = 1,
+        store: Optional[AgentGuardStore] = None,
     ) -> None:
         self.enabled = bool(enabled)
         self.daily_quota = max(0, int(daily_quota))
         self.max_consecutive_failures = max(1, int(max_consecutive_failures))
-        self._day: Optional[date] = None
-        self._used = 0
-        self._consecutive_failures = 0
-        self._tripped = False
+        self.max_content_failures_per_site = max(1, int(max_content_failures_per_site))
+        self._store: AgentGuardStore = store or MysqlAgentGuardStore()
 
-    def _roll_day(self) -> None:
-        today = date.today()
-        if self._day != today:
-            self._day = today
-            self._used = 0
-            self._consecutive_failures = 0
-            self._tripped = False
-
-    def allow(self) -> tuple[bool, str]:
+    async def allow(self, source_url_id: int) -> tuple[bool, str]:
         """
-        是否允许发起一次 Agent 兜底。
+            只读闸门：开关 / 系统熔断 / 该源内容跳过。不扣配额。
 
-        Returns:
-            (是否允许, 不允许时的原因)
+            Args:
+                source_url_id: 任务信息源 id；≤0 时跳过按源检查
+
+            Returns:
+                (是否允许继续尝试扣配额, 不允许时的原因)
         """
         if not self.enabled:
             return False, "Agent 兜底已关闭（NEWS_CONTENT_AGENT_FALLBACK_ENABLED=false）"
-        self._roll_day()
-        if self._tripped:
-            return False, (
-                f"Agent 兜底已熔断（连续失败 {self._consecutive_failures} 次），当日不再兜底"
+
+        # 1. 全局系统熔断
+        stat = today_stat_date()
+        if await self._store.is_system_tripped(stat):
+            return False, "Agent 兜底已熔断（连续系统失败），当日不再兜底"
+
+        # 2. 按信息源内容跳过
+        sid = int(source_url_id or 0)
+        if sid > 0 and await self._store.is_source_skipped(sid, stat):
+            return (
+                False,
+                f"Agent 兜底已跳过该信息源（source_url_id={sid} 内容失败达阈），当日不再兜底",
             )
-        if self._used >= self.daily_quota:
-            return False, f"Agent 兜底已达当日配额（{self._used}/{self.daily_quota}）"
         return True, ""
 
-    def mark_used(self) -> None:
-        """记一次已发起的兜底（无论成败都计数，成本已发生）。"""
-        self._roll_day()
-        self._used += 1
+    async def try_consume_quota(self) -> tuple[bool, str]:
+        """
+            原子扣减日配额（唯一扣配额入口）。
 
-    def mark_result(self, success: bool) -> None:
-        """记一次兜底结果，维护连续失败计数与熔断位。"""
-        self._roll_day()
+            Returns:
+                (是否扣成功, 失败原因)；失败时调用方不得再跑 Agent
+        """
+        ok, used, reason = await self._store.try_consume_quota(
+            today_stat_date(), self.daily_quota
+        )
+        if ok:
+            logger.info(
+                "Agent 兜底扣配额成功 used=%s/%s", used, self.daily_quota
+            )
+        return ok, reason
+
+    async def mark_result(
+        self,
+        *,
+        success: bool,
+        source_url_id: int,
+        failure_kind: Optional[FailureKind] = None,
+        content_streak_eligible: bool = False,
+    ) -> None:
+        """
+            根据兜底结果更新系统熔断与按源跳过计数。
+
+            Args:
+                success: 是否抽到合格正文
+                source_url_id: 信息源 id
+                failure_kind: 失败类别；ok=False 且缺失时按 system
+                content_streak_eligible: 是否计入按源 content streak（HTTP 200 空正文等）
+        """
+        stat = today_stat_date()
+        sid = int(source_url_id or 0)
+
         if success:
-            self._consecutive_failures = 0
+            # 成功：清零系统 streak，并清零该源 content 计数
+            await self._store.mark_system_result(
+                stat, success=True, max_streak=self.max_consecutive_failures
+            )
+            if sid > 0:
+                await self._store.mark_content_result(
+                    sid,
+                    stat,
+                    success=True,
+                    increment_streak=False,
+                    max_streak=self.max_content_failures_per_site,
+                )
             return
-        self._consecutive_failures += 1
-        if self._consecutive_failures >= self.max_consecutive_failures:
-            self._tripped = True
-            logger.warning(
-                "Agent 兜底熔断：连续失败 %d 次，当日不再兜底", self._consecutive_failures
+
+        kind: FailureKind = failure_kind if failure_kind in ("content", "system") else "system"
+        if kind == "system":
+            await self._store.mark_system_result(
+                stat, success=False, max_streak=self.max_consecutive_failures
+            )
+            return
+
+        # content：不推系统熔断；按 eligible 决定是否推源跳过
+        if sid > 0:
+            await self._store.mark_content_result(
+                sid,
+                stat,
+                success=False,
+                increment_streak=bool(content_streak_eligible),
+                max_streak=self.max_content_failures_per_site,
             )
 
-    @property
-    def used_today(self) -> int:
-        """今日已用次数（日志/自检用）。"""
-        self._roll_day()
-        return self._used
+
+def _content_streak_eligible_from_store(store: DetailAgentStore, min_chars: int) -> bool:
+    """
+        是否满足「HTTP 200 + 无可抽正文」——可计入按源 content streak。
+
+        临时 5xx / 连接失败等页面不计入，避免误跳过好源。
+    """
+    threshold = max(1, int(min_chars))
+    for page in store.pages:
+        if int(page.http_status or 0) != 200:
+            continue
+        content_len = len((page.article.content_text if page.article else None) or "")
+        readable_len = len((page.text or "").strip())
+        if content_len < threshold and readable_len < threshold:
+            return True
+    return False
 
 
 # ---------------------------------------------------------------- 工具工厂
@@ -416,6 +484,8 @@ class AgentFallbackResult:
     duration_ms: int
     agent_turns: Optional[int] = None
     agent_cost_usd: Optional[float] = None
+    failure_kind: Optional[FailureKind] = None
+    content_streak_eligible: bool = False
 
 
 async def run_detail_fetch_agent(
@@ -426,25 +496,26 @@ async def run_detail_fetch_agent(
     trace_id: Optional[str] = None,
 ) -> AgentFallbackResult:
     """
-    对单个详情页跑一次 Agent 兜底抽取（每 URL 只应调用一次）。
+        对单个详情页跑一次 Agent 兜底抽取（每 URL 只应调用一次）。
 
-    ⚠️ 本函数**不含配额判断** —— 调用方必须先过 `AgentFallbackGuard.allow()`，
-    并在发起后 `mark_used()`、结束后 `mark_result(ok)`。
+        ⚠️ 本函数**不含配额判断** —— 调用方必须先 `allow` + `try_consume_quota`，
+        结束后 `mark_result(...)`。
 
-    Args:
-        url: 详情页 URL
-        site_key: 站点标识（同站限速）
-        limiter: 进程内共享限速器
-        trace_id: 链路追踪 ID（回写 `agent_trace_id`）
+        Args:
+            url: 详情页 URL
+            site_key: 站点标识（同站限速，通常为 source_url_id 字符串）
+            limiter: 进程内共享限速器
+            trace_id: 链路追踪 ID（回写 `agent_trace_id`）
 
-    Returns:
-        AgentFallbackResult —— 失败时 `error` 有值，绝不抛异常给主循环
+        Returns:
+            AgentFallbackResult —— 失败时 `error` / `failure_kind` 有值，绝不抛异常给主循环
     """
     started = time.monotonic()
     trace = trace_id or ""
     store = DetailAgentStore(target_url=url, site_key=str(site_key or ""))
     detail_server = build_detail_server(store, limiter)
     sdk_env = build_sdk_env()
+    min_chars = int(settings.NEWS_CONTENT_FETCH_MIN_CHARS)
 
     options = ClaudeAgentOptions(
         system_prompt=SYSTEM_PROMPT,
@@ -490,11 +561,14 @@ async def run_detail_fetch_agent(
             error=f"{type(exc).__name__}: {exc}",
             trace_id=trace,
             duration_ms=duration_ms,
+            failure_kind="system",
+            content_streak_eligible=False,
         )
 
     duration_ms = int((time.monotonic() - started) * 1000)
     turns = result_meta.get("turns")
     cost = result_meta.get("cost_usd")
+    streak_eligible = _content_streak_eligible_from_store(store, min_chars)
 
     if result_meta.get("is_error"):
         return AgentFallbackResult(
@@ -502,6 +576,8 @@ async def run_detail_fetch_agent(
             error=f"Agent 返回错误状态: {result_meta.get('status')}",
             trace_id=trace, duration_ms=duration_ms,
             agent_turns=turns, agent_cost_usd=cost,
+            failure_kind="system",
+            content_streak_eligible=False,
         )
 
     if not store.submitted:
@@ -510,17 +586,20 @@ async def run_detail_fetch_agent(
             ok=False, article=None, error=detail,
             trace_id=trace, duration_ms=duration_ms,
             agent_turns=turns, agent_cost_usd=cost,
+            failure_kind="content",
+            content_streak_eligible=streak_eligible,
         )
 
     submitted = store.submitted
     content_text = submitted["content_text"]
-    min_chars = int(settings.NEWS_CONTENT_FETCH_MIN_CHARS)
     if len(content_text.strip()) < min_chars:
         return AgentFallbackResult(
             ok=False, article=None,
             error=f"Agent 提交的正文过短（{len(content_text.strip())} < {min_chars}）",
             trace_id=trace, duration_ms=duration_ms,
             agent_turns=turns, agent_cost_usd=cost,
+            failure_kind="content",
+            content_streak_eligible=streak_eligible,
         )
 
     article = ExtractedArticle(
@@ -541,6 +620,8 @@ async def run_detail_fetch_agent(
     return AgentFallbackResult(
         ok=True, article=article, error=None, trace_id=trace,
         duration_ms=duration_ms, agent_turns=turns, agent_cost_usd=cost,
+        failure_kind=None,
+        content_streak_eligible=False,
     )
 
 
@@ -548,6 +629,7 @@ __all__ = [
     "AgentFallbackGuard",
     "AgentFallbackResult",
     "DetailAgentStore",
+    "FailureKind",
     "build_detail_server",
     "run_detail_fetch_agent",
 ]
