@@ -6,7 +6,7 @@
 
 核心差异：
   1. 纯内存返回，不落盘
-  2. 凭证从 settings 组装，不直读 os.environ
+  2. 凭证只认项目 .env（或无 .env 时的 K8s 注入），不回退本机 shell 个人 key
   3. 新增 known_urls（提示词命中 + 返回前过滤）
   4. 新增 stop_reason（区分通道问题）
 """
@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import shutil
 import time
 from typing import Any, Optional
@@ -36,36 +35,21 @@ from backend.domain.news_crawl.url_norm import normalize_many
 
 logger = logging.getLogger(__name__)
 
-# 传给 CLI 子进程的环境变量白名单
-_SDK_ENV_KEYS = (
-    "ANTHROPIC_BASE_URL",
-    "ANTHROPIC_AUTH_TOKEN",
-    "ANTHROPIC_API_KEY",
-    "ANTHROPIC_MODEL",
-    "ANTHROPIC_SMALL_FAST_MODEL",
-    "ANTHROPIC_DEFAULT_HAIKU_MODEL",
-    "ANTHROPIC_DEFAULT_SONNET_MODEL",
-    "ANTHROPIC_DEFAULT_OPUS_MODEL",
-)
-
 
 def build_sdk_env() -> dict[str, str]:
     """
-    组装传给 CLI 子进程的 Anthropic 凭证。
+        组装传给 CLI 子进程的 Anthropic 凭证与隔离配置。
 
-    优先取 settings（项目约定配置过 settings），回退到 os.environ
-    以兼容本地开发时直接用 shell 变量的场景。
+        委托 settings.build_claude_sdk_env()：
+        - 本地只认项目 .env，不读本机 shell / ~/.claude 个人 key
+        - 设置 CLAUDE_CONFIG_DIR 到项目内目录
+        - 调用方保持 setting_sources=[]，避免加载用户 settings
 
-    ⚠️ 公开函数：雷达新闻知识库的详情页兜底 Agent
-    （`backend/domain/news_content/agent_fallback.py`）复用同一套凭证组装，
-    避免两处各写一份导致「一边能跑一边 401」。
+        ⚠️ 公开函数：雷达新闻知识库的详情页兜底 Agent
+        （`backend/domain/news_content/agent_fallback.py`）复用同一套组装，
+        避免两处各写一份导致「一边能跑一边 401」。
     """
-    env: dict[str, str] = {}
-    for key in _SDK_ENV_KEYS:
-        value = getattr(settings, key, None) or os.getenv(key)
-        if value:
-            env[key] = str(value)
-    return env
+    return settings.build_claude_sdk_env()
 
 
 # 兼容旧名（本模块历史内部引用）
@@ -180,9 +164,10 @@ async def run_news_crawl_agent(
     )
     sdk_env = _sdk_env()
 
+    # model / env 均来自项目隔离配置；setting_sources=[] 禁止加载 ~/.claude
     options = ClaudeAgentOptions(
         system_prompt=SYSTEM_PROMPT,
-        model=sdk_env.get("ANTHROPIC_MODEL") or settings.ANTHROPIC_MODEL,
+        model=sdk_env.get("ANTHROPIC_MODEL") or None,
         env=sdk_env,
         mcp_servers={"crawl": crawl_server},
         allowed_tools=[

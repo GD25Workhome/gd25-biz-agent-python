@@ -1,5 +1,6 @@
 # 华院雷达采集 Worker（独立于 FastAPI）
 pymysql>=1.1.0,<2.0.0
-requests>=2.31.0,<3.0.0
+# 巨潮静态站 WAF 按 TLS 指纹拦截非浏览器客户端，需 curl_cffi 仿真 Chrome 指纹
+curl_cffi>=0.16.0,<1.0.0
 pypdf>=4.0.0,<6.0.0
 python-dotenv>=1.0.0,<2.0.0

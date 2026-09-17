@@ -37,6 +37,9 @@ env/
 .env
 .env.local
 
+# Claude Agent SDK 项目隔离运行时（勿与本机 ~/.claude 混用）
+.claude_sdk_runtime/
+
 # Database
 *.db
 *.sqlite

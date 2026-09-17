@@ -124,6 +124,7 @@ def _claim_tasks_sync(
             f"""
             SELECT id FROM radar_news_content_task
             WHERE {_NOT_DELETED} AND status = %s
+              AND (source_kind = 'news_html' OR source_kind IS NULL OR source_kind = '')
             ORDER BY id ASC
             LIMIT %s
             FOR UPDATE SKIP LOCKED

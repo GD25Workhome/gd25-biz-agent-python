@@ -88,6 +88,19 @@ def _parse_bool(raw: Optional[str], default: bool) -> bool:
 
 def load_settings() -> Settings:
     """从环境变量加载配置。"""
+    # 巨潮 HTTP 节奏：与 radar_kb 共用适配器内限速（默认 5s + 0～4s 抖动）
+    cninfo_interval = float(
+        os.getenv(
+            "RADAR_CNINFO_REQUEST_INTERVAL_SEC",
+            os.getenv("RADAR_REQUEST_INTERVAL_SEC", "5"),
+        )
+        or "5"
+    )
+    cninfo_jitter = float(os.getenv("RADAR_CNINFO_REQUEST_JITTER_SEC", "4") or "4")
+    from radar_crawl.adapters import cninfo as cninfo_adapter
+
+    cninfo_adapter.configure_request_pace(cninfo_interval, cninfo_jitter)
+
     return Settings(
         db_host=os.getenv("RADAR_DB_HOST", "127.0.0.1"),
         db_port=int(os.getenv("RADAR_DB_PORT", "3306")),
@@ -96,7 +109,8 @@ def load_settings() -> Settings:
         db_name=os.getenv("RADAR_DB_NAME", "unidt_exhibition"),
         tenant_id=_parse_optional_int(os.getenv("RADAR_TENANT_ID")),
         poll_interval_sec=float(os.getenv("RADAR_POLL_INTERVAL_SEC", "60")),
-        request_interval_sec=float(os.getenv("RADAR_REQUEST_INTERVAL_SEC", "1.0")),
+        # 遗留 worker 任务间 sleep；真实 HTTP 间隔以 cninfo 适配器为准
+        request_interval_sec=cninfo_interval,
         worker_id=os.getenv("RADAR_WORKER_ID", f"py-{os.getpid()}"),
         # 默认开启 PDF 正文抽取（由阶段 B worker 执行）
         cninfo_fetch_pdf=_parse_bool(os.getenv("RADAR_CNINFO_FETCH_PDF"), True),

@@ -1,5 +1,8 @@
 # 雷达采集 Worker（radar_crawl）
 
+> **Deprecated（知识库合并 M2+）**：默认 `RADAR_KB_UNIFIED=1` 时本包 worker 启动即退出。
+> 请改用仓库根目录 `python -m radar_kb discover|content|all`（写 `radar_company_news_*`，不再写 `radar_raw_document`）。
+
 独立可发布服务，与华院 FastAPI **分开部署**。  
 **默认一个启动命令拉起全部任务**（当前：列表采集 + PDF 回填）。
 
@@ -43,3 +46,19 @@ docker build -f Dockerfile.radar-crawl -t unidt-exhibition-opportunity-py-crawl:
 ```
 
 K8s 示例：`deploy/k8s/radar-crawl.yaml`（单个 Deployment）。
+
+
+## 本地启动
+入口就是 radar_crawl 这个包,但要在仓库根目录跑:
+
+### 1. 激活 conda 环境(必须,否则依赖对不上)
+conda activate py311_GD25_base
+
+### 2. 仓库根目录
+cd /Users/shuxiaolong/work/github/gd25WorkHome/gd25-biz-agent-python
+
+### 3. 只跑 PDF 回填(验证修复用)
+python -m radar_crawl pdf
+
+### 或者全开(列表采集 + PDF 回填)
+python -m radar_crawl

@@ -28,7 +28,12 @@ log = logging.getLogger("radar.pdf")
 
 
 class GlobalRateLimiter:
-    """全进程 HTTP 最小间隔（协程共享一把锁）。"""
+    """
+    全进程 HTTP 最小间隔（协程共享一把锁）。
+
+    说明：巨潮 PDF 下载已改由 ``cninfo`` 适配器线程锁限速；本类保留给其它
+    调用方或排障，当前 pdf_fill 主路径不再使用。
+    """
 
     def __init__(self, interval_sec: float) -> None:
         self._interval = max(0.0, interval_sec)
@@ -55,7 +60,6 @@ async def fill_one(
     settings: Settings,
     doc: dict[str, Any],
     sem: asyncio.Semaphore,
-    limiter: GlobalRateLimiter,
 ) -> str:
     """
     处理单条证据正文。
@@ -93,7 +97,7 @@ async def fill_one(
                 log.warning("单条失败 doc_id=%s url= empty_url", doc_id)
                 return "fail"
 
-            await limiter.wait()
+            # 限速在 cninfo 适配器内（线程锁 + 5s/抖动）；此处不再叠一层 wait
             text, err = await asyncio.to_thread(
                 cninfo.download_and_extract_text,
                 url,
@@ -165,9 +169,8 @@ async def fill_one(
 async def run_batch(settings: Settings, docs: list[dict[str, Any]]) -> dict[str, int]:
     """并发处理一批文档。"""
     sem = asyncio.Semaphore(max(1, settings.pdf_concurrency))
-    limiter = GlobalRateLimiter(settings.request_interval_sec)
     results = await asyncio.gather(
-        *[fill_one(settings, doc, sem, limiter) for doc in docs],
+        *[fill_one(settings, doc, sem) for doc in docs],
         return_exceptions=False,
     )
     summary = {"ok": 0, "fail": 0, "skip": 0}
@@ -181,6 +184,13 @@ async def run_batch(settings: Settings, docs: list[dict[str, Any]]) -> dict[str,
 
 def main() -> None:
     """阶段 B 主循环。"""
+    from radar_kb.config import is_legacy_crawl_disabled
+
+    if is_legacy_crawl_disabled():
+        log.warning(
+            "RADAR_KB_UNIFIED=1：legacy pdf_fill_worker 已停用，请使用 python -m radar_kb content"
+        )
+        return
     settings = load_settings()
     log.info(
         "Worker 启动(阶段B-PDF) worker_id=%s concurrency=%s batch=%s interval=%ss "

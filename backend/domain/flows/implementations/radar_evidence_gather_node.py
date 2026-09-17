@@ -159,6 +159,10 @@ def _compact_briefs_for_prompt(briefs: List[Dict[str, Any]]) -> List[Dict[str, A
             item["source_level"] = b.get("source_level")
         if b.get("score") is not None:
             item["score"] = b.get("score")
+        if b.get("content_grade"):
+            item["content_grade"] = b.get("content_grade")
+        if b.get("source_kind"):
+            item["source_kind"] = b.get("source_kind")
         compact.append(item)
     return compact
 
@@ -394,9 +398,27 @@ class EvidenceGatherNode(BaseFunctionNode):
                 vector = await embedder.embed_one(query)
             finally:
                 await embedder.aclose()
-            hits = await get_milvus_store().search_async(
-                vector, company_id=int(ctx.company_id), top_k=top_k
+            store = get_milvus_store()
+            per_path = max(4, top_k // 2)
+            full_hits = await store.search_async(
+                vector, company_id=int(ctx.company_id), content_grade="full", top_k=per_path
             )
+            stub_hits = await store.search_async(
+                vector, company_id=int(ctx.company_id), content_grade="stub", top_k=per_path
+            )
+            merged: dict[str, dict[str, Any]] = {}
+            for hit in (full_hits or []) + (stub_hits or []):
+                if not isinstance(hit, dict):
+                    continue
+                key = str(hit.get("chunk_id") or hit.get("doc_id") or "")
+                prev = merged.get(key)
+                if prev is None or float(hit.get("score") or 0) > float(prev.get("score") or 0):
+                    merged[key] = hit
+            hits = sorted(
+                merged.values(),
+                key=lambda h: float(h.get("score") or 0),
+                reverse=True,
+            )[:top_k]
         except Exception as e:
             payload["error"] = f"{type(e).__name__}: {e}"
             return payload
@@ -682,6 +704,8 @@ class EvidenceGatherNode(BaseFunctionNode):
             "subject_match": text_mentions_subject(subject_blob, subject_keywords),
             "query": query,
             "chunk_index": chunk_index if chunk_index >= 0 else None,
+            "content_grade": hit.get("content_grade"),
+            "source_kind": hit.get("source_kind"),
         }
 
     async def _maybe_extract(

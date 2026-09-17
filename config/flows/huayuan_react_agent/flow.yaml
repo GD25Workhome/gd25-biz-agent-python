@@ -9,7 +9,7 @@ nodes:
     config:
       prompt: prompts/portrait_react.md
       model:
-        provider: doubao
+        provider: huayuan
         temperature: 0.2
         thinking:
           type: disabled

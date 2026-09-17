@@ -59,7 +59,6 @@ def run_cninfo_list_only(conn, settings, task: dict) -> dict:
         edate=edate,
         page_size=settings.cninfo_page_size,
         max_pages=settings.cninfo_max_pages,
-        interval_sec=settings.request_interval_sec,
     )
     stats["searched"] = len(raw_list)
     matched = cninfo.filter_by_stock_code(raw_list, stock_code)
@@ -170,6 +169,13 @@ def process_task(conn, settings, task: dict) -> None:
 
 def main() -> None:
     """阶段 A 主循环。"""
+    from radar_kb.config import is_legacy_crawl_disabled
+
+    if is_legacy_crawl_disabled():
+        log.warning(
+            "RADAR_KB_UNIFIED=1：legacy crawl_worker 已停用，请使用 python -m radar_kb discover"
+        )
+        return
     settings = load_settings()
     log.info(
         "Worker 启动(阶段A-列表) worker_id=%s db=%s@%s/%s poll=%ss tenant=%s fetch_pdf_switch=%s",

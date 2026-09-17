@@ -49,8 +49,14 @@ FIELD_CHUNK_INDEX = "chunk_index"
 FIELD_CHUNK_COUNT = "chunk_count"
 FIELD_CHAR_START = "char_start"
 FIELD_CHAR_END = "char_end"
+FIELD_CONTENT_GRADE = "content_grade"
+FIELD_SOURCE_KIND = "source_kind"
 
 MAX_LEN_CHUNK_ID = 64
+MAX_LEN_CONTENT_GRADE = 16
+MAX_LEN_SOURCE_KIND = 32
+DEFAULT_CONTENT_GRADE = "full"
+DEFAULT_SOURCE_KIND = "news_html"
 
 
 class SchemaMismatchError(RuntimeError):
@@ -134,12 +140,18 @@ class RadarNewsChunkStore:
         return {str(f.get("name")) for f in (desc.get("fields") or []) if f.get("name")}
 
     def _assert_v2_schema(self) -> None:
-        """已存在的 collection 必须含 chunk_id，否则拒绝继续。"""
+        """已存在的 collection 必须含 V2 必需字段，否则拒绝继续。"""
         names = self._field_names()
-        if FIELD_CHUNK_ID not in names:
+        required = {
+            FIELD_CHUNK_ID,
+            FIELD_CONTENT_GRADE,
+            FIELD_SOURCE_KIND,
+        }
+        missing = required - names
+        if missing:
             raise SchemaMismatchError(
-                f"collection={self.collection} 不是 V2 chunk schema（缺少字段 {FIELD_CHUNK_ID}）。"
-                f"请将 MILVUS_COLLECTION 改为 radar_company_news_chunk，或 drop 旧 collection 后重建。"
+                f"collection={self.collection} 不是 V2 chunk schema（缺少字段 {sorted(missing)}）。"
+                f"请运行 scripts/rebuild_radar_milvus_collection.py 重建 collection。"
             )
 
     def ensure_collection(self) -> bool:
@@ -175,6 +187,10 @@ class RadarNewsChunkStore:
         schema.add_field(FIELD_SUMMARY, DataType.VARCHAR, max_length=MAX_LEN_SUMMARY)
         schema.add_field(FIELD_URL, DataType.VARCHAR, max_length=MAX_LEN_URL)
         schema.add_field(FIELD_EMBED_TEXT, DataType.VARCHAR, max_length=MAX_LEN_EMBED_TEXT)
+        schema.add_field(
+            FIELD_CONTENT_GRADE, DataType.VARCHAR, max_length=MAX_LEN_CONTENT_GRADE
+        )
+        schema.add_field(FIELD_SOURCE_KIND, DataType.VARCHAR, max_length=MAX_LEN_SOURCE_KIND)
         schema.add_field(FIELD_EMBEDDING, DataType.FLOAT_VECTOR, dim=self.dim)
 
         client.create_collection(collection_name=self.collection, schema=schema)
@@ -251,6 +267,12 @@ class RadarNewsChunkStore:
             doc_id = int(row["doc_id"])
             chunk_index = int(row["chunk_index"])
             chunk_id = str(row.get("chunk_id") or self.make_chunk_id(doc_id, chunk_index))
+            content_grade = str(
+                row.get("content_grade") or DEFAULT_CONTENT_GRADE
+            ).strip() or DEFAULT_CONTENT_GRADE
+            source_kind = str(row.get("source_kind") or DEFAULT_SOURCE_KIND).strip() or (
+                DEFAULT_SOURCE_KIND
+            )
             payload.append(
                 {
                     FIELD_CHUNK_ID: _truncate(chunk_id, MAX_LEN_CHUNK_ID),
@@ -264,6 +286,8 @@ class RadarNewsChunkStore:
                     FIELD_SUMMARY: _truncate(row.get("summary"), MAX_LEN_SUMMARY),
                     FIELD_URL: _truncate(row.get("url"), MAX_LEN_URL),
                     FIELD_EMBED_TEXT: _truncate(row.get("embed_text"), MAX_LEN_EMBED_TEXT),
+                    FIELD_CONTENT_GRADE: _truncate(content_grade, MAX_LEN_CONTENT_GRADE),
+                    FIELD_SOURCE_KIND: _truncate(source_kind, MAX_LEN_SOURCE_KIND),
                     FIELD_EMBEDDING: [float(x) for x in vector],
                 }
             )
@@ -282,6 +306,8 @@ class RadarNewsChunkStore:
         query_vector: Sequence[float],
         *,
         company_id: Optional[int] = None,
+        content_grade: Optional[str] = None,
+        source_kind: Optional[str] = None,
         top_k: int = 10,
         ef: int = SEARCH_EF,
     ) -> list[dict[str, Any]]:
@@ -292,9 +318,18 @@ class RadarNewsChunkStore:
                 含 chunk_id/doc_id/chunk_index/embed_text/score 等字段的列表
         """
         self.ensure_collection()
-        filter_expr = (
-            f"{FIELD_COMPANY_ID} == {int(company_id)}" if company_id is not None else ""
-        )
+        filter_parts: list[str] = []
+        if company_id is not None:
+            filter_parts.append(f"{FIELD_COMPANY_ID} == {int(company_id)}")
+        if content_grade:
+            filter_parts.append(
+                f'{FIELD_CONTENT_GRADE} == "{str(content_grade).replace(chr(34), "")}"'
+            )
+        if source_kind:
+            filter_parts.append(
+                f'{FIELD_SOURCE_KIND} == "{str(source_kind).replace(chr(34), "")}"'
+            )
+        filter_expr = " and ".join(filter_parts)
         output_fields = [
             FIELD_CHUNK_ID,
             FIELD_DOC_ID,
@@ -307,6 +342,8 @@ class RadarNewsChunkStore:
             FIELD_SUMMARY,
             FIELD_URL,
             FIELD_EMBED_TEXT,
+            FIELD_CONTENT_GRADE,
+            FIELD_SOURCE_KIND,
         ]
         results = self._get_client().search(
             collection_name=self.collection,
@@ -332,10 +369,29 @@ class RadarNewsChunkStore:
                     "summary": entity.get(FIELD_SUMMARY),
                     "url": entity.get(FIELD_URL),
                     "embed_text": entity.get(FIELD_EMBED_TEXT),
+                    "content_grade": entity.get(FIELD_CONTENT_GRADE),
+                    "source_kind": entity.get(FIELD_SOURCE_KIND),
                     "score": hit.get("distance"),
                 }
             )
         return hits
+
+    def rebuild_collection(self, *, drop: bool = True) -> bool:
+        """
+        删除并重建 V2 chunk collection（联调/ schema 升级用）。
+
+        Args:
+            drop: True 时先 drop 再 create；False 时仅 ensure（不删数据）
+
+        Returns:
+            True 表示本次新建；False 表示已存在且未 drop
+        """
+        client = self._get_client()
+        if drop and client.has_collection(self.collection):
+            client.drop_collection(self.collection)
+            self._ensured = False
+            logger.warning("已 drop chunk collection=%s，准备重建", self.collection)
+        return self.ensure_collection()
 
     def _count_raw(self) -> int:
         """统计实体数（不带 limit）。"""
@@ -452,4 +508,6 @@ __all__ = [
     "FIELD_CHUNK_COUNT",
     "FIELD_CHAR_START",
     "FIELD_CHAR_END",
+    "FIELD_CONTENT_GRADE",
+    "FIELD_SOURCE_KIND",
 ]

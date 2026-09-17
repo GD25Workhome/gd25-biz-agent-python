@@ -234,6 +234,8 @@ class NewsContentProcessor:
             title=article.title,
             content_text=article.content_text,
             url=article.url or url,
+            content_grade="full",
+            source_kind=str(task.get("source_kind") or "news_html"),
         )
 
         cost_ms = self._ms(started)
@@ -328,6 +330,8 @@ class NewsContentProcessor:
         title: Optional[str],
         content_text: Optional[str],
         url: str,
+        content_grade: str = "full",
+        source_kind: str = "news_html",
     ) -> tuple[int, Optional[str]]:
         """
             向量段（V2）：切分 → 降状态 → 删旧 chunk → 批量 embedding → 写 Milvus → 回写。
@@ -413,6 +417,8 @@ class NewsContentProcessor:
                 "url": url,
                 "embed_text": chunk.text,
                 "embedding": vectors[idx],
+                "content_grade": content_grade,
+                "source_kind": source_kind,
             }
             for idx, chunk in enumerate(split.chunks)
         ]

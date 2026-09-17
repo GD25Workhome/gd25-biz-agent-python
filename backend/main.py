@@ -2,7 +2,7 @@
 FastAPI应用入口
 
 运行方式：
-conda activate py311_GD25_autoGen
+-（废弃）- conda activate py311_GD25_autoGen
 conda activate py311_GD25_base
 
     方式1（推荐）：直接运行
@@ -108,6 +108,8 @@ async def lifespan(app: FastAPI):
     consumer_tasks = []
     news_content_stop = None
     news_content_task = None
+    radar_kb_stop = None
+    radar_kb_threads = None
     # 启动时执行
     logger.info("=" * 60)
     logger.info("系统启动中...")
@@ -180,26 +182,57 @@ async def lifespan(app: FastAPI):
                 "（NEWS_CRAWL_ENABLED=false 或未配置 Anthropic 凭证）"
             )
 
-        # 8. 新闻知识库写入主循环（方案 A′：与脚本共用 worker_loop，仍扫表抢锁）
-        #    默认关闭；开启后与 Rewritten 消费者并存，互不共用队列。
+        # 8. L2：radar_kb 发现+正文调度器挂 lifespan（后台线程，不堵事件循环）
+        #    默认 RADAR_KB_WORKER_IN_APP=true；可退回 python -m radar_kb 独立进程。
+        if settings.RADAR_KB_WORKER_IN_APP:
+            logger.info("8. 启动 radar_kb 统一调度器（应用内 L2）...")
+            mysql_ok = settings.is_exhibition_mysql_enabled
+            if not mysql_ok:
+                # 仍可能靠 RADAR_DB_*；交给 load_kb_settings 判断
+                mysql_ok = True
+            if mysql_ok:
+                try:
+                    from radar_kb.in_app import start_radar_kb_in_app
+
+                    radar_kb_stop, radar_kb_threads = start_radar_kb_in_app()
+                    logger.info(
+                        "   ✓ radar_kb discover+content 已在后台线程启动"
+                        "（RADAR_KB_WORKER_IN_APP=true）"
+                    )
+                except Exception as exc:
+                    logger.error(
+                        "   ✗ radar_kb 启动失败（不阻断 API）：%s",
+                        exc,
+                        exc_info=True,
+                    )
+            else:
+                logger.error(
+                    "   ✗ RADAR_KB_WORKER_IN_APP=true 但未配置 MySQL，跳过"
+                )
+        else:
+            logger.info(
+                "8. 跳过 radar_kb 应用内调度"
+                "（RADAR_KB_WORKER_IN_APP=false；可用 python -m radar_kb）"
+            )
+
+        # 8b. 旧 news_content_worker 应用内挂载（与 L2 互斥）
         if settings.NEWS_CONTENT_WORKER_IN_APP:
-            logger.info("8. 启动新闻知识库写入 worker（应用内）...")
-            if settings.is_exhibition_mysql_enabled:
+            if settings.RADAR_KB_WORKER_IN_APP and radar_kb_threads:
+                logger.info(
+                    "8b. 跳过 NEWS_CONTENT_WORKER_IN_APP："
+                    "L2 radar_kb 已覆盖正文调度，避免双扫 content_task"
+                )
+            elif settings.is_exhibition_mysql_enabled:
+                logger.info("8b. 启动遗留新闻知识库 worker（应用内）...")
                 from backend.domain.news_content.worker_loop import (
                     start_news_content_worker_in_app,
                 )
                 news_content_stop, news_content_task = start_news_content_worker_in_app()
-                logger.info("   ✓ 新闻知识库 worker 已启动（扫表抢锁，非内存队列）")
+                logger.info("   ✓ 遗留 news_content worker 已启动")
             else:
                 logger.error(
-                    "   ✗ NEWS_CONTENT_WORKER_IN_APP=true 但未配置 exhibition MySQL，"
-                    "跳过启动（请配置 EXHIBITION_MYSQL_HOST/USER/PASSWORD/DB）"
+                    "   ✗ NEWS_CONTENT_WORKER_IN_APP=true 但未配置 exhibition MySQL，跳过"
                 )
-        else:
-            logger.info(
-                "8. 跳过新闻知识库写入 worker"
-                "（NEWS_CONTENT_WORKER_IN_APP=false；可用 scripts/news_content_worker.py）"
-            )
 
         logger.info("=" * 60)
         logger.info("系统启动完成！")
@@ -211,7 +244,12 @@ async def lifespan(app: FastAPI):
 
     yield  # 应用运行期间
 
-    # 关闭时：先停新闻 worker（优雅 stop），再 cancel Rewritten 消费者
+    # 关闭时：先停 radar_kb / 新闻 worker，再 cancel Rewritten 消费者
+    if radar_kb_stop is not None and radar_kb_threads is not None:
+        from radar_kb.in_app import stop_radar_kb_in_app
+
+        stop_radar_kb_in_app(radar_kb_stop, radar_kb_threads)
+
     if news_content_stop is not None and news_content_task is not None:
         from backend.domain.news_content.worker_loop import (
             stop_news_content_worker_in_app,

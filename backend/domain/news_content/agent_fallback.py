@@ -517,9 +517,10 @@ async def run_detail_fetch_agent(
     sdk_env = build_sdk_env()
     min_chars = int(settings.NEWS_CONTENT_FETCH_MIN_CHARS)
 
+    # model / env 均来自项目隔离配置；setting_sources=[] 禁止加载 ~/.claude
     options = ClaudeAgentOptions(
         system_prompt=SYSTEM_PROMPT,
-        model=sdk_env.get("ANTHROPIC_MODEL") or settings.ANTHROPIC_MODEL,
+        model=sdk_env.get("ANTHROPIC_MODEL") or None,
         env=sdk_env,
         mcp_servers={"detail": detail_server},
         allowed_tools=[

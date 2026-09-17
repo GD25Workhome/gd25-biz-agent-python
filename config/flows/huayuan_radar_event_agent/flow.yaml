@@ -10,7 +10,7 @@ nodes:
     config:
       prompt: prompts/query_planner.md
       model:
-        provider: doubao
+        provider: huayuan
         temperature: 0.3
         thinking:
           type: disabled
@@ -31,7 +31,7 @@ nodes:
     config:
       prompt: prompts/radar_event_score.md
       model:
-        provider: doubao
+        provider: huayuan
         temperature: 0.2
         # 终评上下文含 briefs，代理链路易长时间无响应；显式超时避免无限挂起
         timeout: 300
