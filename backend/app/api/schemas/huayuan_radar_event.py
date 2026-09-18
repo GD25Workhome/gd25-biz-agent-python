@@ -52,14 +52,12 @@ class RadarEventKnowledgeConfig(BaseModel):
     """
     知识库使用开关（请求可选）。
 
-    ⚠️ A/B 契约：**不传 / enabled=false 时，雷达事件评分与改造前完全一致**
-    （gather 不做任何 Milvus 调用，也不挂 load_news_document）。
-    需要开启知识库时必须显式传 `enabled=true`。
+    缺省 enabled=true：外网必跑 + KB 默认增强；显式 false 时仅外网。
     """
 
     enabled: bool = Field(
-        default=False,
-        description="是否启用知识库（Milvus 检索 + 按需拉全文）；缺省 false=旧行为不变",
+        default=True,
+        description="是否启用知识库（Milvus 检索 + 按需拉全文）；缺省 true",
     )
     max_docs: Optional[int] = Field(
         default=None,
@@ -75,8 +73,13 @@ class RadarEventKnowledgeConfig(BaseModel):
 
 
 class RadarEventEvidenceItem(BaseModel):
-    """单条可追溯证据。"""
+    """单条可追溯证据（evidences[] 为真相源）。"""
 
+    evidence_no: Optional[int] = Field(default=None, description="事件内稳定序号，从 0 起")
+    source_type: Optional[str] = Field(
+        default=None, description="web | knowledge_base"
+    )
+    doc_id: Optional[Union[int, str]] = Field(default=None, description="知识库文档 id")
     title: Optional[str] = Field(default=None, description="标题")
     summary: Optional[str] = Field(default=None, description="摘要")
     quote: Optional[str] = Field(default=None, description="短摘录，建议≤200字")
@@ -88,7 +91,18 @@ class RadarEventEvidenceItem(BaseModel):
         default=None,
         description="来源层级 P0/P1/P2（知识库召回=P0）；缺省 None 由调用方兜底",
     )
+    content_grade: Optional[str] = Field(default=None, description="KB：full|stub")
+    cite_reason: Optional[str] = Field(default=None, description="为何引此条")
     kept: bool = Field(default=True, description="是否纳入计分证据")
+
+
+class RadarEventScoreItem(BaseModel):
+    """展厅评分子项（引用 evidence_no，不嵌套 Citation）。"""
+
+    code: str
+    score: Optional[int] = None
+    score_reason: Optional[str] = None
+    evidence_nos: List[int] = Field(default_factory=list)
 
 
 class RadarEventDiscardedItem(BaseModel):
@@ -126,11 +140,14 @@ class RadarEventScoreResult(BaseModel):
         default="pending_verify",
         description="准入提示：pass/reject_unrelated/pending_verify/expired",
     )
-    score_reason: Optional[str] = Field(default=None, description="打分理由")
+    score_reason: Optional[str] = Field(default=None, description="总评理由")
+    score_items: List[RadarEventScoreItem] = Field(default_factory=list)
     evidences: List[RadarEventEvidenceItem] = Field(default_factory=list)
     discarded: List[RadarEventDiscardedItem] = Field(default_factory=list)
     search_count: int = Field(default=0, ge=0)
     extract_count: int = Field(default=0, ge=0)
+    web_hit_count: int = Field(default=0, ge=0)
+    kb_hit_count: int = Field(default=0, ge=0)
 
 
 class RadarEventCompany(BaseModel):
@@ -181,7 +198,7 @@ class HuayuanRadarEventRequestContext(BaseModel):
     max_results_per_search: Optional[int] = None
     knowledge: Optional[RadarEventKnowledgeConfig] = Field(
         default=None,
-        description="知识库使用开关（可选）；不传=禁用，旧请求行为完全不变",
+        description="知识库使用开关（可选）；不传=默认启用 KB",
     )
 
 

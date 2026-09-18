@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import re
 import secrets
 from datetime import datetime
@@ -18,6 +17,7 @@ from fastapi import APIRouter, HTTPException
 from langchain_core.messages import AIMessage, HumanMessage
 
 from backend.app.api.schemas.huayuan_radar_event import (
+    RadarEventScoreItem,
     DEFAULT_KNOWLEDGE_MAX_CHARS,
     DEFAULT_KNOWLEDGE_MAX_DOCS,
     DEFAULT_KNOWLEDGE_MAX_LOAD_TIMES,
@@ -112,9 +112,8 @@ def resolve_radar_knowledge_config(ctx_body: Any) -> Dict[str, Any]:
     """
         解析知识库开关与限额（请求可选 `context.knowledge`）。
 
-        ⚠️ A/B 契约：未传 knowledge 或 enabled=false 时**一律按关闭返回** —— gather 节点
-        不做任何 Milvus 检索、也不会有可加载的 doc_id 白名单，评分行为与改造前完全一致。
-        `max_load_times` 为 load_news_document 的调用上限（缺省 3）。
+        缺省或未传 knowledge 时 **enabled=true**（外网仍必跑，KB 默认增强）。
+        显式 `enabled=false` 时关闭 Milvus 召回。
 
         Args:
             ctx_body: 请求 context
@@ -123,7 +122,14 @@ def resolve_radar_knowledge_config(ctx_body: Any) -> Dict[str, Any]:
             {"enabled": bool, "max_docs": int, "max_load_times": int}
     """
     cfg = getattr(ctx_body, "knowledge", None)
-    if cfg is None or not bool(getattr(cfg, "enabled", False)):
+    if cfg is None:
+        return {
+            "enabled": True,
+            "max_docs": DEFAULT_KNOWLEDGE_MAX_DOCS,
+            "max_load_times": DEFAULT_KNOWLEDGE_MAX_LOAD_TIMES,
+        }
+    enabled = getattr(cfg, "enabled", True)
+    if not bool(enabled):
         return {
             "enabled": False,
             "max_docs": DEFAULT_KNOWLEDGE_MAX_DOCS,
@@ -132,9 +138,7 @@ def resolve_radar_knowledge_config(ctx_body: Any) -> Dict[str, Any]:
 
     raw_docs = getattr(cfg, "max_docs", None)
     raw_loads = getattr(cfg, "max_load_times", None)
-    max_docs = (
-        int(raw_docs) if raw_docs is not None else DEFAULT_KNOWLEDGE_MAX_DOCS
-    )
+    max_docs = int(raw_docs) if raw_docs is not None else DEFAULT_KNOWLEDGE_MAX_DOCS
     max_load_times = (
         int(raw_loads) if raw_loads is not None else DEFAULT_KNOWLEDGE_MAX_LOAD_TIMES
     )
@@ -342,11 +346,11 @@ def _parse_optional_score(value: Any, allowed: set[int], field_name: str) -> Opt
 
 
 def _parse_evidences(raw: Any) -> List[RadarEventEvidenceItem]:
-    """解析 evidences 列表。"""
+    """解析 evidences 列表（补 evidence_no / source_type）。"""
     if not isinstance(raw, list):
         return []
     items: List[RadarEventEvidenceItem] = []
-    for ev in raw:
+    for idx, ev in enumerate(raw):
         if not isinstance(ev, dict):
             continue
         url = ev.get("url") or ev.get("source_url") or ev.get("sourceUrl")
@@ -358,8 +362,20 @@ def _parse_evidences(raw: Any) -> List[RadarEventEvidenceItem]:
         if not tier and url_str:
             tier = classify_authority_tier(url_str)
         source_level = ev.get("source_level") or ev.get("sourceLevel")
+        doc_id = ev.get("doc_id", ev.get("docId"))
+        st = str(ev.get("source_type") or ev.get("sourceType") or "").strip().lower()
+        if not st:
+            st = "knowledge_base" if doc_id else "web"
+        eno = ev.get("evidence_no", ev.get("evidenceNo", ev.get("temp_id", ev.get("tempId"))))
+        try:
+            evidence_no = int(eno) if eno is not None and eno != "" else idx
+        except (TypeError, ValueError):
+            evidence_no = idx
         items.append(
             RadarEventEvidenceItem(
+                evidence_no=evidence_no,
+                source_type=st,
+                doc_id=doc_id,
                 title=ev.get("title"),
                 summary=ev.get("summary"),
                 quote=ev.get("quote"),
@@ -367,12 +383,60 @@ def _parse_evidences(raw: Any) -> List[RadarEventEvidenceItem]:
                 publish_date=ev.get("publish_date") or ev.get("publishDate"),
                 source_host=str(host) if host else None,
                 authority_tier=str(tier) if tier else None,
-                # 知识库召回=P0、网络搜索=P2（归一为大写；缺省 None 由调用方兜底）
                 source_level=str(source_level).strip().upper() if source_level else None,
+                content_grade=ev.get("content_grade") or ev.get("contentGrade"),
+                cite_reason=ev.get("cite_reason") or ev.get("citeReason"),
                 kept=_as_bool(ev.get("kept", True), True),
             )
         )
     return items
+
+
+def _parse_score_items(raw: Any) -> List[RadarEventScoreItem]:
+    """解析 score_items 列表。"""
+    if not isinstance(raw, list):
+        return []
+    items: List[RadarEventScoreItem] = []
+    for row in raw:
+        if not isinstance(row, dict):
+            continue
+        code = str(row.get("code") or "").strip()
+        if not code:
+            continue
+        raw_score = row.get("score")
+        score: Optional[int] = None
+        if raw_score is not None and raw_score != "":
+            try:
+                score = int(raw_score)
+            except (TypeError, ValueError):
+                score = None
+        nos_raw = row.get("evidence_nos") or row.get("evidenceNos") or []
+        evidence_nos: List[int] = []
+        if isinstance(nos_raw, list):
+            for n in nos_raw:
+                try:
+                    evidence_nos.append(int(n))
+                except (TypeError, ValueError):
+                    continue
+        items.append(
+            RadarEventScoreItem(
+                code=code,
+                score=score,
+                score_reason=row.get("score_reason") or row.get("scoreReason"),
+                evidence_nos=evidence_nos,
+            )
+        )
+    return items
+
+
+def _kept_evidence_valid(ev: RadarEventEvidenceItem) -> bool:
+    """kept 证据是否满足「有分必有据」：KB 需 doc_id；web 需 http url。"""
+    st = str(ev.source_type or "web").lower()
+    if st == "knowledge_base":
+        return bool(str(ev.doc_id or "").strip())
+    if st == "web":
+        return bool(ev.url and str(ev.url).startswith("http"))
+    return bool(ev.url and str(ev.url).startswith("http")) or bool(str(ev.doc_id or "").strip())
 
 
 def _parse_discarded(raw: Any) -> List[RadarEventDiscardedItem]:
@@ -429,18 +493,34 @@ def parse_radar_event_score_from_obj(obj: Dict[str, Any]) -> RadarEventScoreResu
         obj.get("expired_or_done", obj.get("expiredOrDone")), False
     )
     evidences = _parse_evidences(obj.get("evidences") or obj.get("evidence") or [])
+    score_items = _parse_score_items(obj.get("score_items") or obj.get("scoreItems") or [])
 
-    # 3. 准入/失效时清空分数；有分必须有证据 URL
+    web_hit_count = int(obj.get("web_hit_count") or obj.get("webHitCount") or 0)
+    kb_hit_count = int(obj.get("kb_hit_count") or obj.get("kbHitCount") or 0)
+    if web_hit_count <= 0:
+        web_hit_count = sum(
+            1 for e in evidences if e.kept and str(e.source_type or "").lower() == "web"
+        )
+    if kb_hit_count <= 0:
+        kb_hit_count = sum(
+            1
+            for e in evidences
+            if e.kept and str(e.source_type or "").lower() == "knowledge_base"
+        )
+
+    # 3. 准入/失效时清空分数；有分必有据（kept 须 doc_id 或 url，web 仍须 url）
     total_score: Optional[int]
     if not exhibition_related or expired_or_done:
         evidence_score = None
         specificity_score = None
         total_score = None
+        # 子项分与顶层对齐为 null，避免下游硬校验把「无关」当成非法分
+        for item in score_items:
+            item.score = None
     else:
         if evidence_score is None and specificity_score is None:
             total_score = None
         else:
-            # 缺一维时按 0 参与合计（调用方可再校验）
             total_score = int(evidence_score or 0) + int(specificity_score or 0)
             raw_total = obj.get("total_score", obj.get("totalScore"))
             if raw_total is not None and raw_total != "":
@@ -452,11 +532,35 @@ def parse_radar_event_score_from_obj(obj: Dict[str, Any]) -> RadarEventScoreResu
                         )
                 except (TypeError, ValueError):
                     pass
-            kept_with_url = [
-                e for e in evidences if e.kept and e.url and e.url.startswith("http")
+            kept_valid = [e for e in evidences if e.kept and _kept_evidence_valid(e)]
+            if total_score is not None and total_score > 0 and not kept_valid:
+                raise ValueError(
+                    "有分必有据：total_score>0 时 kept 证据须含 doc_id 或有效 url（web 必须 url）"
+                )
+        # score_items 缺分时用顶层回填
+        for item in score_items:
+            if item.score is not None:
+                continue
+            if item.code == "evidence_score" and evidence_score is not None:
+                item.score = evidence_score
+            elif item.code == "specificity_score" and specificity_score is not None:
+                item.score = specificity_score
+        # 无 score_items 时按顶层合成，便于 Java 统一契约
+        if not score_items and (evidence_score is not None or specificity_score is not None):
+            score_items = [
+                RadarEventScoreItem(
+                    code="evidence_score",
+                    score=evidence_score,
+                    score_reason=obj.get("score_reason") or obj.get("scoreReason"),
+                    evidence_nos=[],
+                ),
+                RadarEventScoreItem(
+                    code="specificity_score",
+                    score=specificity_score,
+                    score_reason=obj.get("score_reason") or obj.get("scoreReason"),
+                    evidence_nos=[],
+                ),
             ]
-            if total_score is not None and total_score > 0 and not kept_with_url:
-                raise ValueError("有分必有据：total_score>0 时 evidences 须含可访问 URL")
 
     tags_raw = obj.get("tags") or []
     tags = [str(t).strip() for t in tags_raw if str(t).strip()] if isinstance(tags_raw, list) else []
@@ -488,10 +592,13 @@ def parse_radar_event_score_from_obj(obj: Dict[str, Any]) -> RadarEventScoreResu
         ),
         admission_hint=admission_hint,
         score_reason=obj.get("score_reason") or obj.get("scoreReason"),
+        score_items=score_items,
         evidences=evidences,
         discarded=_parse_discarded(obj.get("discarded") or []),
         search_count=int(obj.get("search_count") or obj.get("searchCount") or 0),
         extract_count=int(obj.get("extract_count") or obj.get("extractCount") or 0),
+        web_hit_count=web_hit_count,
+        kb_hit_count=kb_hit_count,
     )
 
 
@@ -575,13 +682,7 @@ async def huayuan_radar_event_score(
         ctx_body
     )
     knowledge = resolve_radar_knowledge_config(ctx_body)
-    # 知识库工具回调基址（与画像工具共用同一环境变量；请求不带 base_url）
-    document_tool_base_url = (os.getenv("HUAYUAN_DOCUMENT_TOOL_BASE_URL") or "").strip()
-    if knowledge["enabled"] and not document_tool_base_url:
-        logger.warning(
-            "知识库已开启，但未配置 HUAYUAN_DOCUMENT_TOOL_BASE_URL："
-            "Milvus 检索不受影响，load_news_document 将无法回调 exhibition"
-        )
+    document_tool_base_url = ""
 
     logger.info(
         f"[华院RadarEvent请求开始] trace_id={trace_id}, "

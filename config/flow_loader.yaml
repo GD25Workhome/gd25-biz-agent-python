@@ -5,6 +5,7 @@ flows:
   preload:
     - huayuan_simple_agent
     - huayuan_react_agent
+    - huayuan_portrait_agent
     - huayuan_radar_event_agent
 
   lazy_load:

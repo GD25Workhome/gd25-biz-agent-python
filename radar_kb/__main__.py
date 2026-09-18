@@ -4,9 +4,11 @@ radar_kb 统一入口。
 推荐（L2）：随 FastAPI 启动（RADAR_KB_WORKER_IN_APP=true，默认）。
 排障/独立部署仍可用：
 
-    python -m radar_kb discover   # 发现调度器
-    python -m radar_kb content    # 正文调度器
-    python -m radar_kb all        # 两进程各跑一种
+    python -m radar_kb              # 默认 unified 单 loop
+    python -m radar_kb unified      # 同上
+    python -m radar_kb discover     # 仅发现
+    python -m radar_kb content      # 仅正文
+    python -m radar_kb all          # 兼容旧双进程（discover+content）
 """
 from __future__ import annotations
 
@@ -26,6 +28,10 @@ logging.basicConfig(
 log = logging.getLogger("radar_kb.main")
 
 
+def _run_unified() -> None:
+    TaskScheduler(load_kb_settings(), "unified").run_forever()
+
+
 def _run_discover() -> None:
     TaskScheduler(load_kb_settings(), "discover").run_forever()
 
@@ -36,13 +42,16 @@ def _run_content() -> None:
 
 def main(argv: list[str] | None = None) -> None:
     """
-    启动 radar_kb 调度器。
+        启动 radar_kb 调度器。
 
-    Args:
-        argv: 子命令 discover | content | all
+        Args:
+            argv: 子命令 unified | discover | content | all
     """
     args = list(sys.argv if argv is None else argv)
-    mode = (args[1] if len(args) > 1 else "all").strip().lower()
+    mode = (args[1] if len(args) > 1 else "unified").strip().lower()
+    if mode in ("unified", "all-in-one", "one"):
+        _run_unified()
+        return
     if mode == "discover":
         _run_discover()
         return
@@ -50,6 +59,10 @@ def main(argv: list[str] | None = None) -> None:
         _run_content()
         return
     if mode == "all":
+        # 兼容旧双进程；新部署请用 unified
+        log.warning(
+            "mode=all 仍为双进程 discover+content；推荐改用 python -m radar_kb unified"
+        )
         procs: List[multiprocessing.Process] = []
         for target, name in ((_run_discover, "discover"), (_run_content, "content")):
             p = multiprocessing.Process(target=target, name=f"radar-kb-{name}")
@@ -66,7 +79,9 @@ def main(argv: list[str] | None = None) -> None:
             for p in procs:
                 p.terminate()
         return
-    raise SystemExit(f"未知模式: {mode!r}，请使用 discover | content | all")
+    raise SystemExit(
+        f"未知模式: {mode!r}，请使用 unified | discover | content | all"
+    )
 
 
 if __name__ == "__main__":

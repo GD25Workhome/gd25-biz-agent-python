@@ -7,10 +7,9 @@ import asyncio
 import logging
 from typing import Optional
 
-from backend.app.config import settings
 from backend.domain.news_content.pipeline import NewsContentProcessor, build_summary
 from backend.infrastructure.llm.huayuan_embedding_client import HuayuanEmbeddingClient
-from backend.infrastructure.milvus.radar_news_chunk_store import RadarNewsChunkStore
+from backend.infrastructure.milvus.radar_news_chunk_store import get_milvus_chunk_store
 
 log = logging.getLogger("radar_kb.embed")
 
@@ -30,12 +29,17 @@ async def _embed_stub_async(
     source_kind: str,
     worker_id: str,
 ) -> bool:
-    """将 stub 摘要写入单 chunk（content_grade=stub）。"""
+    """
+        将 stub 摘要写入单 chunk（content_grade=stub）。
+
+        复用进程级 Milvus 单例，避免每篇文档新建客户端并重复 ensure collection。
+    """
     text = (summary or title or "").strip()
     if not text:
         return False
     embed_text = f"{(title or '').strip()}\n{text}".strip()
-    store = RadarNewsChunkStore()
+    # 进程内单例：首次写入会 ensure，后续文档短路
+    store = get_milvus_chunk_store()
     embedder = HuayuanEmbeddingClient()
     try:
         vectors = await embedder.embed_texts([embed_text])
@@ -72,8 +76,8 @@ async def _embed_stub_async(
         log.warning("stub 向量失败 document_id=%s err=%s", document_id, exc)
         return False
     finally:
+        # 不关闭 Milvus 单例；仅释放本轮 embedding HTTP 客户端
         await embedder.aclose()
-        await store.close_async()
 
 
 def embed_stub_document(

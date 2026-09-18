@@ -1,0 +1,33 @@
+# 华院五维画像：两段式（gather → ReAct 评分）
+name: huayuan_portrait_agent
+version: "2.0"
+description: "画像：知识库 gather + 五维 score_items 终评"
+
+nodes:
+  - name: evidence_gather_portrait
+    type: function
+    config:
+      function_key: "evidence_gather_portrait_func"
+
+  - name: portrait_score
+    type: agent
+    config:
+      prompt: prompts/portrait_score.md
+      model:
+        provider: huayuan
+        temperature: 0.2
+        thinking:
+          type: disabled
+      tools:
+        - load_news_document
+
+edges:
+  - from: evidence_gather_portrait
+    to: portrait_score
+    condition: always
+
+  - from: portrait_score
+    to: END
+    condition: always
+
+entry_node: evidence_gather_portrait

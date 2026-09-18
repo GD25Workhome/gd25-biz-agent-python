@@ -1,5 +1,5 @@
 """
-L2：在 FastAPI 进程内挂载 radar_kb 发现/正文调度器。
+L2：在 FastAPI 进程内挂载 radar_kb 统一调度器（单线程单 loop）。
 
 同步扫表循环跑在 daemon 线程里，避免阻塞 asyncio 事件循环。
 独立 CLI（python -m radar_kb）仍可用，便于排障。
@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import logging
 import threading
-from dataclasses import replace
 from typing import List, Optional, Tuple
 
 from radar_kb.config import load_kb_settings
@@ -25,21 +24,24 @@ def start_radar_kb_in_app(
     modes: Optional[List[SchedulerMode]] = None,
 ) -> _Runtime:
     """
-    在当前进程拉起 discover/content 调度线程。
+        在当前进程拉起 radar_kb 调度线程。
 
-    Args:
-        modes: 默认同时跑 discover + content
+        Args:
+            modes: 默认仅 ``["unified"]``（单 loop：发现优先 + 自适应休息）。
+                   传入 ``discover`` / ``content`` 可回到旧双线程排障模式。
 
-    Returns:
-        (stop_event, threads)：关闭时先 stop.set()，再 join 线程
+        Returns:
+            (stop_event, threads)：关闭时先 stop.set()，再 join 线程
     """
-    run_modes: List[SchedulerMode] = list(modes or ["discover", "content"])
+    run_modes: List[SchedulerMode] = list(modes or ["unified"])
     settings = load_kb_settings()
     stop = threading.Event()
     threads: List[threading.Thread] = []
 
     for mode in run_modes:
-        # 每模式独立 worker_id，避免 locked_by 冲突
+        # 每模式独立 worker_id，避免 locked_by 冲突（多 mode 排障时）
+        from dataclasses import replace
+
         mode_settings = replace(settings, worker_id=f"{settings.worker_id}-{mode}")
         scheduler = TaskScheduler(mode_settings, mode)
 
@@ -68,12 +70,12 @@ def stop_radar_kb_in_app(
     wait_seconds: float = 30.0,
 ) -> None:
     """
-    优雅停止应用内 radar_kb 线程。
+        优雅停止应用内 radar_kb 线程。
 
-    Args:
-        stop: start 返回的事件
-        threads: start 返回的线程列表
-        wait_seconds: 每线程最长等待
+        Args:
+            stop: start 返回的事件
+            threads: start 返回的线程列表
+            wait_seconds: 每线程最长等待
     """
     stop.set()
     for t in threads:

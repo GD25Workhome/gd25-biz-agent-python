@@ -9,7 +9,7 @@ from __future__ import annotations
 import contextvars
 import threading
 from dataclasses import dataclass, field
-from typing import Any, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 from urllib.parse import urlparse
 
 
@@ -72,6 +72,7 @@ class RadarKnowledgeState:
     recall_hit_queries: int = 0
     recall_zero_hit_queries: int = 0
     recalled_doc_count: int = 0
+    loaded_content_by_doc: Dict[str, str] = field(default_factory=dict)
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False, compare=False)
 
     @property
@@ -153,6 +154,14 @@ class RadarKnowledgeState:
         with self._lock:
             self.loaded_doc_ids.add(did)
             self.load_count += 1
+
+    def remember_loaded_content(self, doc_id: Any, content: str) -> None:
+        """缓存截断后的正文，供 citation quote 软校验。"""
+        did = str(doc_id).strip()
+        if not did:
+            return
+        with self._lock:
+            self.loaded_content_by_doc[did] = str(content or "")
 
 
 @dataclass

@@ -25,6 +25,7 @@ from backend.domain.tools.huayuan_radar_event_context import (
     text_mentions_subject,
 )
 from backend.app.config import settings
+from backend.domain.knowledge.radar_kb_recall import recall_chunks_for_query
 from backend.domain.news_content.chunking import strip_title_prefix
 from backend.infrastructure.observability.langfuse_handler import record_observation_span
 
@@ -63,6 +64,9 @@ _MIN_QUERIES_HINT = 3
 _SUMMARY_MAX_CHARS = 200
 _MAX_BRIEFS = 40
 _MAX_BRIEFS_FOR_PROMPT = 12
+_WEB_PROMPT_QUOTA = 6
+_KB_PROMPT_QUOTA = 6
+_KB_STUB_PROMPT_QUOTA = 2
 _MAX_DISCARDED_FOR_PROMPT = 15
 _MAX_EXTRACT_CANDIDATES = 5
 _INVALID_MARKERS = (
@@ -118,9 +122,67 @@ def _brief_priority(brief: Dict[str, Any]) -> tuple:
     )
 
 
+def _select_briefs_by_channel_quota(briefs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+        按通道配额选取入模 briefs：Web≤6、KB≤6（KB 内 stub≤2），不足再互补。
+
+        禁止全量混排后一刀切 12 条（避免 KB 挤掉网页通道）。
+
+        Args:
+            briefs: 全量 briefs
+
+        Returns:
+            选取后的 brief 列表（顺序：先 web 后 kb）
+    """
+    web = [b for b in briefs if b.get("tool_name") != _KNOWLEDGE_TOOL_NAME]
+    kb = [b for b in briefs if b.get("tool_name") == _KNOWLEDGE_TOOL_NAME]
+    web_ranked = sorted(web, key=_brief_priority, reverse=True)
+    kb_full = sorted(
+        [b for b in kb if str(b.get("content_grade") or "").lower() == "full"],
+        key=_brief_priority,
+        reverse=True,
+    )
+    kb_stub = sorted(
+        [b for b in kb if str(b.get("content_grade") or "").lower() != "full"],
+        key=_brief_priority,
+        reverse=True,
+    )
+    web_sel = web_ranked[:_WEB_PROMPT_QUOTA]
+    kb_sel: List[Dict[str, Any]] = []
+    for b in kb_full:
+        if len(kb_sel) >= _KB_PROMPT_QUOTA:
+            break
+        kb_sel.append(b)
+    stub_used = 0
+    for b in kb_stub:
+        if len(kb_sel) >= _KB_PROMPT_QUOTA:
+            break
+        if stub_used >= _KB_STUB_PROMPT_QUOTA:
+            continue
+        kb_sel.append(b)
+        stub_used += 1
+
+    remaining = _MAX_BRIEFS_FOR_PROMPT - len(web_sel) - len(kb_sel)
+    if remaining > 0:
+        for b in web_ranked[len(web_sel) :]:
+            if remaining <= 0:
+                break
+            web_sel.append(b)
+            remaining -= 1
+    if remaining > 0:
+        extra_kb = [b for b in kb if b not in kb_sel]
+        extra_kb.sort(key=_brief_priority, reverse=True)
+        for b in extra_kb:
+            if remaining <= 0:
+                break
+            kb_sel.append(b)
+            remaining -= 1
+    return web_sel + kb_sel
+
+
 def _compact_briefs_for_prompt(briefs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
-        压缩写入终评 prompt 的 briefs：排序截断，去掉冗余字段。
+        压缩写入终评 prompt 的 briefs：通道配额选取，去掉冗余字段。
 
         Args:
             briefs: 全量 briefs
@@ -128,8 +190,7 @@ def _compact_briefs_for_prompt(briefs: List[Dict[str, Any]]) -> List[Dict[str, A
         Returns:
             精简后的列表
     """
-    ranked = sorted(briefs, key=_brief_priority, reverse=True)
-    selected = ranked[:_MAX_BRIEFS_FOR_PROMPT]
+    selected = _select_briefs_by_channel_quota(briefs)
     compact: List[Dict[str, Any]] = []
     for b in selected:
         item = {
@@ -355,77 +416,37 @@ class EvidenceGatherNode(BaseFunctionNode):
 
     async def _knowledge_search_one(self, query: str) -> Dict[str, Any]:
         """
-            单条 query 的知识库检索：query embedding（bge-m3，同写链路模型）→ Milvus 检索。
-
-            降级约定：任何失败都返回 `ok=False`（不抛异常），由调用方跳过该 query，
-            主链路（博查/AnySearch/终评）不受影响。
+            单条 query 的知识库检索（委托 radar_kb_recall 双路 Milvus）。
 
             Args:
                 query: 检索式
 
             Returns:
-                含 ok/results/query/error 的字典；results 项为
-                {"doc_id","title","summary","url","score"}
+                含 ok/results/query/error 的字典
         """
-        payload: Dict[str, Any] = {
-            "ok": False,
-            "query": query,
-            "results": [],
-            "error": "",
-        }
         ctx = get_huayuan_radar_event_context()
         if ctx is None or not ctx.knowledge.enabled:
-            payload["error"] = "知识库未启用"
-            return payload
+            return {
+                "ok": False,
+                "query": query,
+                "results": [],
+                "error": "知识库未启用",
+            }
         if ctx.company_id is None:
-            # 缺 company_id 时不过滤会跨企业召回（幻觉/串证据风险），宁可跳过
-            payload["error"] = "缺少 company_id，已跳过知识库检索（避免跨企业召回）"
-            return payload
-
+            return {
+                "ok": False,
+                "query": query,
+                "results": [],
+                "error": "缺少 company_id，已跳过知识库检索（避免跨企业召回）",
+            }
         max_docs = max(1, min(MAX_KNOWLEDGE_DOCS_LIMIT, int(ctx.knowledge.max_docs)))
         factor = max(1, int(settings.KNOWLEDGE_SEARCH_CHUNK_TOP_K_FACTOR))
-        # 候选按 chunk 放大，减轻长文占满 topK（策略 C）
         top_k = min(128, max(max_docs * factor, max_docs + 8))
-        # 延迟导入：开关关闭的请求完全不加载 pymilvus / embedding 依赖
-        try:
-            from backend.infrastructure.llm.huayuan_embedding_client import (
-                HuayuanEmbeddingClient,
-            )
-            from backend.infrastructure.milvus import get_milvus_store
-
-            embedder = HuayuanEmbeddingClient()
-            try:
-                vector = await embedder.embed_one(query)
-            finally:
-                await embedder.aclose()
-            store = get_milvus_store()
-            per_path = max(4, top_k // 2)
-            full_hits = await store.search_async(
-                vector, company_id=int(ctx.company_id), content_grade="full", top_k=per_path
-            )
-            stub_hits = await store.search_async(
-                vector, company_id=int(ctx.company_id), content_grade="stub", top_k=per_path
-            )
-            merged: dict[str, dict[str, Any]] = {}
-            for hit in (full_hits or []) + (stub_hits or []):
-                if not isinstance(hit, dict):
-                    continue
-                key = str(hit.get("chunk_id") or hit.get("doc_id") or "")
-                prev = merged.get(key)
-                if prev is None or float(hit.get("score") or 0) > float(prev.get("score") or 0):
-                    merged[key] = hit
-            hits = sorted(
-                merged.values(),
-                key=lambda h: float(h.get("score") or 0),
-                reverse=True,
-            )[:top_k]
-        except Exception as e:
-            payload["error"] = f"{type(e).__name__}: {e}"
-            return payload
-
-        payload["ok"] = True
-        payload["results"] = [h for h in (hits or []) if isinstance(h, dict)]
-        return payload
+        return await recall_chunks_for_query(
+            query,
+            company_id=int(ctx.company_id),
+            top_k=top_k,
+        )
 
     def _merge_knowledge_results(
         self,

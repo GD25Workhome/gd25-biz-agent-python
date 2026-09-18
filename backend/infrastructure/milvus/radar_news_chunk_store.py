@@ -158,18 +158,25 @@ class RadarNewsChunkStore:
         """
             幂等初始化 V2 collection：不存在才建；已存在则校验 schema 并 load。
 
+            同一 store 实例上仅真正检查一次（`_ensured`）；后续 delete/upsert/search
+            直接短路，避免每篇文档重复 has_collection / load / INFO 刷屏。
+
             Returns:
-                True 表示本次新建；False 表示已存在
+                True 表示本次新建；False 表示已存在（含本实例已 ensure 过）
 
             Raises:
                 SchemaMismatchError: 已存在但非 V2 schema
         """
+        # 1. 本实例已就绪则跳过远程检查（close 会清 _ensured）
+        if self._ensured:
+            return False
+
         client = self._get_client()
         if client.has_collection(self.collection):
             self._assert_v2_schema()
             self._load()
             self._ensured = True
-            logger.info("chunk collection 已存在 collection=%s", self.collection)
+            logger.info("chunk collection 已就绪 collection=%s", self.collection)
             return False
 
         # 1. 建 schema

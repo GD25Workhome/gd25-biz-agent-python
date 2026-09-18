@@ -43,6 +43,12 @@ class KbSettings:
     tenant_id: Optional[int]
     worker_id: str
     poll_interval_sec: float
+    # 统一单 loop：发现后短休 / 正文后长休 / 空闲休（秒）
+    poll_after_discover_sec: float
+    poll_after_content_sec: float
+    poll_idle_sec: float
+    # 某类任务查表为空后，至少间隔这么久再查该类（秒）
+    empty_backoff_sec: float
     content_text_max_chars: int
     summary_max_chars: int
     pdf_max_pages: int
@@ -101,6 +107,23 @@ def load_kb_settings() -> KbSettings:
         cninfo_request_jitter_sec,
     )
 
+    # 空闲/兼容旧配置：RADAR_KB_POLL_INTERVAL_SEC 仍作默认空闲与正文后休息
+    poll_interval_sec = float(os.getenv("RADAR_KB_POLL_INTERVAL_SEC", "10"))
+    poll_after_discover_sec = float(
+        os.getenv("RADAR_KB_POLL_AFTER_DISCOVER_SEC", "2") or "2"
+    )
+    poll_after_content_sec = float(
+        os.getenv("RADAR_KB_POLL_AFTER_CONTENT_SEC", str(poll_interval_sec))
+        or str(poll_interval_sec)
+    )
+    poll_idle_sec = float(
+        os.getenv("RADAR_KB_POLL_IDLE_SEC", str(poll_interval_sec))
+        or str(poll_interval_sec)
+    )
+    empty_backoff_sec = float(
+        os.getenv("RADAR_KB_EMPTY_BACKOFF_SEC", "60") or "60"
+    )
+
     return KbSettings(
         db_host=host,
         db_port=port,
@@ -109,7 +132,11 @@ def load_kb_settings() -> KbSettings:
         db_name=db_name,
         tenant_id=_parse_optional_int(os.getenv("RADAR_TENANT_ID")),
         worker_id=os.getenv("RADAR_KB_WORKER_ID", f"py-kb-{os.getpid()}"),
-        poll_interval_sec=float(os.getenv("RADAR_KB_POLL_INTERVAL_SEC", "10")),
+        poll_interval_sec=poll_interval_sec,
+        poll_after_discover_sec=poll_after_discover_sec,
+        poll_after_content_sec=poll_after_content_sec,
+        poll_idle_sec=poll_idle_sec,
+        empty_backoff_sec=empty_backoff_sec,
         content_text_max_chars=int(os.getenv("RADAR_CONTENT_TEXT_MAX_CHARS", "500000")),
         summary_max_chars=int(os.getenv("RADAR_SUMMARY_MAX_CHARS", "500")),
         pdf_max_pages=int(os.getenv("RADAR_PDF_MAX_PAGES", "80")),

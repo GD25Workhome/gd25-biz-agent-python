@@ -114,12 +114,24 @@ class NewsContentProcessor:
             max_content_failures_per_site=settings.NEWS_CONTENT_AGENT_MAX_CONTENT_FAILURES_PER_SITE,
         )
         self.embedder = embedder or HuayuanEmbeddingClient()
-        self.milvus = milvus or RadarNewsChunkStore()
+        # 默认复用进程级单例，避免每任务重建客户端 / 重复 ensure
+        if milvus is not None:
+            self.milvus = milvus
+            self._owns_milvus = True
+        else:
+            from backend.infrastructure.milvus.radar_news_chunk_store import (
+                get_milvus_chunk_store,
+            )
+
+            self.milvus = get_milvus_chunk_store()
+            self._owns_milvus = False
 
     async def aclose(self) -> None:
         """释放外部资源（worker 优雅退出时调用）。"""
         await self.embedder.aclose()
-        await self.milvus.close_async()
+        # 单例由进程共享，勿在单任务结束时关闭
+        if self._owns_milvus:
+            await self.milvus.close_async()
 
     # ------------------------------------------------------------ 主流程
     async def process_task(self, task: dict[str, Any]) -> ProcessOutcome:

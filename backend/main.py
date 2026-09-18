@@ -185,7 +185,7 @@ async def lifespan(app: FastAPI):
         # 8. L2：radar_kb 发现+正文调度器挂 lifespan（后台线程，不堵事件循环）
         #    默认 RADAR_KB_WORKER_IN_APP=true；可退回 python -m radar_kb 独立进程。
         if settings.RADAR_KB_WORKER_IN_APP:
-            logger.info("8. 启动 radar_kb 统一调度器（应用内 L2）...")
+            logger.info("8. 启动 radar_kb 统一单 loop 调度器（应用内 L2）...")
             mysql_ok = settings.is_exhibition_mysql_enabled
             if not mysql_ok:
                 # 仍可能靠 RADAR_DB_*；交给 load_kb_settings 判断
@@ -196,7 +196,7 @@ async def lifespan(app: FastAPI):
 
                     radar_kb_stop, radar_kb_threads = start_radar_kb_in_app()
                     logger.info(
-                        "   ✓ radar_kb discover+content 已在后台线程启动"
+                        "   ✓ radar_kb unified 已在后台线程启动"
                         "（RADAR_KB_WORKER_IN_APP=true）"
                     )
                 except Exception as exc:

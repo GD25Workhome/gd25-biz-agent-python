@@ -24,12 +24,14 @@ if str(_project_root) not in sys.path:
 from backend.app.api.routes.huayuan_radar_event import (
     HUAYUAN_RADAR_EVENT_FLOW_KEY,
     parse_radar_event_score_from_ai_text,
+    resolve_radar_knowledge_config,
     resolve_radar_tool_quotas,
     resolve_score_from_flow_result,
     router as radar_event_router,
 )
 from backend.app.api.schemas.huayuan_radar_event import HuayuanRadarEventRequest
 from backend.domain.flows.implementations.radar_evidence_gather_node import (
+    _select_briefs_by_channel_quota,
     invoke_registered_tool,
 )
 from backend.domain.tools.huayuan_radar_event_context import (
@@ -195,7 +197,7 @@ def test_parse_rejects_illegal_evidence_score() -> None:
 
 
 def test_parse_score_requires_evidence_url() -> None:
-    """有分无 URL 应失败。"""
+    """有分无 URL/doc_id 应失败。"""
     text = json.dumps(
         _sample_score_json(
             evidences=[{"title": "无链接", "quote": "x", "url": "", "kept": True}]
@@ -204,6 +206,74 @@ def test_parse_score_requires_evidence_url() -> None:
     )
     with pytest.raises(ValueError, match="有分必有据"):
         parse_radar_event_score_from_ai_text(text)
+
+
+def test_parse_score_accepts_kb_doc_id_without_url() -> None:
+    """KB kept 有 doc_id 可无 url 通过有分必有据。"""
+    text = json.dumps(
+        _sample_score_json(
+            evidences=[
+                {
+                    "evidence_no": 0,
+                    "source_type": "knowledge_base",
+                    "doc_id": 9001,
+                    "content_grade": "full",
+                    "title": "公告",
+                    "quote": "建设展厅",
+                    "cite_reason": "明确需求",
+                    "kept": True,
+                }
+            ],
+            score_items=[
+                {
+                    "code": "evidence_score",
+                    "score": 60,
+                    "score_reason": "有知识库证据",
+                    "evidence_nos": [0],
+                },
+                {
+                    "code": "specificity_score",
+                    "score": 10,
+                    "score_reason": "较具体",
+                    "evidence_nos": [0],
+                },
+            ],
+        ),
+        ensure_ascii=False,
+    )
+    result = parse_radar_event_score_from_ai_text(text)
+    assert result.total_score == 70
+    assert result.evidences[0].doc_id == 9001
+
+
+def test_resolve_knowledge_default_enabled() -> None:
+    """未传 knowledge 时默认 enabled=true。"""
+    req = HuayuanRadarEventRequest(**_sample_request_body())
+    cfg = resolve_radar_knowledge_config(req.context)
+    assert cfg["enabled"] is True
+
+
+def test_channel_quota_prefers_web_and_kb() -> None:
+    """入模配额：两通道各保留，禁止 KB 独占 12 条。"""
+    web_briefs = [
+        {"tool_name": "bocha_web_search", "title": f"w{i}", "url": f"https://ex.com/{i}"}
+        for i in range(8)
+    ]
+    kb_briefs = [
+        {
+            "tool_name": "knowledge_base",
+            "doc_id": str(i),
+            "content_grade": "full",
+            "url": f"https://kb.com/{i}",
+        }
+        for i in range(8)
+    ]
+    selected = _select_briefs_by_channel_quota(web_briefs + kb_briefs)
+    web_n = sum(1 for b in selected if b.get("tool_name") != "knowledge_base")
+    kb_n = sum(1 for b in selected if b.get("tool_name") == "knowledge_base")
+    assert web_n >= 6
+    assert kb_n >= 6
+    assert len(selected) <= 12
 
 
 def test_parse_unrelated_clears_scores() -> None:
