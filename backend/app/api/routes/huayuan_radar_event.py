@@ -297,6 +297,39 @@ def _as_bool(value: Any, default: bool = False) -> bool:
     return default
 
 
+def _normalize_optional_str(value: Any) -> Optional[str]:
+    """将可选字符串去空白；空则 None。"""
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _normalize_signal_summary(value: Any) -> Optional[str]:
+    """
+        规范化一句话信号简述。
+
+        Returns:
+            去空白后的简述；空则 None
+    """
+    return _normalize_optional_str(value)
+
+
+def _is_level_only_summary(summary: str) -> bool:
+    """简述是否仅为 S1-S4 等级码（禁止作为 UI 主文案）。"""
+    return bool(re.fullmatch(r"S[1-4]", summary.strip(), flags=re.IGNORECASE))
+
+
+def _parse_optional_int(value: Any) -> Optional[int]:
+    """可选整数解析。"""
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _normalize_subject_confidence(value: Any) -> str:
     """规范化主体置信。"""
     s = str(value or "").strip().lower()
@@ -508,13 +541,25 @@ def parse_radar_event_score_from_obj(obj: Dict[str, Any]) -> RadarEventScoreResu
             if e.kept and str(e.source_type or "").lower() == "knowledge_base"
         )
 
-    # 3. 准入/失效时清空分数；有分必有据（kept 须 doc_id 或 url，web 仍须 url）
+    # 先对齐排除语义：模型常只写 admission_hint=expired，未同步 expired_or_done
+    admission_hint = _normalize_admission_hint(
+        obj.get("admission_hint") or obj.get("admissionHint")
+    )
+    if not exhibition_related:
+        admission_hint = "reject_unrelated"
+    if admission_hint == "reject_unrelated":
+        exhibition_related = False
+    if admission_hint == "expired" or expired_or_done:
+        expired_or_done = True
+        admission_hint = "expired"
+
+    # 3. 排除类清空分数；有分必有据（kept 须 doc_id 或 url，web 仍须 url）
     total_score: Optional[int]
-    if not exhibition_related or expired_or_done:
+    excluded = (not exhibition_related) or expired_or_done
+    if excluded:
         evidence_score = None
         specificity_score = None
         total_score = None
-        # 子项分与顶层对齐为 null，避免下游硬校验把「无关」当成非法分
         for item in score_items:
             item.score = None
     else:
@@ -565,13 +610,24 @@ def parse_radar_event_score_from_obj(obj: Dict[str, Any]) -> RadarEventScoreResu
     tags_raw = obj.get("tags") or []
     tags = [str(t).strip() for t in tags_raw if str(t).strip()] if isinstance(tags_raw, list) else []
 
-    admission_hint = _normalize_admission_hint(
-        obj.get("admission_hint") or obj.get("admissionHint")
+    signal_summary = _normalize_signal_summary(
+        obj.get("signal_summary") or obj.get("signalSummary")
     )
-    if not exhibition_related:
-        admission_hint = "reject_unrelated"
-    elif expired_or_done:
-        admission_hint = "expired"
+    signal_time = _normalize_optional_str(
+        obj.get("signal_time") or obj.get("signalTime")
+    )
+    signal_time_evidence_no = _parse_optional_int(
+        obj.get("signal_time_evidence_no") or obj.get("signalTimeEvidenceNo")
+    )
+    # 有分必有 UI 简述；无信号时间不得标 pass
+    has_score = total_score is not None and total_score > 0
+    if has_score:
+        if not signal_summary:
+            raise ValueError("有分必有 signal_summary：total_score>0 时须输出一句话展厅信号简述")
+        if _is_level_only_summary(signal_summary):
+            raise ValueError("signal_summary 禁止仅为 S1-S4 等级码")
+        if not signal_time and admission_hint == "pass":
+            admission_hint = "pending_verify"
 
     return RadarEventScoreResult(
         exhibition_related=exhibition_related,
@@ -582,6 +638,9 @@ def parse_radar_event_score_from_obj(obj: Dict[str, Any]) -> RadarEventScoreResu
         action=obj.get("action"),
         place=obj.get("place"),
         time_text=obj.get("time_text") or obj.get("timeText"),
+        signal_summary=signal_summary,
+        signal_time=signal_time,
+        signal_time_evidence_no=signal_time_evidence_no,
         evidence_score=evidence_score,
         specificity_score=specificity_score,
         total_score=total_score,

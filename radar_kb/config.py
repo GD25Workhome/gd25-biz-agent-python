@@ -49,6 +49,14 @@ class KbSettings:
     poll_idle_sec: float
     # 某类任务查表为空后，至少间隔这么久再查该类（秒）
     empty_backoff_sec: float
+    # 正文 Frontier：批量认领与同站间隔
+    content_claim_batch: int
+    content_claim_per_key: int
+    content_polite_key: str
+    content_same_key_gap_min_sec: float
+    content_same_key_gap_max_sec: float
+    content_site_min_interval_sec: float
+    crawl_stale_timeout_sec: int
     content_text_max_chars: int
     summary_max_chars: int
     pdf_max_pages: int
@@ -123,6 +131,37 @@ def load_kb_settings() -> KbSettings:
     empty_backoff_sec = float(
         os.getenv("RADAR_KB_EMPTY_BACKOFF_SEC", "60") or "60"
     )
+    content_claim_batch = int(os.getenv("RADAR_KB_CONTENT_CLAIM_BATCH", "200") or "200")
+    content_claim_per_key = int(
+        os.getenv("RADAR_KB_CONTENT_CLAIM_PER_KEY", "3") or "3"
+    )
+    content_polite_key = (
+        os.getenv("RADAR_KB_CONTENT_POLITE_KEY", "source_url_id") or "source_url_id"
+    ).strip().lower()
+    if content_polite_key not in ("source_url_id", "host", "company_id"):
+        content_polite_key = "source_url_id"
+    content_same_key_gap_min_sec = float(
+        os.getenv("RADAR_KB_CONTENT_SAME_KEY_GAP_MIN_SEC", "5") or "5"
+    )
+    content_same_key_gap_max_sec = float(
+        os.getenv("RADAR_KB_CONTENT_SAME_KEY_GAP_MAX_SEC", "10") or "10"
+    )
+    # 与 NEWS_CONTENT 同站间隔对齐；未设时读 backend settings
+    site_min_raw = os.getenv("RADAR_KB_CONTENT_SITE_MIN_INTERVAL_SEC")
+    if site_min_raw is None or str(site_min_raw).strip() == "":
+        try:
+            from backend.app.config import settings as app_settings
+
+            content_site_min_interval_sec = float(
+                app_settings.NEWS_CONTENT_SITE_MIN_INTERVAL_SECONDS
+            )
+        except Exception:
+            content_site_min_interval_sec = 2.0
+    else:
+        content_site_min_interval_sec = float(site_min_raw)
+    crawl_stale_timeout_sec = int(
+        os.getenv("RADAR_KB_CRAWL_STALE_TIMEOUT_SEC", "1800") or "1800"
+    )
 
     return KbSettings(
         db_host=host,
@@ -137,6 +176,13 @@ def load_kb_settings() -> KbSettings:
         poll_after_content_sec=poll_after_content_sec,
         poll_idle_sec=poll_idle_sec,
         empty_backoff_sec=empty_backoff_sec,
+        content_claim_batch=content_claim_batch,
+        content_claim_per_key=content_claim_per_key,
+        content_polite_key=content_polite_key,
+        content_same_key_gap_min_sec=content_same_key_gap_min_sec,
+        content_same_key_gap_max_sec=content_same_key_gap_max_sec,
+        content_site_min_interval_sec=content_site_min_interval_sec,
+        crawl_stale_timeout_sec=crawl_stale_timeout_sec,
         content_text_max_chars=int(os.getenv("RADAR_CONTENT_TEXT_MAX_CHARS", "500000")),
         summary_max_chars=int(os.getenv("RADAR_SUMMARY_MAX_CHARS", "500")),
         pdf_max_pages=int(os.getenv("RADAR_PDF_MAX_PAGES", "80")),

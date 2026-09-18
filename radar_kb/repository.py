@@ -633,43 +633,155 @@ def claim_content_task(
     conn: pymysql.Connection, settings: KbSettings, kind: str, locked_by: str
 ) -> Optional[dict[str, Any]]:
     """按 source_kind 抢一条 PENDING 正文任务。"""
+    batch = claim_content_tasks_batch(
+        conn, settings, kind, locked_by, limit=1
+    )
+    return batch[0] if batch else None
+
+
+def claim_content_tasks_batch(
+    conn: pymysql.Connection,
+    settings: KbSettings,
+    kind: str,
+    locked_by: str,
+    *,
+    limit: int,
+) -> list[dict[str, Any]]:
+    """
+        按组（站/企业）轮询小批量认领 PENDING 正文。
+
+        算法（对齐 PGMQ read_grouped_rr / 多租户公平队列）：
+        1. 窗口函数按分组键 PARTITION，组内 id ASC；
+        2. 每组最多取 ``content_claim_per_key`` 条（默认 3）；
+        3. ``ORDER BY rn, id``：先各站第 1 条，再各站第 2 条……再 LIMIT 总批次；
+        4. 对候选 id ``FOR UPDATE SKIP LOCKED`` 后置 RUNNING。
+
+        分组键：``content_polite_key=company_id`` 时按企业，否则按 ``source_url_id``
+        （host 模式 SQL 侧仍按 source_url_id，内存 Frontier 再按 host 打散）。
+
+        Args:
+            conn: 连接
+            settings: 配置
+            kind: source_kind
+            locked_by: 锁持有者
+            limit: 本批总上限
+
+        Returns:
+            已置为 RUNNING 的任务行（尽量多站交错）
+    """
+    n = max(1, int(limit))
+    per_key = max(1, int(getattr(settings, "content_claim_per_key", 3) or 3))
+    partition_col = (
+        "company_id"
+        if str(getattr(settings, "content_polite_key", "") or "") == "company_id"
+        else "source_url_id"
+    )
     tenant_sql, tenant_params = _tenant_clause(settings)
     with conn.cursor() as cur:
+        # 1. 候选 id：每组前 per_key 条，再按层（rn）交错截断到 n
         cur.execute(
             f"""
-            SELECT id FROM radar_news_content_task
-            WHERE {_NOT_DELETED} AND status = %s AND source_kind = %s{tenant_sql}
-            ORDER BY id ASC
-            LIMIT 1
-            FOR UPDATE
+            SELECT id FROM (
+                SELECT id,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY {partition_col}
+                           ORDER BY id ASC
+                       ) AS rn
+                FROM radar_news_content_task
+                WHERE {_NOT_DELETED}
+                  AND status = %s
+                  AND source_kind = %s
+                  {tenant_sql}
+            ) ranked
+            WHERE rn <= %s
+            ORDER BY rn ASC, id ASC
+            LIMIT %s
             """,
-            [STATUS_PENDING, kind, *tenant_params],
+            [STATUS_PENDING, kind, *tenant_params, per_key, n],
         )
-        row = cur.fetchone()
-        if not row:
+        candidates = [int(r["id"]) for r in (cur.fetchall() or [])]
+        if not candidates:
             conn.commit()
-            return None
-        task_id = int(row["id"])
+            return []
+
+        # 2. 锁定仍为 PENDING 的候选（多实例跳过已锁行）
+        placeholders = ",".join(["%s"] * len(candidates))
+        # FIELD 保持 rn 交错顺序
+        field_order = ",".join(str(i) for i in candidates)
+        lock_sql_skip = f"""
+            SELECT id FROM radar_news_content_task
+            WHERE id IN ({placeholders})
+              AND status = %s
+              AND {_NOT_DELETED}
+            ORDER BY FIELD(id, {field_order})
+            FOR UPDATE SKIP LOCKED
+            """
+        lock_sql_plain = f"""
+            SELECT id FROM radar_news_content_task
+            WHERE id IN ({placeholders})
+              AND status = %s
+              AND {_NOT_DELETED}
+            ORDER BY FIELD(id, {field_order})
+            FOR UPDATE
+            """
+        try:
+            cur.execute(lock_sql_skip, [*candidates, STATUS_PENDING])
+        except pymysql.err.ProgrammingError:
+            cur.execute(lock_sql_plain, [*candidates, STATUS_PENDING])
+        locked_rows = list(cur.fetchall() or [])
+        if not locked_rows:
+            conn.commit()
+            return []
+
+        task_ids = [int(r["id"]) for r in locked_rows]
         now = datetime.now()
+        id_ph = ",".join(["%s"] * len(task_ids))
         cur.execute(
             f"""
             UPDATE radar_news_content_task
             SET status = %s, locked_by = %s, locked_at = %s,
                 updater = %s, update_time = %s
-            WHERE id = %s AND status = %s AND {_NOT_DELETED}
+            WHERE id IN ({id_ph}) AND status = %s AND {_NOT_DELETED}
             """,
-            (STATUS_RUNNING, locked_by, now, locked_by, now, task_id, STATUS_PENDING),
+            (
+                STATUS_RUNNING,
+                locked_by,
+                now,
+                locked_by,
+                now,
+                *task_ids,
+                STATUS_PENDING,
+            ),
         )
-        if cur.rowcount != 1:
+        if cur.rowcount <= 0:
             conn.rollback()
-            return None
+            return []
         cur.execute(
-            f"SELECT * FROM radar_news_content_task WHERE id = %s",
-            (task_id,),
+            f"""
+            SELECT * FROM radar_news_content_task
+            WHERE id IN ({id_ph}) AND status = %s AND locked_by = %s
+            ORDER BY FIELD(id, {",".join(str(i) for i in task_ids)})
+            """,
+            (*task_ids, STATUS_RUNNING, locked_by),
         )
-        task = cur.fetchone()
+        tasks = list(cur.fetchall() or [])
     conn.commit()
-    return task
+
+    # 统计本批覆盖了多少站/企业，便于观察打散效果
+    key_set = {
+        int(t.get(partition_col) or 0)
+        for t in tasks
+    }
+    log.info(
+        "分组轮询领取正文 kind=%s partition=%s per_key=%s count=%d groups=%d ids_head=%s",
+        kind,
+        partition_col,
+        per_key,
+        len(tasks),
+        len(key_set),
+        [int(t["id"]) for t in tasks[:8]],
+    )
+    return tasks
 
 
 def has_active_crawl_tasks(
@@ -869,6 +981,34 @@ def reset_stale_content_tasks(conn: pymysql.Connection, timeout_sec: int) -> int
         )
         affected = int(cur.rowcount or 0)
     conn.commit()
+    return affected
+
+
+def reset_stale_crawl_tasks(conn: pymysql.Connection, timeout_sec: int) -> int:
+    """
+        回收超时 RUNNING 发现任务（避免僵尸锁导致正文永久让路）。
+
+        Args:
+            conn: 连接
+            timeout_sec: locked_at 超过该秒数则回 PENDING
+
+        Returns:
+            回收条数
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            f"""
+            UPDATE radar_news_crawl_task
+            SET status = %s, locked_by = NULL, locked_at = NULL, update_time = NOW()
+            WHERE status = %s AND {_NOT_DELETED}
+              AND (locked_at IS NULL OR locked_at < DATE_SUB(NOW(), INTERVAL %s SECOND))
+            """,
+            (STATUS_PENDING, STATUS_RUNNING, int(timeout_sec)),
+        )
+        affected = int(cur.rowcount or 0)
+    conn.commit()
+    if affected:
+        log.warning("已回收超时 RUNNING 发现任务 count=%s timeout_sec=%s", affected, timeout_sec)
     return affected
 
 

@@ -151,6 +151,9 @@
   "action": "升级改造意向",
   "place": null,
   "time_text": "2026年",
+  "signal_summary": "公开信息显示企业展厅有升级改造意向",
+  "signal_time": "2026-01-15",
+  "signal_time_evidence_no": 0,
   "evidence_score": 60,
   "specificity_score": 10,
   "total_score": 70,
@@ -165,7 +168,7 @@
       "summary": "...",
       "quote": "短摘≤200字",
       "url": "https://...",
-      "publish_date": null,
+      "publish_date": "2026-01-15",
       "source_host": "example.com",
       "authority_tier": "unknown",
       "kept": true
@@ -178,6 +181,12 @@
   "extract_count": 0
 }
 ```
+
+补充约束（与 score 节点一致）：
+
+- 有分必有 `signal_summary`（禁止仅写 S1-S4）；`signal_time` 取证据发布日，禁止用跑批日。
+- 实效性：约近约好；≥约 1 年信号 evidence_score 上限 ≤25。
+- 已建成且即需求标的 → `admission_hint=expired`，分 null。
 
 - `evidence_score`：85/75/60/45/25/10 或 null（禁止其它数字）
 - `specificity_score`：15/10/5/0 或 null

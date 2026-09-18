@@ -73,6 +73,9 @@ def _sample_score_json(**overrides: object) -> dict:
         "action": "升级改造意向",
         "place": None,
         "time_text": "2026年",
+        "signal_summary": "公开信息显示企业展厅有升级改造意向",
+        "signal_time": "2026-01-15",
+        "signal_time_evidence_no": 0,
         "evidence_score": 60,
         "specificity_score": 10,
         "total_score": 70,
@@ -87,6 +90,7 @@ def _sample_score_json(**overrides: object) -> dict:
                 "summary": "提及展厅升级",
                 "quote": "将升级企业展厅",
                 "url": "https://news.example.com/a",
+                "publish_date": "2026-01-15",
                 "source_host": "news.example.com",
                 "authority_tier": "unknown",
                 "kept": True,
@@ -179,7 +183,54 @@ def test_parse_radar_event_score_success() -> None:
     assert result.evidence_score == 60
     assert result.specificity_score == 10
     assert result.total_score == 70
+    assert result.signal_summary == "公开信息显示企业展厅有升级改造意向"
+    assert result.signal_time == "2026-01-15"
     assert result.evidences[0].url.startswith("https://")
+
+
+def test_parse_rejects_missing_signal_summary_when_scored() -> None:
+    """有分但缺少 signal_summary 应失败。"""
+    text = json.dumps(_sample_score_json(signal_summary=""), ensure_ascii=False)
+    with pytest.raises(ValueError, match="signal_summary"):
+        parse_radar_event_score_from_ai_text(text)
+
+
+def test_parse_rejects_level_only_signal_summary() -> None:
+    """signal_summary 仅为 S2 应失败。"""
+    text = json.dumps(_sample_score_json(signal_summary="S2"), ensure_ascii=False)
+    with pytest.raises(ValueError, match="signal_summary"):
+        parse_radar_event_score_from_ai_text(text)
+
+
+def test_parse_downgrades_pass_when_signal_time_missing() -> None:
+    """有分无 signal_time 时不得保持 pass。"""
+    text = json.dumps(
+        _sample_score_json(signal_time=None, admission_hint="pass"),
+        ensure_ascii=False,
+    )
+    result = parse_radar_event_score_from_ai_text(text)
+    assert result.admission_hint == "pending_verify"
+
+
+def test_parse_expired_hint_clears_scores_without_expired_flag() -> None:
+    """仅 admission_hint=expired 时也应清分并标记 expired_or_done。"""
+    text = json.dumps(
+        _sample_score_json(
+            admission_hint="expired",
+            expired_or_done=False,
+            evidence_score=None,
+            specificity_score=None,
+            total_score=None,
+            signal_summary="某某体验中心已开业，需求已落地",
+            signal_time="2024-06-01",
+        ),
+        ensure_ascii=False,
+    )
+    result = parse_radar_event_score_from_ai_text(text)
+    assert result.admission_hint == "expired"
+    assert result.expired_or_done is True
+    assert result.evidence_score is None
+    assert result.total_score is None
 
 
 def test_parse_wrapped_radar_event_score() -> None:

@@ -62,3 +62,34 @@ class SiteRateLimiter:
     def reset(self) -> None:
         """清空记录（测试用）。"""
         self._last_at.clear()
+
+
+_shared_limiter: SiteRateLimiter | None = None
+
+
+def get_shared_site_rate_limiter(min_interval: float | None = None) -> SiteRateLimiter:
+    """
+        进程内共享限速器（radar_kb / news_content 复用）。
+
+        Args:
+            min_interval: 首次创建时的最小间隔；已创建后忽略
+    """
+    global _shared_limiter
+    if _shared_limiter is None:
+        from backend.app.config import settings
+
+        interval = (
+            float(min_interval)
+            if min_interval is not None
+            else float(settings.NEWS_CONTENT_SITE_MIN_INTERVAL_SECONDS)
+        )
+        _shared_limiter = SiteRateLimiter(interval)
+    return _shared_limiter
+
+
+def reset_shared_site_rate_limiter() -> None:
+    """重置共享限速器（测试用）。"""
+    global _shared_limiter
+    if _shared_limiter is not None:
+        _shared_limiter.reset()
+    _shared_limiter = None

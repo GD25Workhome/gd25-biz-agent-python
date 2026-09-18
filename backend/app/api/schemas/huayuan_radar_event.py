@@ -125,7 +125,19 @@ class RadarEventScoreResult(BaseModel):
     space_object: Optional[str] = Field(default=None, description="展厅对象")
     action: Optional[str] = Field(default=None, description="需求/项目动作")
     place: Optional[str] = Field(default=None, description="地点")
-    time_text: Optional[str] = Field(default=None, description="时间表述")
+    time_text: Optional[str] = Field(default=None, description="工期/计划等自由时间表述（非列表主时间）")
+    signal_summary: Optional[str] = Field(
+        default=None,
+        description="一句话展厅信号简述（列表主文案；有分时必填，禁止仅写 S1-S4）",
+    )
+    signal_time: Optional[str] = Field(
+        default=None,
+        description="需求在公开资料中出现的时间 YYYY-MM-DD 或 YYYY-MM；来自证据发布日，禁止用跑批日",
+    )
+    signal_time_evidence_no: Optional[int] = Field(
+        default=None,
+        description="signal_time 对应 evidences[].evidence_no",
+    )
     evidence_score: Optional[int] = Field(
         default=None, description="证据强度分，合法档 85/75/60/45/25/10"
     )

@@ -16,6 +16,7 @@ from typing import Literal
 
 from radar_kb import repository as repo
 from radar_kb.config import KbSettings
+from radar_kb.content_frontier import ContentFrontier, PoliteKeyMode
 from radar_kb.embed import embed_full_document, embed_stub_document
 from radar_kb.registry import CONTENT_REGISTRY, DISCOVER_REGISTRY
 from radar_kb.types import ContentResult, DiscoverResult
@@ -37,6 +38,15 @@ class TaskScheduler:
         # 单调时钟：到点前跳过对应表查询（空表步长）
         self._discover_next_at: float = 0.0
         self._content_next_at: float = 0.0
+        polite_mode: PoliteKeyMode = "source_url_id"
+        if settings.content_polite_key in ("source_url_id", "host", "company_id"):
+            polite_mode = settings.content_polite_key  # type: ignore[assignment]
+        self._content_frontier = ContentFrontier(
+            polite_key_mode=polite_mode,
+            same_key_gap_min_sec=settings.content_same_key_gap_min_sec,
+            same_key_gap_max_sec=settings.content_same_key_gap_max_sec,
+            site_min_interval_sec=settings.content_site_min_interval_sec,
+        )
 
     def run_forever(self, stop_event=None) -> None:
         """
@@ -47,13 +57,18 @@ class TaskScheduler:
         """
         log.info(
             "调度器启动 mode=%s worker_id=%s "
-            "after_discover=%.1fs after_content=%.1fs idle=%.1fs empty_backoff=%.1fs",
+            "after_discover=%.1fs after_content=%.1fs idle=%.1fs empty_backoff=%.1fs "
+            "content_batch=%s polite_key=%s same_key_gap=%.1f~%.1fs",
             self.mode,
             self.settings.worker_id,
             self.settings.poll_after_discover_sec,
             self.settings.poll_after_content_sec,
             self.settings.poll_idle_sec,
             self.settings.empty_backoff_sec,
+            self.settings.content_claim_batch,
+            self.settings.content_polite_key,
+            self.settings.content_same_key_gap_min_sec,
+            self.settings.content_same_key_gap_max_sec,
         )
         while True:
             if stop_event is not None and stop_event.is_set():
@@ -112,7 +127,19 @@ class TaskScheduler:
         return "empty"
 
     def _poll_content(self, now: float) -> PollOutcome:
-        """带空表步长的正文轮询（让路不走 1min 空表步长）。"""
+        """
+            正文轮询：内存 Frontier 未空时可无视空表步长继续 pop。
+        """
+        # Frontier 仍有货：直接消费（含同站冷却等待）
+        if not self._content_frontier.empty():
+            outcome = self._content_once()
+            if outcome == "work":
+                self._content_next_at = 0.0
+            elif outcome == "yielded":
+                retry = float(self.settings.poll_after_discover_sec)
+                self._content_next_at = now + max(retry, 0.5)
+            return outcome
+
         if now < self._content_next_at:
             log.debug(
                 "正文步长未到，跳过查表 remain=%.1fs",
@@ -126,7 +153,6 @@ class TaskScheduler:
             return "work"
 
         if outcome == "yielded":
-            # 他机发现中：短延迟再试，避免空转也不误伤成 1min
             retry = float(self.settings.poll_after_discover_sec)
             self._content_next_at = now + max(retry, 0.5)
             log.debug("正文让路，%.1fs 后再查", self._content_next_at - now)
@@ -142,7 +168,8 @@ class TaskScheduler:
         if work == "discover":
             return float(self.settings.poll_after_discover_sec)
         if work == "content":
-            return float(self.settings.poll_after_content_sec)
+            # Frontier 已按站冷却；轮间短休即可换站，避免再叠 10s 全局空等
+            return min(float(self.settings.poll_after_content_sec), 1.0)
         return self._idle_sleep_seconds()
 
     def _idle_sleep_seconds(self) -> float:
@@ -254,56 +281,117 @@ class TaskScheduler:
 
     def _content_once(self) -> PollOutcome:
         """
-            按 kind 各最多抢 1 条正文任务并执行。
+            正文：批量认领入 Frontier，再按礼貌键到点弹出执行。
 
             Returns:
-                work / empty / yielded（让路且未执行任何正文）
+                work / empty / yielded
         """
         conn = repo.connect(self.settings)
-        did_work = False
-        saw_yield = False
         try:
             repo.reset_stale_content_tasks(conn, 1800)
-            for kind, entry in CONTENT_REGISTRY.items():
-                # 多实例安全：他机正在发现时本机仍让路
-                if repo.has_active_crawl_tasks(conn, self.settings, kind):
-                    log.debug(
-                        "正文让路：存在进行中的发现任务 kind=%s，本轮跳过",
+            repo.reset_stale_crawl_tasks(
+                conn, int(self.settings.crawl_stale_timeout_sec)
+            )
+
+            # 1. Frontier 空则按 kind 批量认领（发现进行中的 kind 跳过）
+            if self._content_frontier.empty():
+                saw_yield = False
+                batch_limit = int(self.settings.content_claim_batch)
+                for kind, _entry in CONTENT_REGISTRY.items():
+                    if repo.has_active_crawl_tasks(conn, self.settings, kind):
+                        log.info(
+                            "正文让路：存在进行中的发现任务 kind=%s，本批不认领",
+                            kind,
+                        )
+                        saw_yield = True
+                        continue
+                    locked_by = f"py-content-{kind}-{self.settings.worker_id}"
+                    batch = repo.claim_content_tasks_batch(
+                        conn,
+                        self.settings,
                         kind,
+                        locked_by,
+                        limit=batch_limit,
                     )
-                    saw_yield = True
-                    continue
-                budget = entry[1]
-                locked_by = f"py-content-{kind}-{self.settings.worker_id}"
-                task = repo.claim_content_task(conn, self.settings, kind, locked_by)
-                if not task:
-                    continue
-                if repo.has_active_crawl_tasks(conn, self.settings, kind):
-                    log.debug(
-                        "正文让路：抢锁后发现有检索任务 kind=%s task_id=%s，放回 PENDING",
+                    if not batch:
+                        continue
+                    added = self._content_frontier.add_tasks(batch)
+                    log.info(
+                        "正文 Frontier 入队 kind=%s claimed=%s added=%s "
+                        "frontier_size=%s keys=%s",
                         kind,
-                        task.get("id"),
+                        len(batch),
+                        added,
+                        len(self._content_frontier),
+                        self._content_frontier.key_count(),
                     )
-                    repo.release_content_task_claim(
-                        conn, int(task["id"]), worker_id=locked_by
-                    )
-                    saw_yield = True
-                    continue
-                ran = self._run_content_task(
-                    conn, kind, task, locked_by, budget.max_attempts
+                if self._content_frontier.empty():
+                    if saw_yield:
+                        return "yielded"
+                    return "empty"
+
+            # 2. 弹出已冷却任务（必要时短等）
+            pop = None
+            for _ in range(4):
+                pop = self._content_frontier.pop_ready()
+                if pop.task is not None:
+                    break
+                if pop.wait_sec <= 0:
+                    break
+                time.sleep(min(float(pop.wait_sec), 15.0))
+            if pop is None or pop.task is None:
+                return "yielded"
+
+            task = pop.task
+            key = pop.key or ""
+            kind = str(task.get("source_kind") or "news_html")
+            entry = CONTENT_REGISTRY.get(kind)
+            if entry is None:
+                log.warning(
+                    "未知 source_kind=%s task_id=%s，放回 PENDING",
+                    kind,
+                    task.get("id"),
                 )
-                if ran:
-                    did_work = True
-                else:
-                    saw_yield = True
+                repo.release_content_task_claim(
+                    conn,
+                    int(task["id"]),
+                    worker_id=f"py-content-{kind}-{self.settings.worker_id}",
+                )
+                return "yielded"
+
+            locked_by = f"py-content-{kind}-{self.settings.worker_id}"
+            budget = entry[1]
+
+            if repo.has_active_crawl_tasks(conn, self.settings, kind):
+                log.info(
+                    "正文让路：执行前发现有检索任务 kind=%s task_id=%s，放回 PENDING",
+                    kind,
+                    task.get("id"),
+                )
+                repo.release_content_task_claim(
+                    conn, int(task["id"]), worker_id=locked_by
+                )
+                return "yielded"
+
+            ran = self._run_content_task(
+                conn, kind, task, locked_by, budget.max_attempts
+            )
+            gap = 0.0
+            if ran and key:
+                gap = self._content_frontier.mark_fetched(key)
+            log.info(
+                "正文 Frontier 完成 task_id=%s key=%s ran=%s gap=%.1fs "
+                "remain=%s keys=%s",
+                task.get("id"),
+                key,
+                ran,
+                gap,
+                len(self._content_frontier),
+                self._content_frontier.key_count(),
+            )
+            return "work" if ran else "yielded"
         finally:
             conn.close()
-
-        if did_work:
-            return "work"
-        if saw_yield:
-            return "yielded"
-        return "empty"
 
     def _run_content_task(
         self,

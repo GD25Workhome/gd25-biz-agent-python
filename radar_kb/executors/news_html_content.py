@@ -11,7 +11,7 @@ from backend.app.config import settings
 from backend.domain.news_content.agent_fallback import AgentFallbackGuard, run_detail_fetch_agent
 from backend.domain.news_content.constants import CHANNEL_AGENT, CHANNEL_RULE
 from backend.domain.news_content.content_fetcher import fetch_article_by_rule
-from backend.domain.news_content.rate_limiter import SiteRateLimiter
+from backend.domain.news_content.rate_limiter import get_shared_site_rate_limiter
 from radar_kb.types import ContentResult
 
 
@@ -37,7 +37,8 @@ class NewsHtmlContentExecutor:
         url = (task.get("url") or "").strip()
         source_url_id = int(task.get("source_url_id") or 0)
         site_key = str(source_url_id or "")
-        limiter = SiteRateLimiter(settings.NEWS_CONTENT_SITE_MIN_INTERVAL_SECONDS)
+        # 进程级单例：跨任务累计同站间隔（Frontier 另有 gap，二者叠加取更保守）
+        limiter = get_shared_site_rate_limiter()
         guard = AgentFallbackGuard(
             enabled=settings.NEWS_CONTENT_AGENT_FALLBACK_ENABLED,
             daily_quota=settings.NEWS_CONTENT_AGENT_DAILY_QUOTA,

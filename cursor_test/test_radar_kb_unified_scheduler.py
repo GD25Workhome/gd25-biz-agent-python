@@ -23,6 +23,13 @@ def _settings(*, empty_backoff: float = 60.0) -> KbSettings:
         poll_after_content_sec=10.0,
         poll_idle_sec=8.0,
         empty_backoff_sec=empty_backoff,
+        content_claim_batch=200,
+        content_claim_per_key=3,
+        content_polite_key="source_url_id",
+        content_same_key_gap_min_sec=5.0,
+        content_same_key_gap_max_sec=10.0,
+        content_site_min_interval_sec=2.0,
+        crawl_stale_timeout_sec=1800,
         content_text_max_chars=1000,
         summary_max_chars=100,
         pdf_max_pages=10,
@@ -35,10 +42,10 @@ def _settings(*, empty_backoff: float = 60.0) -> KbSettings:
 
 
 def test_rest_seconds_by_work_kind() -> None:
-    """发现短休、正文长休。"""
+    """发现短休；正文在 Frontier 模式下轮间 ≤1s。"""
     sched = TaskScheduler(_settings(), "unified")
     assert sched._rest_seconds("discover") == 2.0
-    assert sched._rest_seconds("content") == 10.0
+    assert sched._rest_seconds("content") == 1.0
 
 
 def test_unified_prefers_discover_and_skips_content() -> None:
