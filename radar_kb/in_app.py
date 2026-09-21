@@ -1,15 +1,16 @@
 """
-L2：在 FastAPI 进程内挂载 radar_kb 统一调度器（单线程单 loop）。
+L2：在 FastAPI 进程内挂载 radar_kb 调度器（daemon 线程）。
 
-同步扫表循环跑在 daemon 线程里，避免阻塞 asyncio 事件循环。
-独立 CLI（python -m radar_kb）仍可用，便于排障。
+默认走 ConcurrentScheduler（跨站并发 + SiteGate）；
+``RADAR_KB_CONCURRENT=0`` 时回退旧串行 TaskScheduler。
 """
 from __future__ import annotations
 
 import logging
 import threading
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
+from radar_kb.async_scheduler import ConcurrentScheduler
 from radar_kb.config import load_kb_settings
 from radar_kb.scheduler import SchedulerMode, TaskScheduler
 
@@ -17,6 +18,7 @@ log = logging.getLogger("radar_kb.in_app")
 
 # (stop_event, threads)
 _Runtime = Tuple[threading.Event, List[threading.Thread]]
+_Scheduler = Union[TaskScheduler, ConcurrentScheduler]
 
 
 def start_radar_kb_in_app(
@@ -27,11 +29,10 @@ def start_radar_kb_in_app(
         在当前进程拉起 radar_kb 调度线程。
 
         Args:
-            modes: 默认仅 ``["unified"]``（单 loop：发现优先 + 自适应休息）。
-                   传入 ``discover`` / ``content`` 可回到旧双线程排障模式。
+            modes: 默认仅 ``["unified"]``。
 
         Returns:
-            (stop_event, threads)：关闭时先 stop.set()，再 join 线程
+            (stop_event, threads)
     """
     run_modes: List[SchedulerMode] = list(modes or ["unified"])
     settings = load_kb_settings()
@@ -39,17 +40,21 @@ def start_radar_kb_in_app(
     threads: List[threading.Thread] = []
 
     for mode in run_modes:
-        # 每模式独立 worker_id，避免 locked_by 冲突（多 mode 排障时）
         from dataclasses import replace
 
         mode_settings = replace(settings, worker_id=f"{settings.worker_id}-{mode}")
-        scheduler = TaskScheduler(mode_settings, mode)
+        if mode_settings.concurrent_enabled:
+            scheduler: _Scheduler = ConcurrentScheduler(mode_settings, mode)
+            label = "concurrent"
+        else:
+            scheduler = TaskScheduler(mode_settings, mode)
+            label = "legacy-serial"
 
-        def _target(sched: TaskScheduler = scheduler) -> None:
+        def _target(sched: _Scheduler = scheduler) -> None:
             try:
                 sched.run_forever(stop_event=stop)
             except Exception:
-                log.exception("radar_kb 线程异常退出 mode=%s", sched.mode)
+                log.exception("radar_kb 线程异常退出 mode=%s", getattr(sched, "mode", "?"))
 
         t = threading.Thread(
             target=_target,
@@ -58,7 +63,12 @@ def start_radar_kb_in_app(
         )
         t.start()
         threads.append(t)
-        log.info("已启动 radar_kb 线程 mode=%s name=%s", mode, t.name)
+        log.info(
+            "已启动 radar_kb 线程 mode=%s name=%s impl=%s",
+            mode,
+            t.name,
+            label,
+        )
 
     return stop, threads
 

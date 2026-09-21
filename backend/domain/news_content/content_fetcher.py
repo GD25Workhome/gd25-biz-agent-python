@@ -25,6 +25,13 @@ from company_news_crawl.adapters.content_extractor import ContentExtractor, Extr
 
 logger = logging.getLogger(__name__)
 
+# 可选：radar_kb SiteGate（延迟导入避免环依赖）
+try:
+    from radar_kb.site_gate import GatePriority, SiteGate
+except Exception:  # pragma: no cover
+    SiteGate = None  # type: ignore
+    GatePriority = None  # type: ignore
+
 # 与 news_crawl 的列表页抓取同一套头，避免同一站点对两个链路的 UA 策略不一致
 _ACCEPT_HEADERS = {
     "User-Agent": USER_AGENT,
@@ -85,29 +92,29 @@ async def fetch_article_by_rule(
     summary_max_length: int,
     timeout: float,
     max_retries: int = 1,
+    site_gate: "SiteGate | None" = None,
+    gate_host: str | None = None,
+    gate_priority: "GatePriority | None" = None,
 ) -> RuleFetchResult:
     """
-    规则版抓取一篇详情页并抽取正文。
+        规则版抓取一篇详情页并抽取正文。
 
-    成败判定（`ok`）：
-      - HTTP 200 且成功解码
-      - `ContentExtractor.extract_article()` 抽出正文，且长度 ≥ `min_chars`
+        若传入 ``site_gate``，则每次 HTTP 经闸门持锁（同站串行+冷却），不再走 limiter。
 
-    任一不满足即 `ok=False`（`error` 给出原因），由上层决定是否走 Agent 兜底。
+        Args:
+            url: 详情页 URL
+            site_key: 旧限速用站点键
+            limiter: 无 SiteGate 时使用的限速器
+            min_chars: 正文最短字符数
+            summary_max_length: 摘要字数
+            timeout: 单次请求超时（秒）
+            max_retries: 额外重试次数
+            site_gate: 可选统一站点闸门
+            gate_host: 闸门 host
+            gate_priority: 闸门优先级
 
-    ⚠️ 不在这里写任何库、不在这里碰 workflow 状态 —— 纯抓取 + 抽取。
-
-    Args:
-        url: 详情页 URL（task 快照里的 `url`）
-        site_key: 站点标识（task 的 `source_url_id`），用于同站限速
-        limiter: 进程内共享的限速器
-        min_chars: 正文最短字符数，低于此值判失败
-        summary_max_length: 摘要字数
-        timeout: 单次请求超时（秒）
-        max_retries: 额外重试次数（总尝试 = 1 + max_retries）
-
-    Returns:
-        RuleFetchResult
+        Returns:
+            RuleFetchResult
     """
     started = time.monotonic()
     client = get_http_client(timeout)
@@ -118,9 +125,18 @@ async def fetch_article_by_rule(
     html: Optional[str] = None
 
     for attempt in range(1, total_attempts + 1):
-        await limiter.acquire(site_key)
         try:
-            response = await client.get(url)
+            if site_gate is not None:
+                from radar_kb.site_gate import GatePriority as GP
+                from radar_kb.site_gate import normalize_host
+
+                host = gate_host or normalize_host(url)
+                prio = gate_priority if gate_priority is not None else GP.CONTENT
+                async with site_gate.hold_for_request(host, prio):
+                    response = await client.get(url)
+            else:
+                await limiter.acquire(site_key)
+                response = await client.get(url)
             http_status = response.status_code
             final_url = str(response.url)
             if http_status != 200:
@@ -135,14 +151,25 @@ async def fetch_article_by_rule(
         except Exception as exc:  # 含解码异常等
             last_error = f"{type(exc).__name__}: {exc}"
         if attempt < total_attempts:
-            logger.debug("规则抓取重试 %d/%d url=%s err=%s", attempt, total_attempts, url, last_error)
+            logger.debug(
+                "规则抓取重试 %d/%d url=%s err=%s",
+                attempt,
+                total_attempts,
+                url,
+                last_error,
+            )
 
     duration_ms = int((time.monotonic() - started) * 1000)
 
     if html is None:
         return RuleFetchResult(
-            url=url, final_url=final_url, http_status=http_status, ok=False,
-            article=None, error=last_error or "抓取失败", attempts=total_attempts,
+            url=url,
+            final_url=final_url,
+            http_status=http_status,
+            ok=False,
+            article=None,
+            error=last_error or "抓取失败",
+            attempts=total_attempts,
             duration_ms=duration_ms,
         )
 
@@ -155,15 +182,25 @@ async def fetch_article_by_rule(
     if not article.satisfies(min_chars):
         got = len((article.content_text or "").strip())
         return RuleFetchResult(
-            url=url, final_url=final_url, http_status=http_status, ok=False,
+            url=url,
+            final_url=final_url,
+            http_status=http_status,
+            ok=False,
             article=article,
             error=f"正文过短或抽取失败（{got} < {int(min_chars)} 字符）",
-            attempts=total_attempts, duration_ms=duration_ms,
+            attempts=total_attempts,
+            duration_ms=duration_ms,
         )
 
     return RuleFetchResult(
-        url=url, final_url=final_url, http_status=http_status, ok=True,
-        article=article, error=None, attempts=total_attempts, duration_ms=duration_ms,
+        url=url,
+        final_url=final_url,
+        http_status=http_status,
+        ok=True,
+        article=article,
+        error=None,
+        attempts=total_attempts,
+        duration_ms=duration_ms,
     )
 
 

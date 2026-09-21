@@ -228,18 +228,26 @@ def group_items_by_page(store: CrawlStore) -> "OrderedDict[str, list[NewsItem]]"
 
 # ---------------------------------------------------------------- MCP 工具工厂
 
-def build_crawl_server(store: CrawlStore, request_interval: float = 0.4):
+def build_crawl_server(
+    store: CrawlStore,
+    request_interval: float = 0.4,
+    *,
+    site_gate: Any = None,
+    gate_priority: Any = None,
+):
     """
-    为一次抓取请求创建 MCP Server。
+        为一次抓取请求创建 MCP Server。
 
-    store 通过闭包绑定，因此不同请求之间【不会】共享任何状态。
+        store 通过闭包绑定，因此不同请求之间【不会】共享任何状态。
 
-    Args:
-        store: 本次请求的内存库
-        request_interval: 同站最小请求间隔（秒），礼貌爬取
+        Args:
+            store: 本次请求的内存库
+            request_interval: 无 SiteGate 时的同站最小间隔（秒）
+            site_gate: 可选 radar_kb.SiteGate；传入后 HTTP 走闸门，忽略 request_interval
+            gate_priority: GatePriority；默认 DISCOVER
 
-    Returns:
-        SDK MCP Server
+        Returns:
+            SDK MCP Server
     """
 
     _last_request_at = 0.0
@@ -247,40 +255,56 @@ def build_crawl_server(store: CrawlStore, request_interval: float = 0.4):
 
     async def _fetch_html(url: str) -> tuple[Optional[str], str, int, Optional[str]]:
         """
-        异步 GET 网页，跟随重定向，遵守最小请求间隔。
+            异步 GET 网页，跟随重定向；优先走 SiteGate。
 
-        Returns:
-            (html, 最终 URL, 状态码, 错误信息)
+            Returns:
+                (html, 最终 URL, 状态码, 错误信息)
         """
         nonlocal _last_request_at
+
+        async def _do_get() -> tuple[Optional[str], str, int, Optional[str]]:
+            try:
+                async with httpx.AsyncClient(
+                    timeout=HTTP_TIMEOUT,
+                    follow_redirects=True,
+                    headers={
+                        "User-Agent": USER_AGENT,
+                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+                    },
+                ) as client:
+                    response = await client.get(url)
+                    final_url = str(response.url)
+                    if response.status_code != 200:
+                        return (
+                            None,
+                            final_url,
+                            response.status_code,
+                            f"HTTP {response.status_code}",
+                        )
+                    return response.text, final_url, response.status_code, None
+            except httpx.TimeoutException:
+                return None, url, 0, "Timeout"
+            except httpx.ConnectError as exc:
+                return None, url, 0, f"Connection error: {exc}"
+            except Exception as exc:
+                return None, url, 0, f"Error: {type(exc).__name__}: {exc}"
+
+        if site_gate is not None:
+            from radar_kb.site_gate import GatePriority, normalize_host
+
+            host = normalize_host(url)
+            prio = gate_priority if gate_priority is not None else GatePriority.DISCOVER
+            async with site_gate.hold_for_request(host, prio):
+                return await _do_get()
+
         async with _lock:
             loop = asyncio.get_running_loop()
             elapsed = loop.time() - _last_request_at
             if elapsed < request_interval:
                 await asyncio.sleep(request_interval - elapsed)
             _last_request_at = loop.time()
-
-        try:
-            async with httpx.AsyncClient(
-                timeout=HTTP_TIMEOUT,
-                follow_redirects=True,
-                headers={
-                    "User-Agent": USER_AGENT,
-                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-                },
-            ) as client:
-                response = await client.get(url)
-                final_url = str(response.url)
-                if response.status_code != 200:
-                    return None, final_url, response.status_code, f"HTTP {response.status_code}"
-                return response.text, final_url, response.status_code, None
-        except httpx.TimeoutException:
-            return None, url, 0, "Timeout"
-        except httpx.ConnectError as exc:
-            return None, url, 0, f"Connection error: {exc}"
-        except Exception as exc:
-            return None, url, 0, f"Error: {type(exc).__name__}: {exc}"
+        return await _do_get()
 
     def _pages_remaining() -> int:
         return max(0, store.max_pages - len(store.list_pages))

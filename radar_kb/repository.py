@@ -139,6 +139,138 @@ def claim_crawl_task(
     return task
 
 
+def source_key_from_crawl_task(task: dict[str, Any]) -> str:
+    """
+        发现任务的源去重键：``{source_ref_type}:{source_url_id}``。
+
+        避免企业源与全局源自增 id 撞车。
+    """
+    ref = str(task.get("source_ref_type") or "company").strip() or "company"
+    sid = int(task.get("source_url_id") or 0)
+    return f"{ref}:{sid}"
+
+
+def claim_crawl_tasks_batch(
+    conn: pymysql.Connection,
+    settings: KbSettings,
+    kind: str,
+    locked_by: str,
+    *,
+    limit: int,
+    exclude_source_keys: Optional[set[str]] = None,
+) -> list[dict[str, Any]]:
+    """
+        批量认领发现任务：SKIP LOCKED + 同源去重。
+
+        Args:
+            conn: 连接
+            settings: 配置
+            kind: source_kind
+            locked_by: 锁标识
+            limit: 本批最多条数
+            exclude_source_keys: 已在跑的 ``ref:id`` 集合，本批跳过
+
+        Returns:
+            已置 RUNNING 的任务行（同源至多 1 条）
+    """
+    n = max(1, int(limit))
+    exclude = set(exclude_source_keys or ())
+    tenant_sql, tenant_params = _tenant_clause(settings)
+    claimed: list[dict[str, Any]] = []
+    picked_sources: set[str] = set()
+    # 多取一些候选再过滤同源，避免 LIMIT 刚好全是同源
+    fetch_n = max(n * 8, 32)
+
+    with conn.cursor() as cur:
+        cur.execute(
+            f"""
+            SELECT id, source_ref_type, source_url_id
+            FROM radar_news_crawl_task
+            WHERE {_NOT_DELETED} AND status = %s AND source_kind = %s{tenant_sql}
+            ORDER BY id ASC
+            LIMIT %s
+            FOR UPDATE SKIP LOCKED
+            """,
+            [STATUS_PENDING, kind, *tenant_params, fetch_n],
+        )
+        rows = list(cur.fetchall() or [])
+        if not rows:
+            conn.commit()
+            return []
+
+        now = datetime.now()
+        for row in rows:
+            if len(claimed) >= n:
+                break
+            sk = source_key_from_crawl_task(row)
+            if sk in exclude or sk in picked_sources:
+                continue
+            task_id = int(row["id"])
+            cur.execute(
+                f"""
+                UPDATE radar_news_crawl_task
+                SET status = %s, locked_by = %s, locked_at = %s,
+                    updater = %s, update_time = %s
+                WHERE id = %s AND status = %s AND {_NOT_DELETED}
+                """,
+                (
+                    STATUS_RUNNING,
+                    locked_by,
+                    now,
+                    locked_by,
+                    now,
+                    task_id,
+                    STATUS_PENDING,
+                ),
+            )
+            if cur.rowcount != 1:
+                continue
+            cur.execute(
+                "SELECT * FROM radar_news_crawl_task WHERE id = %s",
+                (task_id,),
+            )
+            task = cur.fetchone()
+            if not task:
+                continue
+            claimed.append(task)
+            picked_sources.add(sk)
+
+    if claimed:
+        conn.commit()
+    else:
+        conn.rollback()
+    log.info(
+        "发现批量认领 kind=%s claimed=%s exclude=%s picked_sources=%s",
+        kind,
+        len(claimed),
+        len(exclude),
+        sorted(picked_sources),
+    )
+    return claimed
+
+
+def count_pending_crawl_tasks(
+    conn: pymysql.Connection,
+    settings: KbSettings,
+    kind: str,
+) -> int:
+    """统计某 kind 仍为 PENDING 的发现任务数（软优先判据，不含 RUNNING）。"""
+    tenant_sql, tenant_params = _tenant_clause(settings)
+    with conn.cursor() as cur:
+        cur.execute(
+            f"""
+            SELECT COUNT(*) AS cnt FROM radar_news_crawl_task
+            WHERE {_NOT_DELETED}
+              AND source_kind = %s
+              AND status = %s
+              {tenant_sql}
+            """,
+            [kind, STATUS_PENDING, *tenant_params],
+        )
+        row = cur.fetchone() or {}
+        return int(row.get("cnt") or 0)
+
+
 def finish_crawl_task(
     conn: pymysql.Connection,
     task_id: int,

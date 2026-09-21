@@ -43,7 +43,8 @@ def polite_key_for_task(task: dict[str, Any], mode: PoliteKeyMode) -> str:
     if mode == "source_url_id":
         sid = int(task.get("source_url_id") or 0)
         if sid > 0:
-            return f"src:{sid}"
+            ref = str(task.get("source_ref_type") or "company").strip() or "company"
+            return f"src:{ref}:{sid}"
     if mode == "company_id":
         cid = int(task.get("company_id") or 0)
         if cid > 0:

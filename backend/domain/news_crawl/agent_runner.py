@@ -123,30 +123,26 @@ async def run_news_crawl_agent(
     stock_code: str = "",
     max_pages: int = 3,
     trace_id: Optional[str] = None,
+    site_gate: Any = None,
 ) -> dict[str, Any]:
     """
-    对单个站点发起一次独立 Agent 采集（纯内存，不落盘）。
+        对单个站点发起一次独立 Agent 采集（纯内存，不落盘）。
 
-    Args:
-        seed_url: 新闻列表入口页 URL
-        known_urls: 调用方已抓取的详情页 URL（用于短路与过滤）
-        company_name: 企业名称（辅助消歧）
-        stock_code: 证券代码（辅助消歧）
-        max_pages: 列表页抓取上限
-        trace_id: 链路追踪 ID
+        Args:
+            seed_url: 新闻列表入口页 URL
+            known_urls: 调用方已抓取的详情页 URL（用于短路与过滤）
+            company_name: 企业名称（辅助消歧）
+            stock_code: 证券代码（辅助消歧）
+            max_pages: 列表页抓取上限
+            trace_id: 链路追踪 ID
+            site_gate: 可选 SiteGate；列表 HTTP 经闸门
 
-    Returns:
-        {
-          "news_urls": [{"url","title","published_at"}, ...],   # 已减去 known_urls
-          "list_pages_fetched": int,
-          "list_page_urls": [str, ...],
-          "stop_reason": str,
-          "stats": {...},
-        }
+        Returns:
+            含 news_urls / list_pages_fetched / stop_reason / stats 的字典
 
-    Raises:
-        ListFetchError: 列表页全部抓取失败（通道/网络问题）
-        AgentExecutionError: Agent 执行失败（SDK 异常 / is_error）
+        Raises:
+            ListFetchError: 列表页全部抓取失败
+            AgentExecutionError: Agent 执行失败
     """
     started = time.monotonic()
     known_norm = normalize_many(known_urls or [])
@@ -159,8 +155,12 @@ async def run_news_crawl_agent(
         known_norm=known_norm,
     )
 
+    # 有 SiteGate 时关闭 0.4s 本地间隔，避免双重睡眠
+    interval = 0.0 if site_gate is not None else settings.NEWS_CRAWL_REQUEST_INTERVAL
     crawl_server = build_crawl_server(
-        store, request_interval=settings.NEWS_CRAWL_REQUEST_INTERVAL
+        store,
+        request_interval=interval,
+        site_gate=site_gate,
     )
     sdk_env = _sdk_env()
 

@@ -12,6 +12,7 @@ from backend.domain.news_content.agent_fallback import AgentFallbackGuard, run_d
 from backend.domain.news_content.constants import CHANNEL_AGENT, CHANNEL_RULE
 from backend.domain.news_content.content_fetcher import fetch_article_by_rule
 from backend.domain.news_content.rate_limiter import get_shared_site_rate_limiter
+from radar_kb.site_gate import GatePriority, SiteGate, get_shared_site_gate, host_from_task
 from radar_kb.types import ContentResult
 
 
@@ -21,23 +22,32 @@ class NewsHtmlContentExecutor:
     kind = "news_html"
 
     def execute(self, task: dict[str, Any]) -> ContentResult:
+        """同步门面：独立事件循环跑 async（旧串行调度器用）。"""
+        return asyncio.run(self.execute_async(task))
+
+    async def execute_async(
+        self,
+        task: dict[str, Any],
+        *,
+        site_gate: Optional[SiteGate] = None,
+    ) -> ContentResult:
         """
-        规则抓取，失败时尝试 Agent 兜底一次。
+            规则抓取，失败时尝试 Agent 兜底一次。
 
-        Args:
-            task: content_task 行
+            Args:
+                task: content_task 行
+                site_gate: 可选闸门；默认取进程共享实例
 
-        Returns:
-            ContentResult
+            Returns:
+                ContentResult
         """
-        return asyncio.run(self._execute_async(task))
-
-    async def _execute_async(self, task: dict[str, Any]) -> ContentResult:
         started = time.monotonic()
         url = (task.get("url") or "").strip()
         source_url_id = int(task.get("source_url_id") or 0)
         site_key = str(source_url_id or "")
-        # 进程级单例：跨任务累计同站间隔（Frontier 另有 gap，二者叠加取更保守）
+        gate = site_gate if site_gate is not None else get_shared_site_gate()
+        host = host_from_task(task)
+        # 无 SiteGate 时仍用旧 limiter；有闸门则 limiter 仅作占位（acquire 被跳过）
         limiter = get_shared_site_rate_limiter()
         guard = AgentFallbackGuard(
             enabled=settings.NEWS_CONTENT_AGENT_FALLBACK_ENABLED,
@@ -58,6 +68,9 @@ class NewsHtmlContentExecutor:
             summary_max_length=settings.NEWS_CONTENT_SUMMARY_MAX_LENGTH,
             timeout=settings.NEWS_CONTENT_HTTP_TIMEOUT_SECONDS,
             max_retries=settings.NEWS_CONTENT_HTTP_MAX_RETRIES,
+            site_gate=gate,
+            gate_host=host,
+            gate_priority=GatePriority.CONTENT,
         )
         article = rule_result.article if rule_result.ok else None
         if article is not None:
@@ -70,14 +83,20 @@ class NewsHtmlContentExecutor:
                 if quota_ok:
                     trace_id = f"radar-kb-content-{task.get('id')}-{int(time.time())}"
                     agent_result = await run_detail_fetch_agent(
-                        url=url, site_key=site_key, limiter=limiter, trace_id=trace_id
+                        url=url,
+                        site_key=site_key,
+                        limiter=limiter,
+                        trace_id=trace_id,
+                        site_gate=gate,
                     )
                     agent_trace_id = agent_result.trace_id
                     await guard.mark_result(
                         success=agent_result.ok,
                         source_url_id=source_url_id,
                         failure_kind=agent_result.failure_kind,
-                        content_streak_eligible=bool(agent_result.content_streak_eligible),
+                        content_streak_eligible=bool(
+                            agent_result.content_streak_eligible
+                        ),
                     )
                     if agent_result.ok and agent_result.article is not None:
                         article = agent_result.article

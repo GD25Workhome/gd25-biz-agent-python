@@ -1,14 +1,9 @@
 """
 radar_kb 统一入口。
 
-推荐（L2）：随 FastAPI 启动（RADAR_KB_WORKER_IN_APP=true，默认）。
-排障/独立部署仍可用：
-
-    python -m radar_kb              # 默认 unified 单 loop
-    python -m radar_kb unified      # 同上
-    python -m radar_kb discover     # 仅发现
-    python -m radar_kb content      # 仅正文
-    python -m radar_kb all          # 兼容旧双进程（discover+content）
+默认不随 FastAPI 启动（RADAR_KB_WORKER_IN_APP=false）。
+本机或独立进程：python -m radar_kb［unified|discover|content|all］
+test 要把写入挂进 Agent 进程时，由发布页设 RADAR_KB_WORKER_IN_APP=true。
 """
 from __future__ import annotations
 
@@ -18,6 +13,7 @@ import sys
 import time
 from typing import List
 
+from radar_kb.async_scheduler import ConcurrentScheduler
 from radar_kb.config import load_kb_settings
 from radar_kb.scheduler import TaskScheduler
 
@@ -28,16 +24,26 @@ logging.basicConfig(
 log = logging.getLogger("radar_kb.main")
 
 
+def _make_scheduler(mode: str):
+    """按配置创建并发或串行调度器。"""
+    settings = load_kb_settings()
+    if settings.concurrent_enabled:
+        log.info("使用 ConcurrentScheduler（RADAR_KB_CONCURRENT=1）")
+        return ConcurrentScheduler(settings, mode)  # type: ignore[arg-type]
+    log.info("使用 TaskScheduler 串行（RADAR_KB_CONCURRENT=0）")
+    return TaskScheduler(settings, mode)  # type: ignore[arg-type]
+
+
 def _run_unified() -> None:
-    TaskScheduler(load_kb_settings(), "unified").run_forever()
+    _make_scheduler("unified").run_forever()
 
 
 def _run_discover() -> None:
-    TaskScheduler(load_kb_settings(), "discover").run_forever()
+    _make_scheduler("discover").run_forever()
 
 
 def _run_content() -> None:
-    TaskScheduler(load_kb_settings(), "content").run_forever()
+    _make_scheduler("content").run_forever()
 
 
 def main(argv: list[str] | None = None) -> None:

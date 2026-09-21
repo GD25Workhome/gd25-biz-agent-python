@@ -321,41 +321,62 @@ def _content_streak_eligible_from_store(store: DetailAgentStore, min_chars: int)
 
 # ---------------------------------------------------------------- 工具工厂
 
-def build_detail_server(store: DetailAgentStore, limiter: SiteRateLimiter):
+def build_detail_server(
+    store: DetailAgentStore,
+    limiter: SiteRateLimiter,
+    *,
+    site_gate: Any = None,
+):
     """
-    为一次兜底请求创建 MCP Server（store 由闭包绑定，请求间零共享）。
+        为一次兜底请求创建 MCP Server（store 由闭包绑定，请求间零共享）。
 
-    工具：
-      - fetch_detail_page(url)  抓页面 + 规则抽取，返回可读文本供模型判断
-      - save_article(...)       提交最终正文（反幻觉校验后接受）
-      - give_up(reason)         明确放弃
+        Args:
+            store: 详情 Agent 会话状态
+            limiter: 无 SiteGate 时的同站限速器
+            site_gate: 可选统一站点闸门
     """
     http_timeout = float(getattr(settings, "NEWS_CONTENT_HTTP_TIMEOUT_SECONDS", HTTP_TIMEOUT))
 
     async def _fetch_html(url: str) -> tuple[Optional[str], str, int, Optional[str]]:
-        """GET 页面，跟随重定向，遵守同站最小间隔。"""
+        """GET 页面；优先 SiteGate，否则 limiter。"""
+
+        async def _do_get() -> tuple[Optional[str], str, int, Optional[str]]:
+            try:
+                async with httpx.AsyncClient(
+                    timeout=http_timeout,
+                    follow_redirects=True,
+                    headers={
+                        "User-Agent": USER_AGENT,
+                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+                    },
+                ) as client:
+                    response = await client.get(url)
+                    final_url = str(response.url)
+                    if response.status_code != 200:
+                        return (
+                            None,
+                            final_url,
+                            response.status_code,
+                            f"HTTP {response.status_code}",
+                        )
+                    return response.text, final_url, response.status_code, None
+            except httpx.TimeoutException:
+                return None, url, 0, "Timeout"
+            except httpx.ConnectError as exc:
+                return None, url, 0, f"Connection error: {type(exc).__name__}"
+            except Exception as exc:
+                return None, url, 0, f"Error: {type(exc).__name__}: {exc}"
+
+        if site_gate is not None:
+            from radar_kb.site_gate import GatePriority, normalize_host
+
+            host = normalize_host(url)
+            async with site_gate.hold_for_request(host, GatePriority.CONTENT):
+                return await _do_get()
+
         await limiter.acquire(store.site_key or None)
-        try:
-            async with httpx.AsyncClient(
-                timeout=http_timeout,
-                follow_redirects=True,
-                headers={
-                    "User-Agent": USER_AGENT,
-                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-                },
-            ) as client:
-                response = await client.get(url)
-                final_url = str(response.url)
-                if response.status_code != 200:
-                    return None, final_url, response.status_code, f"HTTP {response.status_code}"
-                return response.text, final_url, response.status_code, None
-        except httpx.TimeoutException:
-            return None, url, 0, "Timeout"
-        except httpx.ConnectError as exc:
-            return None, url, 0, f"Connection error: {type(exc).__name__}"
-        except Exception as exc:
-            return None, url, 0, f"Error: {type(exc).__name__}: {exc}"
+        return await _do_get()
 
     def _same_site(url: str) -> bool:
         """只允许抓同站（防 Agent 顺着外链跑偏，也防跑出成本）。"""
@@ -494,26 +515,25 @@ async def run_detail_fetch_agent(
     site_key: str = "",
     limiter: SiteRateLimiter,
     trace_id: Optional[str] = None,
+    site_gate: Any = None,
 ) -> AgentFallbackResult:
     """
         对单个详情页跑一次 Agent 兜底抽取（每 URL 只应调用一次）。
 
-        ⚠️ 本函数**不含配额判断** —— 调用方必须先 `allow` + `try_consume_quota`，
-        结束后 `mark_result(...)`。
-
         Args:
             url: 详情页 URL
-            site_key: 站点标识（同站限速，通常为 source_url_id 字符串）
+            site_key: 站点标识（旧限速）
             limiter: 进程内共享限速器
-            trace_id: 链路追踪 ID（回写 `agent_trace_id`）
+            trace_id: 链路追踪 ID
+            site_gate: 可选 SiteGate
 
         Returns:
-            AgentFallbackResult —— 失败时 `error` / `failure_kind` 有值，绝不抛异常给主循环
+            AgentFallbackResult
     """
     started = time.monotonic()
     trace = trace_id or ""
     store = DetailAgentStore(target_url=url, site_key=str(site_key or ""))
-    detail_server = build_detail_server(store, limiter)
+    detail_server = build_detail_server(store, limiter, site_gate=site_gate)
     sdk_env = build_sdk_env()
     min_chars = int(settings.NEWS_CONTENT_FETCH_MIN_CHARS)
 

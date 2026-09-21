@@ -9,6 +9,11 @@ data:
   ENABLE_DATABASE: "false"
   LANGFUSE_ENABLED: "false"
   PROMPT_SOURCE_MODE: "local"
+  NEWS_CRAWL_ENABLED: "true"
+  ANTHROPIC_BASE_URL: "https://ai-api.unidtai.com/openapi/llm/anthropic"
+  ANTHROPIC_MODEL: "deepseek/deepseek-v4.1-flash"
+  # 代码默认已是 false；显式写出，避免以后改默认时 test 误开抓取
+  RADAR_KB_WORKER_IN_APP: "false"
 ---
 apiVersion: v1
 kind: Secret
@@ -16,8 +21,9 @@ metadata:
   name: huayuan-agent-secrets
 type: Opaque
 stringData:
-  DOUBAO_API_KEY: "replace-me"
-  OPENAI_API_KEY: "replace-me"
+  # 华院 LLM 主密钥（provider=huayuan）；可与 ANTHROPIC_AUTH_TOKEN 同一把网关 key
+  HUAYUAN_API_KEY: "replace-me"
+  ANTHROPIC_AUTH_TOKEN: "replace-me"
   ANY_SEARCH_API_KEY: "replace-me"
   BO_CHA_APIKEY: "replace-me"
 ---

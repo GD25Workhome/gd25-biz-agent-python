@@ -3,10 +3,12 @@
 # 运行：docker run --rm -p 8000:8000 \
 #   -e ENABLE_DATABASE=false \
 #   -e LANGFUSE_ENABLED=false \
-#   -e DOUBAO_API_KEY=xxx \
+#   -e HUAYUAN_API_KEY=xxx \
 #   -e ANY_SEARCH_API_KEY=xxx \
 #   -e BO_CHA_APIKEY=xxx \
 #   unidt-exhibition-opportunity-py-agent:latest
+# 华院 flow 走 provider=huayuan，密钥是 HUAYUAN_API_KEY（不要再注入 DOUBAO_API_KEY 当主模型）。
+# 密钥不要 COPY 进镜像；.dockerignore 已排除 .env。
 #
 # 基础镜像默认走 DaoCloud（国内直连 Docker Hub 常超时）；可覆盖：
 #   docker build --build-arg BASE_REGISTRY=docker.io/library/ ...
@@ -58,7 +60,9 @@ COPY config/model_providers.yaml config/model_providers.yaml
 COPY config/flow_loader.yaml config/flow_loader.yaml
 COPY config/flows/huayuan_simple_agent/ config/flows/huayuan_simple_agent/
 COPY config/flows/huayuan_react_agent/ config/flows/huayuan_react_agent/
+COPY config/flows/huayuan_portrait_agent/ config/flows/huayuan_portrait_agent/
 COPY config/flows/huayuan_radar_event_agent/ config/flows/huayuan_radar_event_agent/
+COPY config/flows/huayuan_radar_event_agent_v1_single_react/ config/flows/huayuan_radar_event_agent_v1_single_react/
 
 # 删除镜像内仍存在但不需要的重型/医疗模块，防止误 import
 RUN find backend -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true \

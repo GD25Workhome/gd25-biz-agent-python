@@ -57,6 +57,15 @@ class KbSettings:
     content_same_key_gap_max_sec: float
     content_site_min_interval_sec: float
     crawl_stale_timeout_sec: int
+    # 跨站并发双池（26092102）
+    concurrent_enabled: bool
+    discover_max_concurrency: int
+    content_max_concurrency: int
+    content_low_concurrency: int
+    embed_max_concurrency: int
+    site_gap_min_sec: float
+    site_gap_max_sec: float
+    site_gate_aging_after_discover: int
     content_text_max_chars: int
     summary_max_chars: int
     pdf_max_pages: int
@@ -65,6 +74,8 @@ class KbSettings:
     request_interval_sec: float
     cninfo_request_interval_sec: float
     cninfo_request_jitter_sec: float
+    # cninfo 是否接入 SiteGate；false=适配器自管节奏（默认，避免双重睡眠）
+    cninfo_use_site_gate: bool
 
 
 def load_kb_settings() -> KbSettings:
@@ -163,6 +174,35 @@ def load_kb_settings() -> KbSettings:
         os.getenv("RADAR_KB_CRAWL_STALE_TIMEOUT_SEC", "1800") or "1800"
     )
 
+    # 并发调度：默认开启；RADAR_KB_CONCURRENT=0 回退旧串行 TaskScheduler
+    concurrent_enabled = _parse_bool(os.getenv("RADAR_KB_CONCURRENT"), True)
+    discover_max_concurrency = int(
+        os.getenv("RADAR_KB_DISCOVER_MAX_CONCURRENCY", "2") or "2"
+    )
+    content_max_concurrency = int(
+        os.getenv("RADAR_KB_CONTENT_MAX_CONCURRENCY", "4") or "4"
+    )
+    # 软优先：有可跑发现时正文槽位上限（默认 1；0=硬优先）
+    content_low_concurrency = int(
+        os.getenv("RADAR_KB_CONTENT_LOW_CONCURRENCY", "1") or "1"
+    )
+    embed_max_concurrency = int(
+        os.getenv("RADAR_KB_EMBED_MAX_CONCURRENCY", "4") or "4"
+    )
+    # 同站冷却默认 5～9（相对旧任务结束+5～10 为放宽，见设计文档）
+    site_gap_min_sec = float(
+        os.getenv("RADAR_KB_SITE_GAP_MIN_SEC", "5") or "5"
+    )
+    site_gap_max_sec = float(
+        os.getenv("RADAR_KB_SITE_GAP_MAX_SEC", "9") or "9"
+    )
+    site_gate_aging_after_discover = int(
+        os.getenv("RADAR_KB_SITE_GATE_AGING_AFTER_DISCOVER", "3") or "3"
+    )
+    cninfo_use_site_gate = _parse_bool(
+        os.getenv("RADAR_KB_CNINFO_USE_SITE_GATE"), False
+    )
+
     return KbSettings(
         db_host=host,
         db_port=port,
@@ -183,6 +223,14 @@ def load_kb_settings() -> KbSettings:
         content_same_key_gap_max_sec=content_same_key_gap_max_sec,
         content_site_min_interval_sec=content_site_min_interval_sec,
         crawl_stale_timeout_sec=crawl_stale_timeout_sec,
+        concurrent_enabled=concurrent_enabled,
+        discover_max_concurrency=discover_max_concurrency,
+        content_max_concurrency=content_max_concurrency,
+        content_low_concurrency=content_low_concurrency,
+        embed_max_concurrency=embed_max_concurrency,
+        site_gap_min_sec=site_gap_min_sec,
+        site_gap_max_sec=site_gap_max_sec,
+        site_gate_aging_after_discover=site_gate_aging_after_discover,
         content_text_max_chars=int(os.getenv("RADAR_CONTENT_TEXT_MAX_CHARS", "500000")),
         summary_max_chars=int(os.getenv("RADAR_SUMMARY_MAX_CHARS", "500")),
         pdf_max_pages=int(os.getenv("RADAR_PDF_MAX_PAGES", "80")),
@@ -191,6 +239,7 @@ def load_kb_settings() -> KbSettings:
         request_interval_sec=cninfo_request_interval_sec,
         cninfo_request_interval_sec=cninfo_request_interval_sec,
         cninfo_request_jitter_sec=cninfo_request_jitter_sec,
+        cninfo_use_site_gate=cninfo_use_site_gate,
     )
 
 
@@ -201,8 +250,8 @@ def is_legacy_crawl_disabled() -> bool:
 
 def is_radar_kb_in_app_enabled() -> bool:
     """
-    是否在 FastAPI 内挂载 radar_kb（L2）。
+        是否在 FastAPI 内挂载 radar_kb（L2）。
 
-    环境变量 RADAR_KB_WORKER_IN_APP，默认 true。
+        环境变量 RADAR_KB_WORKER_IN_APP，默认 false（与 settings 一致）。
     """
-    return _parse_bool(os.getenv("RADAR_KB_WORKER_IN_APP"), True)
+    return _parse_bool(os.getenv("RADAR_KB_WORKER_IN_APP"), False)

@@ -469,11 +469,12 @@ class Settings(BaseSettings):
         ),
     )
     RADAR_KB_WORKER_IN_APP: bool = Field(
-        default=True,
+        default=False,
         description=(
-            "L2：在 FastAPI lifespan 内以后台线程启动 radar_kb 发现+正文调度器；"
-            "默认 true。设 false 可退回独立进程 python -m radar_kb。"
-            "需配置 EXHIBITION_MYSQL_* 或 RADAR_DB_*。"
+            "L2：在 FastAPI lifespan 内以后台线程启动 radar_kb 发现+正文调度器。"
+            "默认 false：本地 uvicorn 与 Agent 镜像只提供 API，不自动抓取。"
+            "test 要跑写入时由发布页设 true（需镜像含 radar_kb + pymysql，并配 MySQL）。"
+            "也可保持 false，另起 python -m radar_kb。"
         ),
     )
     NEWS_CONTENT_WORKER_ID: Optional[str] = Field(

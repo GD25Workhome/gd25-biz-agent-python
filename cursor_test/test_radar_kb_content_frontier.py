@@ -17,7 +17,13 @@ def _task(tid: int, source_url_id: int, company_id: int = 1, url: str = "") -> d
 
 
 def test_polite_key_source_url_id() -> None:
-    assert polite_key_for_task(_task(1, 9), "source_url_id") == "src:9"
+    assert polite_key_for_task(_task(1, 9), "source_url_id") == "src:company:9"
+    assert (
+        polite_key_for_task(
+            {**_task(1, 9), "source_ref_type": "global"}, "source_url_id"
+        )
+        == "src:global:9"
+    )
     assert polite_key_for_task(
         _task(1, 0, url="https://WWW.Foo.com/x"), "host"
     ) == "host:foo.com"
@@ -48,8 +54,8 @@ def test_frontier_interleaves_different_keys() -> None:
         keys.append(pop.key)
     same_adjacent = sum(1 for a, b in zip(keys, keys[1:]) if a == b)
     assert same_adjacent == 0, keys
-    assert keys.count("src:100") == 3
-    assert keys.count("src:200") == 3
+    assert keys.count("src:company:100") == 3
+    assert keys.count("src:company:200") == 3
 
 
 def test_frontier_same_key_requires_wait() -> None:

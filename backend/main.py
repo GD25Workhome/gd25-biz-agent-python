@@ -183,7 +183,7 @@ async def lifespan(app: FastAPI):
             )
 
         # 8. L2：radar_kb 发现+正文调度器挂 lifespan（后台线程，不堵事件循环）
-        #    默认 RADAR_KB_WORKER_IN_APP=true；可退回 python -m radar_kb 独立进程。
+        #    默认 RADAR_KB_WORKER_IN_APP=false；test 写入由发布页显式打开。
         if settings.RADAR_KB_WORKER_IN_APP:
             logger.info("8. 启动 radar_kb 统一单 loop 调度器（应用内 L2）...")
             mysql_ok = settings.is_exhibition_mysql_enabled
