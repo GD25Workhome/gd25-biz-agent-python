@@ -28,8 +28,12 @@ from backend.app.api.routes.huayuan_radar_event import (
     resolve_radar_tool_quotas,
     resolve_score_from_flow_result,
     router as radar_event_router,
+    validate_score_items_same_cluster,
 )
-from backend.app.api.schemas.huayuan_radar_event import HuayuanRadarEventRequest
+from backend.app.api.schemas.huayuan_radar_event import (
+    HuayuanRadarEventRequest,
+    RadarEventScoreItem,
+)
 from backend.domain.flows.implementations.radar_evidence_gather_node import (
     _select_briefs_by_channel_quota,
     invoke_registered_tool,
@@ -295,6 +299,117 @@ def test_parse_score_accepts_kb_doc_id_without_url() -> None:
     result = parse_radar_event_score_from_ai_text(text)
     assert result.total_score == 70
     assert result.evidences[0].doc_id == 9001
+
+
+def test_validate_score_items_same_cluster_rejects_disjoint() -> None:
+    """两维 evidence_nos 不相交应失败。"""
+    items = [
+        RadarEventScoreItem(
+            code="evidence_score", score=60, evidence_nos=[0]
+        ),
+        RadarEventScoreItem(
+            code="specificity_score", score=10, evidence_nos=[1]
+        ),
+    ]
+    with pytest.raises(ValueError, match="跨主簇不相交"):
+        validate_score_items_same_cluster(items)
+
+
+def test_validate_score_items_same_cluster_accepts_subset() -> None:
+    """specificity 为 evidence 子集应通过。"""
+    items = [
+        RadarEventScoreItem(
+            code="evidence_score", score=60, evidence_nos=[0, 1]
+        ),
+        RadarEventScoreItem(
+            code="specificity_score", score=10, evidence_nos=[0]
+        ),
+    ]
+    validate_score_items_same_cluster(items)
+
+
+def test_parse_rejects_cross_cluster_score_items() -> None:
+    """有分且两维引用不相交证据时应解析失败。"""
+    text = json.dumps(
+        _sample_score_json(
+            evidences=[
+                {
+                    "evidence_no": 0,
+                    "title": "意向",
+                    "quote": "拟建展厅",
+                    "url": "https://news.example.com/a",
+                    "kept": True,
+                },
+                {
+                    "evidence_no": 1,
+                    "title": "另一项目细节",
+                    "quote": "湖州展示中心面积明确",
+                    "url": "https://news.example.com/b",
+                    "kept": True,
+                },
+            ],
+            score_items=[
+                {
+                    "code": "evidence_score",
+                    "score": 60,
+                    "score_reason": "用证据0",
+                    "evidence_nos": [0],
+                },
+                {
+                    "code": "specificity_score",
+                    "score": 15,
+                    "score_reason": "用证据1抬细节",
+                    "evidence_nos": [1],
+                },
+            ],
+        ),
+        ensure_ascii=False,
+    )
+    with pytest.raises(ValueError, match="跨主簇不相交"):
+        parse_radar_event_score_from_ai_text(text)
+
+
+def test_parse_accepts_overlapping_cluster_score_items() -> None:
+    """两维引用有交集时通过。"""
+    text = json.dumps(
+        _sample_score_json(
+            evidences=[
+                {
+                    "evidence_no": 0,
+                    "title": "共建",
+                    "quote": "签约共建体验中心",
+                    "url": "https://news.example.com/a",
+                    "publish_date": "2026-01-15",
+                    "kept": True,
+                },
+                {
+                    "evidence_no": 1,
+                    "title": "补充",
+                    "quote": "位于南京",
+                    "url": "https://news.example.com/b",
+                    "publish_date": "2026-01-10",
+                    "kept": True,
+                },
+            ],
+            score_items=[
+                {
+                    "code": "evidence_score",
+                    "score": 60,
+                    "score_reason": "意向档",
+                    "evidence_nos": [0, 1],
+                },
+                {
+                    "code": "specificity_score",
+                    "score": 10,
+                    "score_reason": "主证据",
+                    "evidence_nos": [0],
+                },
+            ],
+        ),
+        ensure_ascii=False,
+    )
+    result = parse_radar_event_score_from_ai_text(text)
+    assert result.total_score == 70
 
 
 def test_resolve_knowledge_default_enabled() -> None:

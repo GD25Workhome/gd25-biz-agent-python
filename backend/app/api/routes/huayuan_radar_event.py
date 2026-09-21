@@ -472,6 +472,63 @@ def _kept_evidence_valid(ev: RadarEventEvidenceItem) -> bool:
     return bool(ev.url and str(ev.url).startswith("http")) or bool(str(ev.doc_id or "").strip())
 
 
+def _score_item_nos_by_code(
+    score_items: List[RadarEventScoreItem], code: str
+) -> List[int]:
+    """
+        取出指定 code 的 score_item.evidence_nos（取首次匹配）。
+
+        Args:
+            score_items: 已解析的分项列表
+            code: evidence_score / specificity_score
+
+        Returns:
+            证据序号列表；无匹配则空列表
+    """
+    for item in score_items:
+        if item.code == code:
+            return list(item.evidence_nos or [])
+    return []
+
+
+def validate_score_items_same_cluster(
+    score_items: List[RadarEventScoreItem],
+    *,
+    require_when_scored: bool = True,
+) -> None:
+    """
+        校验两维 score_items 的 evidence_nos 同属一主簇（防跨信号拼分）。
+
+        规则：当两维均声明了非空 evidence_nos 时，须满足其一——
+        specificity ⊆ evidence、evidence ⊆ specificity、或二者交集非空。
+        任一方 nos 为空时跳过（兼容旧输出未填引用）。
+
+        Args:
+            score_items: 分项列表
+            require_when_scored: 保留参数，便于调用方显式表达「有分时校验」
+
+        Raises:
+            ValueError: 两维 nos 不相交且互不为子集（跨簇拼分）
+    """
+    # 1. 取出两维引用
+    _ = require_when_scored
+    evidence_nos = set(_score_item_nos_by_code(score_items, "evidence_score"))
+    specificity_nos = set(_score_item_nos_by_code(score_items, "specificity_score"))
+    # 2. 任一方未声明引用则不强制（旧契约兼容）
+    if not evidence_nos or not specificity_nos:
+        return
+    # 3. 同簇：子集或交集
+    if specificity_nos <= evidence_nos or evidence_nos <= specificity_nos:
+        return
+    if evidence_nos & specificity_nos:
+        return
+    raise ValueError(
+        "两维 score_items.evidence_nos 跨主簇不相交："
+        f"evidence_score={sorted(evidence_nos)}, "
+        f"specificity_score={sorted(specificity_nos)}"
+    )
+
+
 def _parse_discarded(raw: Any) -> List[RadarEventDiscardedItem]:
     """解析 discarded 列表。"""
     if not isinstance(raw, list):
@@ -582,6 +639,9 @@ def parse_radar_event_score_from_obj(obj: Dict[str, Any]) -> RadarEventScoreResu
                 raise ValueError(
                     "有分必有据：total_score>0 时 kept 证据须含 doc_id 或有效 url（web 必须 url）"
                 )
+            # 有分时校验两维 evidence_nos 同主簇（提示词纪律的服务端兜底）
+            if total_score is not None and total_score > 0:
+                validate_score_items_same_cluster(score_items)
         # score_items 缺分时用顶层回填
         for item in score_items:
             if item.score is not None:
