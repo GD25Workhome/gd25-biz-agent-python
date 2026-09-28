@@ -18,6 +18,7 @@ from typing import Any, Optional, Set
 from radar_kb import repository as repo
 from radar_kb.config import KbSettings
 from radar_kb.embed import embed_full_document_async, embed_stub_document_async
+from radar_kb.host_pick import pick_distinct_host_tasks
 from radar_kb.registry import CONTENT_REGISTRY, DISCOVER_REGISTRY
 from radar_kb.scheduler import SchedulerMode
 from radar_kb.site_gate import (
@@ -405,7 +406,9 @@ class ConcurrentScheduler:
             self._content_empty_until = 0.0
             for task in batch:
                 host = host_from_task(task) or "__global__"
-                # 未到点则短暂等待，仍占 inflight 但先 await gate ready 再占 sem
+                # 一 spawn 就占住 host，避免冷却等待期间再次认领同站
+                async with self._counter_lock:
+                    self._content_hosts.add(host)
                 t = asyncio.create_task(
                     self._run_content_one(task, host),
                     name=f"content-{task.get('id')}",
@@ -432,7 +435,7 @@ class ConcurrentScheduler:
         self, limit: int, busy_hosts: set[str]
     ) -> list[dict[str, Any]]:
         """
-            同步认领正文；跳过当前已在跑的 host（减少同站占槽）。
+            同步认领正文；先只读筛 host，再只把选中行打成 RUNNING。
         """
         conn = repo.connect(self.settings)
         out: list[dict[str, Any]] = []
@@ -441,38 +444,37 @@ class ConcurrentScheduler:
             repo.reset_stale_crawl_tasks(
                 conn, int(self.settings.crawl_stale_timeout_sec)
             )
-            batch_limit = max(limit * 3, limit)
+            # 窗口必须大于「忙碌站 × per_key」，否则筛完同站后领不到别的站
+            claim_batch = int(getattr(self.settings, "content_claim_batch", 200) or 200)
+            window = max(limit * 8, claim_batch, limit)
             for kind, _entry in CONTENT_REGISTRY.items():
                 if len(out) >= limit:
                     break
                 locked_by = f"py-content-{kind}-{self.settings.worker_id}"
-                part = repo.claim_content_tasks_batch(
+                # list_pending_content_candidates：只读公平窗口，不改 status
+                candidates = repo.list_pending_content_candidates(
+                    conn,
+                    self.settings,
+                    kind,
+                    limit=window,
+                )
+                picked = pick_distinct_host_tasks(
+                    candidates,
+                    limit=limit - len(out),
+                    busy_hosts=busy_hosts,
+                )
+                if not picked:
+                    continue
+                # claim_content_tasks_by_ids：仅锁真正要跑的行
+                part = repo.claim_content_tasks_by_ids(
                     conn,
                     self.settings,
                     kind,
                     locked_by,
-                    limit=batch_limit,
+                    [int(t["id"]) for t in picked],
                 )
                 for task in part:
-                    if len(out) >= limit:
-                        # 多领的放回 PENDING
-                        repo.release_content_task_claim(
-                            conn,
-                            int(task["id"]),
-                            worker_id=locked_by,
-                        )
-                        continue
                     host = host_from_task(task) or "__global__"
-                    if host in busy_hosts or any(
-                        host_from_task(t) == host for t in out
-                    ):
-                        repo.release_content_task_claim(
-                            conn,
-                            int(task["id"]),
-                            worker_id=locked_by,
-                        )
-                        continue
-                    # host 未到点也不在此阻塞；由 run 侧 wait
                     out.append(task)
                     busy_hosts.add(host)
             return out
@@ -485,19 +487,20 @@ class ConcurrentScheduler:
         kind = str(task.get("source_kind") or "news_html")
         locked_by = f"py-content-{kind}-{self.settings.worker_id}"
 
-        # 1. 锁外等到 SiteGate 冷却，避免占着池槽 sleep
-        await self._gate.wait_until_ready(host)
-
-        async with self._content_sem:
-            async with self._counter_lock:
-                self._content_running += 1
-                self._content_hosts.add(host)
-            try:
-                await self._execute_content(task, kind, locked_by)
-            finally:
+        try:
+            # 1. 锁外等到 SiteGate 冷却，避免占着池槽 sleep
+            await self._gate.wait_until_ready(host)
+            async with self._content_sem:
                 async with self._counter_lock:
-                    self._content_running = max(0, self._content_running - 1)
-                    self._content_hosts.discard(host)
+                    self._content_running += 1
+                try:
+                    await self._execute_content(task, kind, locked_by)
+                finally:
+                    async with self._counter_lock:
+                        self._content_running = max(0, self._content_running - 1)
+        finally:
+            async with self._counter_lock:
+                self._content_hosts.discard(host)
 
     async def _execute_content(
         self, task: dict[str, Any], kind: str, locked_by: str

@@ -14,6 +14,8 @@ data:
   ANTHROPIC_MODEL: "deepseek/deepseek-v4.1-flash"
   # 代码默认已是 false；显式写出，避免以后改默认时 test 误开抓取
   RADAR_KB_WORKER_IN_APP: "false"
+  # 五维画像 / 展厅需求自动调度。Java score-prepare 未上线前保持 false
+  RADAR_SCORE_WORKER_IN_APP: "false"
 ---
 apiVersion: v1
 kind: Secret
@@ -25,6 +27,8 @@ stringData:
   HUAYUAN_API_KEY: "replace-me"
   ANTHROPIC_AUTH_TOKEN: "replace-me"
   ANY_SEARCH_API_KEY: "replace-me"
+  # 可选。非空时按逗号顺序做凭证池，并忽略上面的单 key。不要提交真实 key。
+  # ANY_SEARCH_API_KEYS: "replace-me-1,replace-me-2"
   BO_CHA_APIKEY: "replace-me"
 ---
 apiVersion: apps/v1

@@ -110,6 +110,8 @@ async def lifespan(app: FastAPI):
     news_content_task = None
     radar_kb_stop = None
     radar_kb_threads = None
+    radar_score_stop = None
+    radar_score_threads = None
     # 启动时执行
     logger.info("=" * 60)
     logger.info("系统启动中...")
@@ -234,6 +236,29 @@ async def lifespan(app: FastAPI):
                     "   ✗ NEWS_CONTENT_WORKER_IN_APP=true 但未配置 exhibition MySQL，跳过"
                 )
 
+        # 9. 五维画像 / 展厅需求自动调度（与 radar_kb 一样挂 lifespan，默认关）
+        if settings.RADAR_SCORE_WORKER_IN_APP:
+            logger.info("9. 启动 radar_score 评分调度（应用内）...")
+            try:
+                from radar_score.in_app import start_radar_score_in_app
+
+                radar_score_stop, radar_score_threads = start_radar_score_in_app()
+                logger.info(
+                    "   ✓ radar_score 已在后台线程启动"
+                    "（RADAR_SCORE_WORKER_IN_APP=true）"
+                )
+            except Exception as exc:
+                logger.error(
+                    "   ✗ radar_score 启动失败（不阻断 API）：%s",
+                    exc,
+                    exc_info=True,
+                )
+        else:
+            logger.info(
+                "9. 跳过 radar_score 应用内调度"
+                "（RADAR_SCORE_WORKER_IN_APP=false；可用 python -m radar_score）"
+            )
+
         logger.info("=" * 60)
         logger.info("系统启动完成！")
         logger.info("=" * 60)
@@ -244,7 +269,12 @@ async def lifespan(app: FastAPI):
 
     yield  # 应用运行期间
 
-    # 关闭时：先停 radar_kb / 新闻 worker，再 cancel Rewritten 消费者
+    # 关闭时：先停评分调度与 radar_kb / 新闻 worker，再 cancel Rewritten 消费者
+    if radar_score_stop is not None and radar_score_threads is not None:
+        from radar_score.in_app import stop_radar_score_in_app
+
+        stop_radar_score_in_app(radar_score_stop, radar_score_threads)
+
     if radar_kb_stop is not None and radar_kb_threads is not None:
         from radar_kb.in_app import stop_radar_kb_in_app
 

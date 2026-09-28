@@ -12,10 +12,17 @@
 #
 # 基础镜像默认走 DaoCloud（国内直连 Docker Hub 常超时）；可覆盖：
 #   docker build --build-arg BASE_REGISTRY=docker.io/library/ ...
+# pip 默认清华源（直连 files.pythonhosted.org 易超时）；可覆盖：
+#   docker build --build-arg PIP_INDEX_URL=https://mirrors.cloud.tencent.com/pypi/simple \
+#                --build-arg PIP_TRUSTED_HOST=mirrors.cloud.tencent.com ...
 
 ARG BASE_REGISTRY=docker.m.daocloud.io/library/
 
 FROM ${BASE_REGISTRY}python:3.11-slim AS runtime
+
+# 须在 FROM 后再声明，构建期 pip 才能用到
+ARG PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
+ARG PIP_TRUSTED_HOST=pypi.tuna.tsinghua.edu.cn
 
 WORKDIR /app
 
@@ -52,19 +59,26 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements-huayuan.txt .
-RUN pip install --no-cache-dir -r requirements-huayuan.txt
+# 清华源 + BuildKit pip 缓存：直连 PyPI 易超时；重试时不必再下 100MB SDK
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --default-timeout=120 \
+      -i "${PIP_INDEX_URL}" \
+      --trusted-host "${PIP_TRUSTED_HOST}" \
+      -r requirements-huayuan.txt
 
-# 仅拷贝运行期需要的后端与配置
+# 运行期代码与配置（config 整目录拷入，含 flow_rule 占位符）
 COPY backend/ backend/
-COPY config/model_providers.yaml config/model_providers.yaml
-COPY config/flow_loader.yaml config/flow_loader.yaml
-COPY config/flows/huayuan_simple_agent/ config/flows/huayuan_simple_agent/
-COPY config/flows/huayuan_react_agent/ config/flows/huayuan_react_agent/
-COPY config/flows/huayuan_portrait_agent/ config/flows/huayuan_portrait_agent/
-COPY config/flows/huayuan_radar_event_agent/ config/flows/huayuan_radar_event_agent/
-COPY config/flows/huayuan_radar_event_agent_v1_single_react/ config/flows/huayuan_radar_event_agent_v1_single_react/
+COPY config/ config/
+COPY radar_kb/ radar_kb/
+COPY radar_score/ radar_score/
+COPY radar_crawl/ radar_crawl/
+COPY company_news_crawl/ company_news_crawl/
 
-# 删除镜像内仍存在但不需要的重型/医疗模块，防止误 import
+# 删除镜像内仍存在但不需要的重型/医疗模块，防止误 import。
+# exhibition MySQL 必留：load_news_document_tool → mysql_connection.py；
+# 不能整目录删 database（否则启动即 ModuleNotFoundError）。
+# 医疗 PG/SQLAlchemy（connection/base/models/repository）仍裁掉，并改写
+# __init__.py，避免 import mysql_connection 时连带拉起 sqlalchemy。
 RUN find backend -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true \
     && rm -rf \
       backend/pipeline \
@@ -72,7 +86,11 @@ RUN find backend -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || tr
       backend/domain/autogen \
       backend/domain/planning \
       backend/domain/embeddings \
-      backend/infrastructure/database \
+      backend/infrastructure/database/models \
+      backend/infrastructure/database/repository \
+      backend/infrastructure/database/connection.py \
+      backend/infrastructure/database/vector_connection.py \
+      backend/infrastructure/database/base.py \
       backend/infrastructure/rag \
       backend/infrastructure/llm/autogen_client.py \
       backend/infrastructure/llm/embedding_client.py \
@@ -98,7 +116,21 @@ RUN find backend -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || tr
     && find backend/domain/flows/implementations -type f -name '*.py' \
          ! -name '__init__.py' \
          ! -name 'radar_evidence_gather_node.py' \
-         -delete
+         ! -name 'evidence_gather_portrait_node.py' \
+         -delete \
+    && printf '%s\n' \
+         '"""华院镜像仅保留 exhibition MySQL（mysql_connection）。"""' \
+         > backend/infrastructure/database/__init__.py
+
+# Claude CLI：bypassPermissions 禁止 root（本机 Mac 是普通用户所以能跑）。
+# IS_SANDBOX 是官方容器豁免；K8s 若仍 runAsUser:0，build_claude_sdk_env 会再写一次。
+ENV IS_SANDBOX=1
+RUN groupadd --gid 10001 app \
+    && useradd --uid 10001 --gid app --no-create-home --home-dir /app \
+       --shell /usr/sbin/nologin app \
+    && mkdir -p /app/.claude_sdk_runtime \
+    && chown -R app:app /app
+USER app
 
 EXPOSE 8000
 

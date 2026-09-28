@@ -122,3 +122,23 @@ def test_build_claude_sdk_env_blanks_and_isolates_config_dir(
     config_dir = Path(sdk_env["CLAUDE_CONFIG_DIR"])
     assert config_dir.exists()
     assert config_dir.parent == tmp_path.resolve()
+
+
+def test_build_claude_sdk_env_sets_is_sandbox_when_root(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """
+        容器 uid=0 时给 CLI 子进程打 IS_SANDBOX=1，否则 bypassPermissions 会被拒绝。
+    """
+    env_file = tmp_path / ".env"
+    env_file.write_text("ANTHROPIC_AUTH_TOKEN=t\n", encoding="utf-8")
+    settings_obj = Settings(_env_file=None, ENABLE_DATABASE=False)  # type: ignore[call-arg]
+    monkeypatch.setattr("backend.app.config.os.geteuid", lambda: 0)
+    sdk_env = build_claude_sdk_env(
+        settings_obj,
+        project_dotenv={"ANTHROPIC_AUTH_TOKEN": "t"},
+        env_file=env_file,
+        project_root=tmp_path,
+    )
+    assert sdk_env["IS_SANDBOX"] == "1"

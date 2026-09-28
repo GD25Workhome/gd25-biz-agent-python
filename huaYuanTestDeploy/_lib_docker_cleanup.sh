@@ -35,7 +35,7 @@ _docker_build_remote() {
   local latest_ref="$4"
   local platform="${PLATFORM:-linux/amd64}"
   echo "==> docker build remote (${platform})"
-  docker build --platform "$platform" \
+  DOCKER_BUILDKIT=1 docker build --platform "$platform" \
     -f "$dockerfile" \
     -t "$full_ref" \
     -t "$latest_ref" \
@@ -51,7 +51,7 @@ _docker_maybe_build_mac() {
   _docker_want_local_tag || return 0
   mac_platform="$(_docker_mac_platform)"
   echo "==> docker build Mac/local (${mac_platform} -> ${image_name}:local)"
-  docker build --platform "$mac_platform" \
+  DOCKER_BUILDKIT=1 docker build --platform "$mac_platform" \
     -f "$dockerfile" \
     -t "${image_name}:local" \
     "$context"

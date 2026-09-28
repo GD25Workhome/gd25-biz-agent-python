@@ -1,8 +1,8 @@
 # 华院最小后端运行时依赖（小镜像）—— Dockerfile 唯一安装此文件
 # 裁剪清单：ai_docs/26091601-华院方案A依赖裁剪清单.md
 # 刻意排除：torch / sentence-transformers / autogen / pandas / sqlalchemy /
-#           psycopg / pgvector / alembic / volcengine / pymysql
-# （pymysql 仅 news_content_worker 需要，不进本 API 镜像）
+#           psycopg / pgvector / alembic / volcengine
+# pymysql：雷达按 doc_id 读新闻正文（mysql_connection / load_news_document_tool）
 
 # Web
 fastapi>=0.100.0,<1.0.0
@@ -37,6 +37,16 @@ claude-agent-sdk>=0.1.0,<1.0.0
 # 新闻 URL 抓取 Agent 的 HTML 解析（crawl_tools 依赖）
 beautifulsoup4>=4.12.0,<5.0.0
 lxml>=5.0.0,<6.0.0
+
+# 规则抽正文（company_news_crawl.ContentExtractor）
+selectolax>=0.3.0,<1.0.0
+trafilatura>=1.5.0,<2.0.0
+
+# exhibition MySQL（雷达新闻正文直读；不要用 SQLAlchemy/psycopg 那套医疗主库）
+pymysql>=1.1.0,<2.0.0
+
+# 巨潮 PDF/检索：WAF 按 TLS 指纹拦普通 HTTP 库，需 curl_cffi 仿真 Chrome
+curl_cffi>=0.16.0,<1.0.0
 
 # Milvus 知识库检索（雷达事件使用链路；服务端 v2.5.0）
 # ⚠️ 勿降级到 2.x：pymilvus 3.x 与 2.4 有三处 API 差异，代码按 3.x 写

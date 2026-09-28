@@ -40,12 +40,7 @@ docker/deps.env
 requirements.txt
 requirements.lock
 
-# 医疗 / 旧流程配置（镜像内只 COPY 华院 flow）
-config/oldflow/
-config/flows/medical_agent_*/
-config/flows/plan_execute_agent/
-config/flows/autogen_review_agent/
-config/flows/embedding_knowledge_agent/
-config/flows/create_rag_agent/
-config/flows/pipeline_step2/
-config/flows/flow_rule/
+# 规则抽取包里的实验/测试材料（运行时只要 adapters）
+company_news_crawl/实验/
+company_news_crawl/tests/
+company_news_crawl/examples/

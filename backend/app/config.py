@@ -2,6 +2,7 @@
 应用配置管理
 使用 Pydantic Settings 管理配置
 """
+import os
 from pathlib import Path
 from typing import Dict, Mapping, Optional
 
@@ -127,6 +128,8 @@ def build_claude_sdk_env(
         - 凭证只来自 resolve_anthropic_sdk_value（本地不读 shell 个人 key）
         - 对未配置的 ANTHROPIC_* 显式写空串，覆盖 Python SDK「merge 父进程环境」带来的串扰
         - CLAUDE_CONFIG_DIR 指向项目内目录，避免加载 ~/.claude
+        - 容器常以 root 运行：Claude CLI 禁止 root + bypassPermissions，
+          需打 IS_SANDBOX=1（官方容器豁免），否则 list 抓取立刻 exit 1
 
         Args:
             settings_obj: 应用 Settings
@@ -157,6 +160,9 @@ def build_claude_sdk_env(
     config_dir.mkdir(parents=True, exist_ok=True)
     env["CLAUDE_CONFIG_DIR"] = str(config_dir.resolve())
     env["CLAUDE_CODE_DISABLE_AUTO_MEMORY"] = "1"
+    # 3. Docker/K8s 默认 uid=0；CLI 拒绝 root 使用 --dangerously-skip-permissions
+    if hasattr(os, "geteuid") and os.geteuid() == 0:
+        env["IS_SANDBOX"] = "1"
     return env
 
 
@@ -310,14 +316,19 @@ class Settings(BaseSettings):
         default=0.4, description="同站抓取最小请求间隔（秒），礼貌爬取"
     )
 
-    # AnySearch 联网检索（华院规则二）；双名兼容官方 ANYSEARCH_API_KEY
+    # AnySearch 联网检索（华院规则二）
+    # ANY_SEARCH_API_KEYS 非空时只用该逗号分隔池；为空才回退下面两个单 key 别名。
+    ANY_SEARCH_API_KEYS: Optional[str] = Field(
+        default=None,
+        description="AnySearch API Key 池，逗号分隔、按顺序故障转移；非空时覆盖单 key",
+    )
     ANY_SEARCH_API_KEY: Optional[str] = Field(
         default=None,
-        description="AnySearch API Key（本仓库约定名）",
+        description="AnySearch API Key（本仓库约定名；池为空时使用）",
     )
     ANYSEARCH_API_KEY: Optional[str] = Field(
         default=None,
-        description="AnySearch API Key（官方文档变量名）",
+        description="AnySearch API Key（官方文档变量名；池为空时与 ANY_SEARCH_API_KEY 一并入池）",
     )
     # 博查 Web Search（展厅发觉）；环境变量名按现网 .env：BO_CHA_APIKEY
     BO_CHA_APIKEY: Optional[str] = Field(
@@ -475,6 +486,15 @@ class Settings(BaseSettings):
             "默认 false：本地 uvicorn 与 Agent 镜像只提供 API，不自动抓取。"
             "test 要跑写入时由发布页设 true（需镜像含 radar_kb + pymysql，并配 MySQL）。"
             "也可保持 false，另起 python -m radar_kb。"
+        ),
+    )
+    RADAR_SCORE_WORKER_IN_APP: bool = Field(
+        default=False,
+        description=(
+            "在 FastAPI lifespan 内以后台线程启动五维画像与展厅需求自动调度。"
+            "默认 false：不扫 radar_profile_job / radar_event_job。"
+            "打开时还需 RADAR_SCORE_JAVA_BASE_URL，以及 MySQL。"
+            "也可保持 false，另起 python -m radar_score。"
         ),
     )
     NEWS_CONTENT_WORKER_ID: Optional[str] = Field(

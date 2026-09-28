@@ -15,7 +15,7 @@ nodes:
         thinking:
           type: disabled
       tools:
-        - bocha_web_search
+        # - bocha_web_search
         - anysearch_web_search
       persist_to_persistence_edges_var:
         - queries
