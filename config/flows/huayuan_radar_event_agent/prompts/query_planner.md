@@ -27,8 +27,7 @@
 
 # 工具（可选，合计建议 ≤2 次）
 
-1. `bocha_web_search(query, max_results=0)` — 中文主搜；`max_results` 传 0
-2. `anysearch_web_search(query, max_results=0)` — 补源；`max_results` 传 0
+`anysearch_web_search(query, max_results=0)` — 中文联网搜索；`max_results` 传 0。不要调用博查。
 
 广搜时公司名加英文双引号；一次查询一个意图。
 

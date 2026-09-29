@@ -1,22 +1,27 @@
 """
 展厅发觉：证据采集 Function 节点
 
-按 planner 产出的 queries，节点内 asyncio.gather 并行调用博查 + AnySearch
+按 planner 产出的 queries，节点内 asyncio.gather 并行调用 AnySearch
 （知识库开关开启时**并列**加挂 Milvus 知识库检索，见 01 文档 §3.3 / 03 文档 T2.3），
 压缩为 evidence_briefs / discarded_briefs **仅写入 prompt_vars 一份**，供终评占位符使用；
 避免在 edges_var / persistence / flow_msgs 中重复塞同一份全量列表。
+
+联网搜索只走 AnySearch。flow.yaml 里 query_planner 的 tools 只约束规划节点，
+采集节点不读那份列表，停用博查必须改本文件的搜索循环。
 """
 from __future__ import annotations
 
 import json
 import logging
+import re
+from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional, Set, Tuple
+from zoneinfo import ZoneInfo
 
 from langchain_core.tools import BaseTool
 
 from backend.domain.flows.nodes.base_function import BaseFunctionNode
 from backend.domain.state import FlowState
-from backend.domain.tools.bocha_tool import bocha_web_search
 from backend.domain.tools.anysearch_tool import anysearch_web_search, anysearch_extract
 from backend.domain.tools.huayuan_radar_event_context import (
     MAX_KNOWLEDGE_DOCS_LIMIT,
@@ -91,6 +96,152 @@ _ACTION_HINT_KEYWORDS = (
     "企业馆",
     "体验中心",
 )
+# 招采窗口：截止日已过，或距今天不足该天数（含当天），不得计入事件信号
+_NEAR_DEADLINE_DAYS = 14
+_DEADLINE_TZ = ZoneInfo("Asia/Shanghai")
+# 只认明确的截止/开标表述，避免把发布日、开工日当成窗口日
+_DEADLINE_LABELS = (
+    "报名截止",
+    "投标截止",
+    "递交截止",
+    "响应截止",
+    "响应文件递交",
+    "开标时间",
+    "开标日期",
+    "开标日",
+    "公告有效期",
+    "截止时间",
+    "截止日期",
+    "延期至",
+    "延期到",
+)
+_DATE_PATTERN = re.compile(
+    r"(?P<y>20\d{2})\s*年\s*(?P<m>1[0-2]|0?[1-9])\s*月\s*(?P<d>3[01]|[12]\d|0?[1-9])\s*日"
+    r"|(?P<y2>20\d{2})[-/.](?P<m2>1[0-2]|0?[1-9])[-/.](?P<d2>3[01]|[12]\d|0?[1-9])"
+)
+
+
+def shanghai_today() -> date:
+    """返回上海时区的今天，供招采窗口与跑批日对齐。"""
+    return datetime.now(_DEADLINE_TZ).date()
+
+
+def _date_from_match(matched: re.Match[str]) -> Optional[date]:
+    """
+        把日期正则的一次命中转成 date；非法月日返回 None。
+
+        Args:
+            matched: _DATE_PATTERN 的匹配
+
+        Returns:
+            解析出的日期；月日不合法时为 None
+    """
+    if matched.group("y"):
+        year = int(matched.group("y"))
+        month = int(matched.group("m"))
+        day = int(matched.group("d"))
+    else:
+        year, month, day = int(matched.group("y2")), int(matched.group("m2")), int(matched.group("d2"))
+    try:
+        return date(year, month, day)
+    except ValueError:
+        return None
+
+
+def parse_procurement_deadline(text: str) -> Optional[date]:
+    """
+        从标题/摘要/摘录中解析招采截止日或开标日。
+
+        只采纳紧挨「截止 / 开标 / 延期至」的日期，发布日单独出现不算。
+        文中写了延期时，以延期后的日期为准；否则取最晚的窗口日。
+
+        Args:
+            text: 待扫描的原文
+
+        Returns:
+            窗口日；无法识别时为 None
+    """
+    if not text or not text.strip():
+        return None
+    extended: List[date] = []
+    others: List[date] = []
+    for matched in _DATE_PATTERN.finditer(text):
+        parsed = _date_from_match(matched)
+        if parsed is None:
+            continue
+        start, end = matched.span()
+        before = text[max(0, start - 24) : start]
+        after = text[end : end + 8]
+        # 「2026年3月1日开标」标签在日期后面；其余标签在日期前面
+        labeled = after.startswith("开标") or any(label in before for label in _DEADLINE_LABELS)
+        if not labeled:
+            continue
+        if "延期至" in before or "延期到" in before:
+            extended.append(parsed)
+        else:
+            others.append(parsed)
+    if extended:
+        return max(extended)
+    if others:
+        return max(others)
+    return None
+
+
+def procurement_deadline_block_reason(
+    brief: Dict[str, Any],
+    today: date,
+    near_days: int = _NEAR_DEADLINE_DAYS,
+) -> Optional[str]:
+    """
+        判断一条证据是否因招采窗口关闭或临近而不能计入信号。
+
+        Args:
+            brief: 含 title / summary / quote 的证据
+            today: 比较用的今天
+            near_days: 距截止日不足该天数（含）则忽略
+
+        Returns:
+            忽略原因；可以计入时为 None
+    """
+    blob = "\n".join(str(brief.get(key) or "") for key in ("title", "summary", "quote"))
+    deadline = parse_procurement_deadline(blob)
+    if deadline is None:
+        return None
+    if deadline > today + timedelta(days=near_days):
+        return None
+    if deadline < today:
+        return f"招采截止日已过：{deadline.isoformat()}"
+    return f"招采截止日临近（{deadline.isoformat()}，距今天不足{near_days}天）"
+
+
+def drop_closed_procurement_briefs(
+    briefs: List[Dict[str, Any]],
+    discarded: List[Dict[str, Any]],
+    today: Optional[date] = None,
+) -> None:
+    """
+        就地丢掉截止日已过或两周内到期的证据，避免终评把它们当成事件信号。
+
+        Args:
+            briefs: 可变证据列表，命中窗口的条目会被移除
+            discarded: 可变丢弃列表，写入忽略原因
+            today: 比较日；缺省为上海时区今天
+    """
+    current = today or shanghai_today()
+    kept: List[Dict[str, Any]] = []
+    for brief in briefs:
+        reason = procurement_deadline_block_reason(brief, current)
+        if reason is None:
+            kept.append(brief)
+            continue
+        discarded.append(
+            {
+                "title": brief.get("title"),
+                "url": brief.get("url"),
+                "reason": reason,
+            }
+        )
+    briefs[:] = kept
 
 
 def _brief_priority(brief: Dict[str, Any]) -> tuple:
@@ -391,23 +542,23 @@ class EvidenceGatherNode(BaseFunctionNode):
         """返回节点的唯一标识 key。"""
         return "radar_evidence_gather_func"
 
-    async def _search_one(self, tool_name: str, query: str) -> Dict[str, Any]:
+    async def _search_one(self, query: str) -> Dict[str, Any]:
         """
-            调用单个搜索工具并解析结果。
+            调用 AnySearch 并解析结果。
+
+            采集节点不读 flow.yaml 的 tools。规划节点关掉博查后，这里若仍写死
+            bocha_web_search，日志里会继续出现博查请求。
 
             Args:
-                tool_name: bocha_web_search / anysearch_web_search
                 query: 检索式
 
             Returns:
                 含 ok/results/tool_name/query 的字典
         """
-        # @register_tool 返回 StructuredTool，必须 ainvoke，不能当协程函数直接调用
-        tool_obj = (
-            bocha_web_search if tool_name == "bocha_web_search" else anysearch_web_search
-        )
+        tool_name = "anysearch_web_search"
+        # invoke_registered_tool：StructuredTool 必须 ainvoke，不能当协程直接调用
         raw = await invoke_registered_tool(
-            tool_obj, {"query": query, "max_results": 0}
+            anysearch_web_search, {"query": query, "max_results": 0}
         )
         payload = _parse_tool_json(raw)
         payload["tool_name"] = tool_name
@@ -816,13 +967,12 @@ class EvidenceGatherNode(BaseFunctionNode):
                 f"anysearch={ctx.anysearch_count}/{ctx.max_anysearch}"
             )
 
-        # 2. 构造并行任务：每条 query ×（博查 + AnySearch）[+ 知识库检索（开关开时）]
+        # 2. 构造并行任务：每条 query 只走 AnySearch [+ 知识库检索（开关开时）]
         tasks_meta: List[Tuple[str, str]] = []
         coros = []
         for q in queries:
-            for tool_name in ("bocha_web_search", "anysearch_web_search"):
-                tasks_meta.append((tool_name, q))
-                coros.append(self._search_one(tool_name, q))
+            tasks_meta.append(("anysearch_web_search", q))
+            coros.append(self._search_one(q))
 
         web_task_count = len(coros)
         knowledge_enabled = bool(ctx is not None and ctx.knowledge.enabled)
@@ -856,7 +1006,7 @@ class EvidenceGatherNode(BaseFunctionNode):
                 ctx, knowledge_queries, knowledge_results, briefs, discarded, seen_urls
             )
 
-        # 3.2 两源搜索结果（与知识库条目按 URL 去重，重复的跳过）
+        # 3.2 网页搜索结果（与知识库条目按 URL 去重，重复的跳过）
         for meta, result in zip(tasks_meta, web_results):
             tool_name, query = meta
             if isinstance(result, Exception):
@@ -923,11 +1073,18 @@ class EvidenceGatherNode(BaseFunctionNode):
             if len(briefs) >= _MAX_BRIEFS:
                 break
 
-        # 4. 可选深抽取（摘要过短）
+        # 4. 可选深抽取（摘要过短）；抽取回填 quote 后才能看到正文里的截止日
         try:
             await self._maybe_extract(briefs, discarded)
         except Exception as e:
             logger.warning(f"[evidence_gather] extract 阶段异常: {e}", exc_info=True)
+
+        # 4.1 截止日已过或两周内到期的招采条目不计入信号
+        before_drop = len(briefs)
+        drop_closed_procurement_briefs(briefs, discarded)
+        dropped = before_drop - len(briefs)
+        if dropped:
+            logger.info(f"[evidence_gather] 忽略招采窗口已过或临近的证据 {dropped} 条")
 
         # 5. 写回状态（对齐「只保留一份 briefs」：仅 prompt_vars 压缩串进终评）
         # - 不再写入 edges_var / persistence 的全量 briefs，避免 Langfuse/节点 input 三处重复

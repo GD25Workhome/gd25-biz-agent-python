@@ -330,13 +330,79 @@ async def test_extract_422_does_not_exhaust_later_keys(monkeypatch: pytest.Monke
     assert not get_anysearch_key_pool().is_exhausted(_KEY_B)
 
 
-async def test_extract_switches_key(monkeypatch: pytest.MonkeyPatch) -> None:
-    """抽取与搜索共用凭证池。"""
+async def test_extract_403_without_request_id_does_not_exhaust(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """抽取 403 没有 request_id 时停在这一次，不熔断、不打后面的 key。"""
+    _use_keys(_KEY_A, _KEY_B)
+    client = _patch_http(
+        monkeypatch,
+        [_FakeResponse(403, "forbidden")],
+    )
+    with _context():
+        raw = await anysearch_tool.anysearch_extract.ainvoke({"url": "https://example.com/hall"})
+    body = json.loads(raw)
+    assert body["ok"] is False
+    assert body["error_code"] == "anysearch_bad_request"
+    assert body["http_status"] == 403
+    assert len(client.calls) == 1
+    assert _auth(client.calls[0]) == f"Bearer {_KEY_A}"
+    assert has_live_key() is True
+    assert not get_anysearch_key_pool().is_exhausted(_KEY_A)
+    assert not get_anysearch_key_pool().is_exhausted(_KEY_B)
+
+
+async def test_search_403_without_request_id_does_not_exhaust(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """搜索 403 没有 request_id 时同样不换 key。"""
+    _use_keys(_KEY_A, _KEY_B)
+    client = _patch_http(
+        monkeypatch,
+        [_FakeResponse(403, {"code": -1, "request_id": "   "})],
+    )
+    with _context():
+        raw = await anysearch_tool.anysearch_web_search.ainvoke(
+            {"query": "鼎捷数智 展厅", "max_results": 1}
+        )
+    body = json.loads(raw)
+    assert body["ok"] is False
+    assert body["error_code"] == "anysearch_bad_request"
+    assert body["http_status"] == 403
+    assert len(client.calls) == 1
+    assert has_live_key() is True
+
+
+async def test_403_request_id_header_still_switches_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """403 的 request_id 在响应头里时，仍视为凭证被拒并换 key。"""
     _use_keys(_KEY_A, _KEY_B)
     client = _patch_http(
         monkeypatch,
         [
-            _FakeResponse(403, {"code": -1}),
+            _FakeResponse(403, {"code": -1}, headers={"X-Request-ID": "hdr-403"}),
+            _ok_search([{"title": "展厅", "url": "https://example.com/a", "snippet": "新建展厅"}]),
+        ],
+    )
+    with _context():
+        raw = await anysearch_tool.anysearch_web_search.ainvoke(
+            {"query": "鼎捷数智 展厅", "max_results": 1}
+        )
+    body = json.loads(raw)
+    assert body["ok"] is True
+    assert len(client.calls) == 2
+    assert get_anysearch_key_pool().is_exhausted(_KEY_A)
+    assert not get_anysearch_key_pool().is_exhausted(_KEY_B)
+
+
+async def test_extract_switches_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    """抽取遇到带 request_id 的 403 时，与搜索共用凭证池并换 key。"""
+    _use_keys(_KEY_A, _KEY_B)
+    client = _patch_http(
+        monkeypatch,
+        [
+            _FakeResponse(403, {"code": -1, "request_id": "extract-403"}),
             _FakeResponse(200, {"code": 0, "data": {"content": "展厅改造招标"}}),
         ],
     )

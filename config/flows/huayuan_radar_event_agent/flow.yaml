@@ -15,7 +15,7 @@ nodes:
         thinking:
           type: disabled
       tools:
-        # - bocha_web_search
+        # 规划节点不再挂博查。采集节点不读这份 tools，停博查在 radar_evidence_gather_node。
         - anysearch_web_search
       persist_to_persistence_edges_var:
         - queries

@@ -7,8 +7,9 @@
 
 凭证池：ANY_SEARCH_API_KEYS（逗号分隔）非空时按顺序使用；
 否则回退 ANY_SEARCH_API_KEY、ANYSEARCH_API_KEY。
-401 / 402 / 403 才熔断当前 key 并换下一把。422 / 400 / 415 是这条请求或 URL
-抽不了，不熔断、也不拿同一请求去打后面的 key。同一上海日历日内跳过已熔断的 key，
+401 / 402，以及带 request_id 的 403，才熔断当前 key 并换下一把。
+没有 request_id 的 403 与 422 / 400 / 415 一样，是这一条请求的异常响应，
+不熔断、也不拿同一请求去打后面的 key。同一上海日历日内跳过已熔断的 key，
 跨日后可再试。池空或全部被拒时不再匿名调用。
 """
 from __future__ import annotations
@@ -40,7 +41,7 @@ _ENV_KEYS = "ANY_SEARCH_API_KEYS"
 _ENV_KEY_PRIMARY = "ANY_SEARCH_API_KEY"
 _ENV_KEY_OFFICIAL = "ANYSEARCH_API_KEY"
 
-# 凭证本身被拒：熔断当天，并换下一把
+# 401 / 402 一律是凭证问题。403 只有带 request_id 才算 AnySearch 自己拒绝凭证。
 _REJECT_STATUS = frozenset({401, 402, 403})
 # 请求或 URL 不合法：换 key 仍会失败，熔断会把后面还能用的 key 打空
 _BAD_REQUEST_STATUS = frozenset({400, 415, 422})
@@ -415,8 +416,8 @@ async def _post_with_key_failover(path: str, payload: Dict[str, Any]) -> _CallOu
     """
         用存活 key 依次 POST 同一请求体。
 
-        只有 401 / 402 / 403 熔断当前 key 并试下一把。
-        400 / 415 / 422 说明这条请求或 URL 本身不能处理，立即返回，不熔断、不换 key。
+        401 / 402，以及带 request_id 的 403，熔断当前 key 并试下一把。
+        没有 request_id 的 403 与 400 / 415 / 422 一样立即返回，不熔断、不换 key。
         429 不熔断、不换 key。其它非 2xx、超时、网络失败不熔断，但改试下一把。
         没有存活 key 时不发 HTTP。
 
@@ -471,7 +472,18 @@ async def _post_with_key_failover(path: str, payload: Dict[str, Any]) -> _CallOu
             status = resp.status_code
             request_id = _safe_request_id(resp)
 
-            # 3. 只有凭证被拒才熔断。422 是这条 URL 抽不了，拿去打下一把会把池打空。
+            # 3. 凭证被拒才熔断。无 request_id 的 403 重放会把后面还能用的 key 打空。
+            if status == 403 and not request_id:
+                logger.warning(
+                    f"AnySearch 403 无 request_id，不熔断 key: path={path} key={label}"
+                )
+                return _CallOutcome(
+                    ok=False,
+                    error="AnySearch 请求被拒绝",
+                    error_code="anysearch_bad_request",
+                    http_status=403,
+                )
+
             if status in _REJECT_STATUS:
                 # mark_exhausted：当天跳过这把 key，跨日后再试
                 pool.mark_exhausted(key)
@@ -631,8 +643,8 @@ async def anysearch_web_search(query: str, max_results: int = 0) -> str:
 
         必须在查询中包含目标公司名或证券代码；结果含 url/snippet 与来源主机启发式权威档。
         受本请求 max_anysearch 限制，相同 query 不可重复搜索。
-        凭证 401 / 402 / 403 时在本次调用内换下一把存活 key，本地计数只加一次。
-        422 只表示这条请求无效，不熔断 key。
+        凭证 401 / 402，或带 request_id 的 403，在本次调用内换下一把存活 key，本地计数只加一次。
+        没有 request_id 的 403 与 422 只表示这条请求异常，不熔断 key。
 
         Args:
             query: 检索式（建议含公司名 + 展厅/招采等意图词）
@@ -737,8 +749,8 @@ async def anysearch_extract(url: str) -> str:
         使用 AnySearch 抽取指定 URL 的页面正文（Markdown），用于 snippet 不足时核验事实。
 
         不支持 PDF/Office 等二进制；受本请求 max_extract_times 限制。
-        凭证 401 / 402 / 403 时在本次调用内换下一把存活 key，本地计数只加一次。
-        422 只表示这条请求无效，不熔断 key。
+        凭证 401 / 402，或带 request_id 的 403，在本次调用内换下一把存活 key，本地计数只加一次。
+        没有 request_id 的 403 与 422 只表示这条请求异常，不熔断 key。
 
         Args:
             url: 目标页面 http(s) URL

@@ -101,7 +101,7 @@ class ScoreScheduler:
             Returns:
                 有存活 AnySearch key 时为 True
         """
-        # has_live_key：当天未被 401/402/403 熔断的 key 才算存活
+        # has_live_key：当天未被 401/402 或带 request_id 的 403 熔断的 key 才算存活
         live = has_live_key()
         if not live and not self._event_claim_paused:
             self._event_claim_paused = True
