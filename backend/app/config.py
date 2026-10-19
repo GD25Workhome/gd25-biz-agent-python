@@ -336,6 +336,22 @@ class Settings(BaseSettings):
         description="博查 AI Web Search API Key",
     )
 
+    # DeepSeek 网页搜索 / 抓取（规则二 v3 检索链路；独立于 AnySearch）
+    # 文档：https://api-docs.deepseek.com/zh-cn/guides/search
+    # 计费：Search / Fetch 各 5 元 / 1000 次成功请求；失败 / 空结果 / 超时不计费。
+    DEEPSEEK_SEARCH_KEY: Optional[str] = Field(
+        default=None,
+        description="DeepSeek 平台 API Key（只做 Bearer 鉴权；留空则回退 DEEPSEEK_API_KEY）",
+    )
+    DEEPSEEK_SEARCH_BASE_URL: str = Field(
+        default="https://api.deepseek.com",
+        description="DeepSeek API Base URL（Search / Fetch 同源）",
+    )
+    DEEPSEEK_SEARCH_TIMEOUT_SECONDS: float = Field(
+        default=30.0,
+        description="DeepSeek Search / Fetch 单次请求超时（秒）；抓取无配置时用 60",
+    )
+
     # ---------------- 新闻知识库 embedding（公司统一 LLM 网关，OpenAI 兼容模式） ----------------
     # 设计文档：exhibition projectDocs/技术设计-260915/02-知识库的构建/01-Claude的思考.md
     # .env 键名按现网：HUAYUAN_API_KEY / HUAYUAN_API_URL_embeddings

@@ -27,6 +27,7 @@ from backend.app.api.schemas.huayuan_radar_event import (
     DEFAULT_MAX_RESULTS_PER_SEARCH,
     DEFAULT_MAX_SEARCH_TIMES,
     DEFAULT_QUERY_HINT,
+    LEGACY_EVIDENCE_SCORES,
     VALID_EVIDENCE_SCORES,
     VALID_SPECIFICITY_SCORES,
     HuayuanRadarEventRequest,
@@ -49,7 +50,7 @@ from backend.infrastructure.observability.langfuse_handler import create_langfus
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-HUAYUAN_RADAR_EVENT_FLOW_KEY = "huayuan_radar_event_agent"
+HUAYUAN_RADAR_EVENT_FLOW_KEY = "huayuan_radar_event_agent_v3"
 VALID_SUBJECT_CONFIDENCE = {"high", "medium", "low", "unknown"}
 VALID_FACT_STATUS = {"confirmed", "inferred", "unknown", "conflict"}
 VALID_ADMISSION_HINT = {"pass", "reject_unrelated", "pending_verify", "expired"}
@@ -112,8 +113,8 @@ def resolve_radar_knowledge_config(ctx_body: Any) -> Dict[str, Any]:
     """
         解析知识库开关与限额（请求可选 `context.knowledge`）。
 
-        缺省或未传 knowledge 时 **enabled=true**（外网仍必跑，KB 默认增强）。
-        显式 `enabled=false` 时关闭 Milvus 召回。
+        v3 目标架构：radar_event 评分链路默认 **enabled=false**（不再召回 Milvus）。
+        显式传 `knowledge.enabled=true` 时仍可开启（联调/回退）。
 
         Args:
             ctx_body: 请求 context
@@ -124,11 +125,11 @@ def resolve_radar_knowledge_config(ctx_body: Any) -> Dict[str, Any]:
     cfg = getattr(ctx_body, "knowledge", None)
     if cfg is None:
         return {
-            "enabled": True,
+            "enabled": False,
             "max_docs": DEFAULT_KNOWLEDGE_MAX_DOCS,
             "max_load_times": DEFAULT_KNOWLEDGE_MAX_LOAD_TIMES,
         }
-    enabled = getattr(cfg, "enabled", True)
+    enabled = getattr(cfg, "enabled", False)
     if not bool(enabled):
         return {
             "enabled": False,
@@ -201,6 +202,8 @@ def build_radar_event_initial_state(
             # 采集节点写入前给占位，避免终评模板残留未替换花括号
             "evidence_briefs": "[]",
             "discarded_briefs": "[]",
+            # v3：该公司既有事件摘要（M2 组装；默认空表示无历史）
+            "history_events_json": (ctx.history_events_json or "").strip() or "[]",
         },
         "edges_var": {},
         "persistence_edges_var": {},
@@ -566,12 +569,16 @@ def parse_radar_event_score_from_obj(obj: Dict[str, Any]) -> RadarEventScoreResu
     if "exhibition_related" not in obj:
         raise ValueError("JSON 中缺少 exhibition_related 字段")
 
-    # 2. 解析分值（非法直接失败，对齐设计 Q4）
+    # 2. 解析分值（非法直接失败；v3 容忍历史档 60/10，放过 + 告警，不产出）
     evidence_score = _parse_optional_score(
         obj.get("evidence_score", obj.get("evidenceScore")),
-        VALID_EVIDENCE_SCORES,
+        VALID_EVIDENCE_SCORES | LEGACY_EVIDENCE_SCORES,
         "evidence_score",
     )
+    if evidence_score in LEGACY_EVIDENCE_SCORES:
+        logger.warning(
+            f"evidence_score={evidence_score} 属历史档位（v2），v3 不应产出，已放过"
+        )
     specificity_score = _parse_optional_score(
         obj.get("specificity_score", obj.get("specificityScore")),
         VALID_SPECIFICITY_SCORES,
@@ -718,6 +725,53 @@ def parse_radar_event_score_from_obj(obj: Dict[str, Any]) -> RadarEventScoreResu
         extract_count=int(obj.get("extract_count") or obj.get("extractCount") or 0),
         web_hit_count=web_hit_count,
         kb_hit_count=kb_hit_count,
+        # ---------------- v3 扩展字段 ----------------
+        target_scope=_normalize_optional_str(
+            obj.get("target_scope") or obj.get("targetScope")
+        ),
+        suggested_level=_normalize_optional_str(
+            obj.get("suggested_level") or obj.get("suggestedLevel")
+        ),
+        suggested_level_reason=_normalize_optional_str(
+            obj.get("suggested_level_reason") or obj.get("suggestedLevelReason")
+        ),
+        procurement_scope=_normalize_optional_str(
+            obj.get("procurement_scope") or obj.get("procurementScope")
+        ),
+        event_stage=_normalize_optional_str(
+            obj.get("event_stage") or obj.get("eventStage")
+        ),
+        exhibition_stage=_normalize_optional_str(
+            obj.get("exhibition_stage") or obj.get("exhibitionStage")
+        ),
+        is_potential=_as_bool(obj.get("is_potential", obj.get("isPotential")), False),
+        signal_category=_normalize_optional_str(
+            obj.get("signal_category") or obj.get("signalCategory")
+        ),
+        verify_priority_default=_normalize_optional_str(
+            obj.get("verify_priority_default") or obj.get("verifyPriorityDefault")
+        ),
+        verify_priority_adjusted=_normalize_optional_str(
+            obj.get("verify_priority_adjusted") or obj.get("verifyPriorityAdjusted")
+        ),
+        verify_priority_reason=_normalize_optional_str(
+            obj.get("verify_priority_reason") or obj.get("verifyPriorityReason")
+        ),
+        planned_time=_normalize_optional_str(
+            obj.get("planned_time") or obj.get("plannedTime")
+        ),
+        expected_time=_normalize_optional_str(
+            obj.get("expected_time") or obj.get("expectedTime")
+        ),
+        actual_time=_normalize_optional_str(
+            obj.get("actual_time") or obj.get("actualTime")
+        ),
+        date_precision=_normalize_optional_str(
+            obj.get("date_precision") or obj.get("datePrecision")
+        ),
+        rule_version=_normalize_optional_str(
+            obj.get("rule_version") or obj.get("ruleVersion")
+        ),
     )
 
 

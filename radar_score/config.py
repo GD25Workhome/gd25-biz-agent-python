@@ -87,7 +87,7 @@ class ScoreSettings:
     tenant_id: Optional[int]
     locked_by: str
     java_base_url: str
-    java_token: str
+    java_token: str  # 预留：生产回调鉴权；当前 Java 不校验，可不配置
     profile_concurrency: int
     event_concurrency: int
     poll_interval_sec: float
@@ -95,6 +95,7 @@ class ScoreSettings:
     java_timeout_sec: float
     java_down_backoff_sec: float
     shutdown_wait_sec: float
+    max_retry: int = 3
 
 
 def is_radar_score_in_app_enabled() -> bool:
@@ -180,4 +181,5 @@ def load_score_settings() -> ScoreSettings:
         java_timeout_sec=float(os.getenv("RADAR_SCORE_JAVA_TIMEOUT_SEC", "60") or "60"),
         java_down_backoff_sec=float(os.getenv("RADAR_SCORE_JAVA_DOWN_BACKOFF_SEC", "60") or "60"),
         shutdown_wait_sec=float(os.getenv("RADAR_SCORE_SHUTDOWN_WAIT_SEC", "30") or "30"),
+        max_retry=max(1, int(os.getenv("RADAR_SCORE_MAX_RETRY", "3") or "3")),
     )

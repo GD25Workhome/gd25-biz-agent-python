@@ -79,7 +79,7 @@ def _score_settings() -> ScoreSettings:
 
 
 class EventClaimPauseTest(unittest.IsolatedAsyncioTestCase):
-    """AnySearch 当天无存活 key 时停领展厅需求，画像继续。"""
+    """未配置 DeepSeek 搜索 key 时停领展厅需求，画像继续。"""
 
     def setUp(self) -> None:
         self.scheduler = ScoreScheduler(_score_settings())
@@ -91,8 +91,8 @@ class EventClaimPauseTest(unittest.IsolatedAsyncioTestCase):
         self.scheduler._fill = _fill  # type: ignore[method-assign]
         self.scheduler._reclaim = lambda: None  # type: ignore[method-assign]
 
-    async def test_no_live_key_skips_event_and_logs_once(self) -> None:
-        with patch("radar_score.scheduler.has_live_key", return_value=False), patch(
+    async def test_no_key_skips_event_and_logs_once(self) -> None:
+        with patch("radar_score.scheduler.resolve_deepseek_key", return_value=None), patch(
             "radar_score.scheduler.log"
         ) as mocked_log:
             await self.scheduler._tick()
@@ -101,17 +101,17 @@ class EventClaimPauseTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(mocked_log.warning.call_count, 1)
         self.assertEqual(mocked_log.info.call_count, 0)
 
-    async def test_live_key_resumes_event_claim_once(self) -> None:
-        live = {"ok": False}
+    async def test_key_resumes_event_claim_once(self) -> None:
+        key = {"value": None}
 
-        def _live() -> bool:
-            return live["ok"]
+        def _resolve():
+            return key["value"]
 
-        with patch("radar_score.scheduler.has_live_key", side_effect=_live), patch(
-            "radar_score.scheduler.log"
-        ) as mocked_log:
+        with patch(
+            "radar_score.scheduler.resolve_deepseek_key", side_effect=_resolve
+        ), patch("radar_score.scheduler.log") as mocked_log:
             await self.scheduler._tick()
-            live["ok"] = True
+            key["value"] = "sk-test"
             await self.scheduler._tick()
             await self.scheduler._tick()
         self.assertEqual(

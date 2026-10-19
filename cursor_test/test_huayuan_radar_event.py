@@ -31,8 +31,10 @@ from backend.app.api.routes.huayuan_radar_event import (
     validate_score_items_same_cluster,
 )
 from backend.app.api.schemas.huayuan_radar_event import (
+    LEGACY_EVIDENCE_SCORES,
     HuayuanRadarEventRequest,
     RadarEventScoreItem,
+    VALID_EVIDENCE_SCORES,
 )
 from backend.domain.flows.implementations.radar_evidence_gather_node import (
     _select_briefs_by_channel_quota,
@@ -412,9 +414,18 @@ def test_parse_accepts_overlapping_cluster_score_items() -> None:
     assert result.total_score == 70
 
 
-def test_resolve_knowledge_default_enabled() -> None:
-    """未传 knowledge 时默认 enabled=true。"""
+def test_resolve_knowledge_default_disabled() -> None:
+    """v3：未传 knowledge 时默认 enabled=false（评分链路不再召回 KB）。"""
     req = HuayuanRadarEventRequest(**_sample_request_body())
+    cfg = resolve_radar_knowledge_config(req.context)
+    assert cfg["enabled"] is False
+
+
+def test_resolve_knowledge_explicit_enabled() -> None:
+    """显式传 knowledge.enabled=true 时仍可开启（联调/回退）。"""
+    body = _sample_request_body()
+    body["context"]["knowledge"] = {"enabled": True}
+    req = HuayuanRadarEventRequest(**body)
     cfg = resolve_radar_knowledge_config(req.context)
     assert cfg["enabled"] is True
 
@@ -553,5 +564,83 @@ def test_invoke_registered_tool_uses_ainvoke() -> None:
 
 
 def test_flow_key_constant() -> None:
-    """流程 key 与配置目录一致。"""
-    assert HUAYUAN_RADAR_EVENT_FLOW_KEY == "huayuan_radar_event_agent"
+    """流程 key 与配置目录一致（v3 单 Agent）。"""
+    assert HUAYUAN_RADAR_EVENT_FLOW_KEY == "huayuan_radar_event_agent_v3"
+
+
+# ---------------- MS1：v3 输出侧（白名单 / 新字段 / 历史档容忍） ----------------
+
+
+def _v3_payload(evidence_score: int, specificity_score: int) -> dict:
+    """构造含注释证据的 v3 评分 JSON。"""
+    return {
+        "radar_event_score": {
+            "exhibition_related": True,
+            "subject_confidence": "high",
+            "space_object": "展示中心",
+            "action": "建设",
+            "place": "上海",
+            "signal_summary": "公告披露拟建设展示中心",
+            "signal_time": "2026-09-18",
+            "evidence_score": evidence_score,
+            "specificity_score": specificity_score,
+            "total_score": evidence_score + specificity_score,
+            "admission_hint": "pending_verify",
+            "fact_status": "confirmed",
+            "target_scope": "enterprise",
+            "suggested_level": "S1",
+            "suggested_level_reason": "总分落 S1 区间",
+            "procurement_scope": "intent_phase",
+            "event_stage": "planned",
+            "exhibition_stage": "planned",
+            "is_potential": False,
+            "signal_category": "",
+            "verify_priority_default": None,
+            "verify_priority_adjusted": "P1",
+            "planned_time": "2026-09",
+            "date_precision": "month",
+            "rule_version": "v3-2026-10-14",
+            "evidences": [
+                {
+                    "evidence_no": 0,
+                    "source_type": "web",
+                    "url": "https://example.com/a",
+                    "quote": "q",
+                    "kept": True,
+                }
+            ],
+        }
+    }
+
+
+def test_v3_valid_evidence_scores_set() -> None:
+    """v3 合法档含 0/5/55，不含 60/10。"""
+    assert VALID_EVIDENCE_SCORES == {85, 75, 55, 45, 25, 5, 0}
+    assert LEGACY_EVIDENCE_SCORES == {60, 10}
+
+
+def test_parse_v3_extended_fields() -> None:
+    """新档位 + v3 扩展字段能被解析回雷达结果。"""
+    result = parse_radar_event_score_from_ai_text(json.dumps(_v3_payload(75, 10)))
+    assert result.evidence_score == 75
+    assert result.total_score == 85
+    assert result.suggested_level == "S1"
+    assert result.procurement_scope == "intent_phase"
+    assert result.event_stage == "planned"
+    assert result.verify_priority_adjusted == "P1"
+    assert result.rule_version == "v3-2026-10-14"
+
+
+def test_parse_fixed_s4_zero_tier() -> None:
+    """固定 S4：0 分档 + 信息分 15 → 总分 15。"""
+    result = parse_radar_event_score_from_ai_text(json.dumps(_v3_payload(0, 15)))
+    assert result.evidence_score == 0
+    assert result.total_score == 15
+
+
+def test_parse_legacy_score_tolerated() -> None:
+    """历史档 60/10 放过解析（不产出告警），不 500。"""
+    result = parse_radar_event_score_from_ai_text(json.dumps(_v3_payload(60, 10)))
+    assert result.evidence_score == 60
+    assert result.specificity_score == 10
+    assert result.total_score == 70

@@ -18,6 +18,7 @@ log = logging.getLogger("radar_score.repository")
 
 STATUS_PENDING = 0
 STATUS_RUNNING = 1
+STATUS_FAILED = 3
 
 _NOT_DELETED = "deleted = b'0'"
 _TABLES = {
@@ -173,7 +174,6 @@ def claim_jobs(
                 SET status = %s,
                     locked_by = %s,
                     locked_at = %s,
-                    error_message = NULL,
                     updater = %s,
                     update_time = %s
                 WHERE id = %s AND status = %s AND {_NOT_DELETED}
@@ -196,17 +196,41 @@ def claim_jobs(
     return claimed
 
 
+def next_status(retryable: bool, retry_count: int, max_retry: int) -> int:
+    """
+        失败后任务应置的状态（纯函数，便于单测）。
+
+        可重试异常且未达重试上限 → PENDING（等下一轮重试）；
+        否则 → FAILED（记录原因、停止循环，避免任务卡住反复重跑）。
+
+        Args:
+            retryable: 异常是否属于可重试（网络/依赖抖动）
+            retry_count: 本次失败前已重试次数
+            max_retry: 允许的最大重试次数
+
+        Returns:
+            STATUS_PENDING 或 STATUS_FAILED
+    """
+    if retryable and (int(retry_count) + 1) <= int(max_retry):
+        return STATUS_PENDING
+    return STATUS_FAILED
+
+
 def release_claim(
     conn: pymysql.Connection,
     settings: ScoreSettings,
     kind: str,
     job_id: int,
     reason: str,
-) -> bool:
+    *,
+    retryable: bool = True,
+) -> int:
     """
-        模型尚未调用时，把本进程认领的任务退回 PENDING。
+        执行失败后处置本进程认领的任务。
 
-        用于 Java prepare 不可达，避免任务停在 RUNNING 直到超时。
+        确定性错误（数据/结构不合规）或超过重试上限 → FAILED 并写 error_message；
+        可重试错误且未超上限 → 退回 PENDING，等下一轮重试。
+        两种情形都记录失败原因，避免任务静默卡在 PENDING 反复重跑。
 
         Args:
             conn: 数据库连接
@@ -214,18 +238,30 @@ def release_claim(
             kind: profile 或 event
             job_id: 任务编号
             reason: 写回 error_message 的说明
+            retryable: 是否可重试（默认 True）
 
         Returns:
-            是否成功退回
+            处置后的状态码（STATUS_PENDING / STATUS_FAILED）
     """
     table = table_of(kind)
     now = datetime.now()
-    message = (reason or "Java 不可用，退回待执行")[:900]
+    message = (reason or "执行失败")[:900]
     with conn.cursor() as cur:
+        cur.execute(
+            f"SELECT retry_count FROM {table} "
+            f"WHERE id = %s AND status = %s AND locked_by = %s AND {_NOT_DELETED}",
+            [int(job_id), STATUS_RUNNING, settings.locked_by],
+        )
+        row = cur.fetchone()
+        if row is None:
+            conn.commit()
+            return STATUS_FAILED
+        status = next_status(retryable, int(row.get("retry_count") or 0), settings.max_retry)
         cur.execute(
             f"""
             UPDATE {table}
             SET status = %s,
+                retry_count = retry_count + 1,
                 locked_by = NULL,
                 locked_at = NULL,
                 error_message = %s,
@@ -234,7 +270,7 @@ def release_claim(
             WHERE id = %s AND status = %s AND locked_by = %s AND {_NOT_DELETED}
             """,
             (
-                STATUS_PENDING,
+                status,
                 message,
                 settings.locked_by,
                 now,
@@ -243,8 +279,9 @@ def release_claim(
                 settings.locked_by,
             ),
         )
-        released = cur.rowcount == 1
     conn.commit()
-    if released:
-        log.info("退回 PENDING kind=%s jobId=%s", kind, job_id)
-    return released
+    if status == STATUS_FAILED:
+        log.error("任务标记失败 kind=%s jobId=%s reason=%s", kind, job_id, message)
+    else:
+        log.warning("退回 PENDING 待重试 kind=%s jobId=%s reason=%s", kind, job_id, message)
+    return status

@@ -8,7 +8,7 @@
   POST {base}/admin-api/radar/event-job/score-prepare
   POST {base}/admin-api/radar/event-job/score-complete
 
-请求头 X-Radar-Score-Token 携带 RADAR_SCORE_JAVA_TOKEN。
+请求头无需凭证（生产再考虑鉴权）。
 prepare 成功时 data.requestBody 与现有 Agent HTTP body 相同。
 complete 体：jobId、lockedBy、ok、agentResp、errorMessage。
 """
@@ -25,7 +25,6 @@ from radar_score.repository import table_of
 
 log = logging.getLogger("radar_score.java_client")
 
-TOKEN_HEADER = "X-Radar-Score-Token"
 _UNAVAILABLE_HTTP = {404, 502, 503, 504}
 
 _PREPARE_PATH = {
@@ -137,8 +136,6 @@ def _post_json(settings: ScoreSettings, url: str, body: dict[str, Any]) -> dict[
     raw = json.dumps(body, ensure_ascii=False).encode("utf-8")
     request = urllib.request.Request(url, data=raw, method="POST")
     request.add_header("Content-Type", "application/json; charset=utf-8")
-    if settings.java_token:
-        request.add_header(TOKEN_HEADER, settings.java_token)
     try:
         with urllib.request.urlopen(request, timeout=settings.java_timeout_sec) as response:
             text = response.read().decode("utf-8")

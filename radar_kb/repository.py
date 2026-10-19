@@ -794,27 +794,42 @@ def list_pending_content_candidates(
     per_key = max(1, int(getattr(settings, "content_claim_per_key", 3) or 3))
     partition_col = _content_partition_col(settings)
     tenant_sql, tenant_params = _tenant_clause(settings)
+    # MySQL 5.7 不支持窗口函数（ROW_NUMBER() OVER），改用关联子查询算每组内序号 rn：
+    #   rn = 同组中 id <= 本行的条数；<=> 保证 NULL 分组语义与 ROW_NUMBER 一致。
+    tenant_sql_t1 = tenant_sql.replace("tenant_id", "t.tenant_id") if tenant_sql else ""
+    tenant_sql_t2 = tenant_sql.replace("tenant_id", "t2.tenant_id") if tenant_sql else ""
     with conn.cursor() as cur:
         cur.execute(
             f"""
             SELECT id, url, source_url_id, source_kind
             FROM (
-                SELECT id, url, source_url_id, source_kind,
-                       ROW_NUMBER() OVER (
-                           PARTITION BY {partition_col}
-                           ORDER BY id ASC
-                       ) AS rn
-                FROM radar_news_content_task
-                WHERE {_NOT_DELETED}
-                  AND status = %s
-                  AND source_kind = %s
-                  {tenant_sql}
+                SELECT t.id, t.url, t.source_url_id, t.source_kind,
+                       (SELECT COUNT(*)
+                          FROM radar_news_content_task t2
+                         WHERE t2.{partition_col} <=> t.{partition_col}
+                           AND t2.deleted = b'0'
+                           AND t2.status = %s
+                           AND t2.source_kind = %s
+                           AND t2.id <= t.id{tenant_sql_t2}) AS rn
+                  FROM radar_news_content_task t
+                 WHERE t.deleted = b'0'
+                   AND t.status = %s
+                   AND t.source_kind = %s{tenant_sql_t1}
             ) ranked
             WHERE rn <= %s
             ORDER BY rn ASC, id ASC
             LIMIT %s
             """,
-            [STATUS_PENDING, kind, *tenant_params, per_key, n],
+            [
+                STATUS_PENDING,
+                kind,
+                *tenant_params,
+                STATUS_PENDING,
+                kind,
+                *tenant_params,
+                per_key,
+                n,
+            ],
         )
         rows = list(cur.fetchall() or [])
     conn.commit()

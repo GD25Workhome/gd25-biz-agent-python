@@ -1,0 +1,37 @@
+# 华院规则二 v3：单 Agent ReAct + DeepSeek Search/Fetch 唯一链路（目标架构）
+# 改造：原三节点（query_planner → evidence_gather → score_summarizer）收敛为单 Agent。
+# 检索链路改用 DeepSeek 官方 Search / Fetch（独立工具，不依赖华院配额上下文）；
+# 旧 AnySearch 链路（anysearch_flow）保留，需要时把 tools 换回 anysearch_web_search / anysearch_extract。
+# 目标架构见 华院Agent设计/261016-Agent重构/Agent整体设计/04-总体设计.md
+name: huayuan_radar_event_agent_v3
+version: "3.0"
+description: "华院规则二 v3：单 Agent ReAct + DeepSeek Search/Fetch；输出两维分 + 建议等级 + v3 扩展字段"
+
+nodes:
+  - name: radar_event_react_node
+    type: agent
+    config:
+      prompt: prompts/radar_event_v3.md
+      model:
+        provider: huayuan
+        temperature: 0.2
+        # 单 Agent 串行多轮检索，链路较长；显式超时避免无限挂起
+        timeout: 300
+        thinking:
+          type: disabled
+      # 唯一证据链路：DeepSeek Search + Fetch（独立工具，不做配额/去重）
+      # + 区域字典查询（确定「展厅所在区域」，逐级下钻 province→city→district）
+      tools:
+        - deepseek_web_search
+        - deepseek_fetch
+        - region_lookup
+        - region_children
+      persist_to_persistence_edges_var:
+        - radar_event_score
+
+edges:
+  - from: radar_event_react_node
+    to: END
+    condition: always
+
+entry_node: radar_event_react_node

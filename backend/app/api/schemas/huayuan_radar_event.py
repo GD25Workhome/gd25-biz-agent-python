@@ -20,9 +20,11 @@ AuthorityTier = Literal[
     "unknown",
 ]
 
-# 产品 §3.4 合法离散分值
-VALID_EVIDENCE_SCORES = {85, 75, 60, 45, 25, 10}
+# 产品 §3.4 合法离散分值（v3：固定 0 分档优先；60→55、10→5）
+VALID_EVIDENCE_SCORES = {85, 75, 55, 45, 25, 5, 0}
 VALID_SPECIFICITY_SCORES = {15, 10, 5, 0}
+# 历史兼容：旧规则曾用 60/10，解析时容忍（放过、不产出），避免旧模型输出直接 500
+LEGACY_EVIDENCE_SCORES = {60, 10}
 
 # 分工具默认配额（效果优先；联调稳定后可收紧）
 DEFAULT_MAX_BOCHA = 10
@@ -52,12 +54,13 @@ class RadarEventKnowledgeConfig(BaseModel):
     """
     知识库使用开关（请求可选）。
 
-    缺省 enabled=true：外网必跑 + KB 默认增强；显式 false 时仅外网。
+    v3 目标架构：radar_event 评分链路**不再使用知识库**（默认 enabled=false）。
+    显式传 enabled=true 时仍可开启（联调/回退用）；缺省一律关闭。
     """
 
     enabled: bool = Field(
-        default=True,
-        description="是否启用知识库（Milvus 检索 + 按需拉全文）；缺省 true",
+        default=False,
+        description="是否启用知识库（Milvus 检索 + 按需拉全文）；v3 缺省 false",
     )
     max_docs: Optional[int] = Field(
         default=None,
@@ -115,9 +118,10 @@ class RadarEventDiscardedItem(BaseModel):
 
 class RadarEventScoreResult(BaseModel):
     """
-    Agent 输出的规则二评分结构。
+    Agent 输出的规则二评分结构（v3）。
 
-    注意：不含最终 S1–S4；调用方按分数阈值与准入规则定级。
+    主契约：两维离散分 + 证据链 + 准入（Java/下游兼容）。
+    v3 扩展：建议等级、目标范围、采购范围、事件/展厅阶段、核验优先级、三时间等。
     """
 
     exhibition_related: bool = Field(..., description="是否与展厅/长期展示空间明确相关")
@@ -125,6 +129,13 @@ class RadarEventScoreResult(BaseModel):
     space_object: Optional[str] = Field(default=None, description="展厅对象")
     action: Optional[str] = Field(default=None, description="需求/项目动作")
     place: Optional[str] = Field(default=None, description="地点")
+    place_region_id: Optional[int] = Field(
+        default=None,
+        description=(
+            "展厅所在区域 region.id（Agent 用 region_lookup/region_children 查字典得到；"
+            "落库用于 region_* 列，source=AI_PARSED；查不到为 null）"
+        ),
+    )
     time_text: Optional[str] = Field(default=None, description="工期/计划等自由时间表述（非列表主时间）")
     signal_summary: Optional[str] = Field(
         default=None,
@@ -139,7 +150,7 @@ class RadarEventScoreResult(BaseModel):
         description="signal_time 对应 evidences[].evidence_no",
     )
     evidence_score: Optional[int] = Field(
-        default=None, description="证据强度分，合法档 85/75/60/45/25/10"
+        default=None, description="证据强度分，合法档 85/75/55/45/25/5/0（v3）"
     )
     specificity_score: Optional[int] = Field(
         default=None, description="信息具体程度，合法档 15/10/5/0"
@@ -160,6 +171,62 @@ class RadarEventScoreResult(BaseModel):
     extract_count: int = Field(default=0, ge=0)
     web_hit_count: int = Field(default=0, ge=0)
     kb_hit_count: int = Field(default=0, ge=0)
+
+    # ---------------- v3 扩展字段（供 S3 排序 / 展品中心展示 / 事件更新） ----------------
+    target_scope: Optional[str] = Field(
+        default=None, description="enterprise | gov_or_park | excluded"
+    )
+    suggested_level: Optional[str] = Field(
+        default=None, description="Agent 建议等级 S1-S4（最终由系统区间自检确认）"
+    )
+    suggested_level_reason: Optional[str] = Field(
+        default=None, description="建议等级依据"
+    )
+    procurement_scope: Optional[str] = Field(
+        default=None,
+        description="采购范围：exhibition_tender|front_building_only|mixed|intent_phase|unknown",
+    )
+    event_stage: Optional[str] = Field(
+        default=None,
+        description="空间事件阶段：planned|in_preparation|under_construction|moved_in|launch_done|park_open|unknown",
+    )
+    exhibition_stage: Optional[str] = Field(
+        default=None,
+        description="展厅阶段：none_known|planned|tendering|implementing|completed|unknown",
+    )
+    is_potential: bool = Field(default=False, description="潜在关联是否为推断")
+    signal_category: Optional[str] = Field(
+        default=None, description="命中的潜在信号目录类别（S3 潜在档）"
+    )
+    verify_priority_default: Optional[str] = Field(
+        default=None, description="目录默认核验优先级 P0-P3"
+    )
+    verify_priority_adjusted: Optional[str] = Field(
+        default=None, description="按阶段修正后的当前核验优先级 P0-P3"
+    )
+    verify_priority_reason: Optional[str] = Field(
+        default=None, description="优先级修正原因"
+    )
+    planned_time: Optional[str] = Field(default=None, description="计划确认时间")
+    expected_time: Optional[str] = Field(default=None, description="预计时间")
+    actual_time: Optional[str] = Field(default=None, description="实际发生时间")
+    date_precision: Optional[str] = Field(
+        default=None, description="day|month|year|unknown"
+    )
+    rule_version: Optional[str] = Field(
+        default=None, description='规则版本，如 "v3-2026-10-14"'
+    )
+
+    @field_validator("place_region_id", mode="before")
+    @classmethod
+    def coerce_region_id(cls, value: Any) -> Optional[int]:
+        """区域 id 容错：数字串/整数照收，其余（含空串、非数字）归 None，避免整单校验失败。"""
+        if value is None or value == "":
+            return None
+        try:
+            return int(str(value).strip())
+        except (TypeError, ValueError):
+            return None
 
 
 class RadarEventCompany(BaseModel):
@@ -200,6 +267,10 @@ class HuayuanRadarEventRequestContext(BaseModel):
     time_to: Optional[str] = None
     query_hint: Optional[str] = None
     event_job_id: Optional[int] = None
+    history_events_json: Optional[str] = Field(
+        default=None,
+        description="该公司既有事件摘要 JSON（M2 组装注入；缺省 []，供判断同一事件新阶段/独立新需求）",
+    )
     max_search_times: Optional[int] = Field(
         default=None,
         description="兼容旧字段：未传 max_bocha/max_anysearch 时，作为两工具各自上限",

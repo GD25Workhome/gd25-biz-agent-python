@@ -29,8 +29,19 @@ def init_tools() -> None:
     from backend.domain.tools import huayuan_document_tool  # noqa: F401
     # 规则二知识库：按 doc_id 拉新闻正文（白名单=本次召回 doc_ids，受 max_load_times 限制）
     from backend.domain.tools import load_news_document_tool  # noqa: F401
-    from backend.domain.tools import anysearch_tool  # noqa: F401
+    # AnySearch：默认走「DB 凭证池」的新实现（anysearch_flow）；
+    # ANYSEARCH_TOOL_IMPL=legacy 可回退旧的 env 实现（anysearch_tool）。
+    import os as _os
+
+    if _os.getenv("ANYSEARCH_TOOL_IMPL", "new").strip().lower() == "legacy":
+        from backend.domain.tools import anysearch_tool  # noqa: F401
+    else:
+        from backend.domain.tools import anysearch_flow  # noqa: F401
     from backend.domain.tools import bocha_tool  # noqa: F401
+    # DeepSeek 网页搜索 / 抓取：独立工具（不依赖华院 radar 上下文），供规则二 v3 检索链路
+    from backend.domain.tools import deepseek_search_tool  # noqa: F401
+    # 区域字典查询：供规则二 v3 Agent 确定「展厅所在区域」（只读 region/region_alias）
+    from backend.domain.tools import region_lookup_tool  # noqa: F401
 
     # 2. 打印已注册数量，便于启动日志核对
     registered_tools = tool_registry.get_all_tools()

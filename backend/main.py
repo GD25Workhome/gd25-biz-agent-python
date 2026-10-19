@@ -112,6 +112,7 @@ async def lifespan(app: FastAPI):
     radar_kb_threads = None
     radar_score_stop = None
     radar_score_threads = None
+    anysearch_pool = None
     # 启动时执行
     logger.info("=" * 60)
     logger.info("系统启动中...")
@@ -259,6 +260,20 @@ async def lifespan(app: FastAPI):
                 "（RADAR_SCORE_WORKER_IN_APP=false；可用 python -m radar_score）"
             )
 
+        # 10. AnySearch 凭证池：加载 DB 快照 + 后台定时刷新（DB 热配置）
+        try:
+            from backend.domain.tools.anysearch.pool import get_anysearch_pool
+
+            anysearch_pool = get_anysearch_pool()
+            _as_snap = anysearch_pool.reload(force=True)
+            anysearch_pool.start_background()
+            logger.info(
+                "10. AnySearch 池就绪 source=%s keys=%d（DB 热配置，后台刷新中）",
+                _as_snap.source, len(_as_snap.keys),
+            )
+        except Exception as e:
+            logger.warning("10. AnySearch 池初始化失败（不阻断 API）：%s", e)
+
         logger.info("=" * 60)
         logger.info("系统启动完成！")
         logger.info("=" * 60)
@@ -270,6 +285,14 @@ async def lifespan(app: FastAPI):
     yield  # 应用运行期间
 
     # 关闭时：先停评分调度与 radar_kb / 新闻 worker，再 cancel Rewritten 消费者
+    if anysearch_pool is not None:
+        try:
+            anysearch_pool.stop_background()
+            await anysearch_pool.release_all()
+            logger.info("AnySearch 池已停止并释放租约")
+        except Exception as e:
+            logger.warning("AnySearch 池停止异常: %s", e)
+
     if radar_score_stop is not None and radar_score_threads is not None:
         from radar_score.in_app import stop_radar_score_in_app
 

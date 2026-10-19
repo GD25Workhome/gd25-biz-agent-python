@@ -7,7 +7,7 @@ import threading
 import time
 from typing import Optional
 
-from backend.domain.tools.anysearch_tool import has_live_key
+from backend.domain.tools.deepseek_search_tool import resolve_deepseek_key
 from radar_score.config import EVENT_KIND, PROFILE_KIND, ScoreSettings, claim_quota
 from radar_score.execute import execute_claimed_job
 from radar_score.java_client import JavaUnavailable
@@ -20,8 +20,8 @@ class ScoreScheduler:
     """
         单事件循环里跑两类任务，用在途数量限制认领。
 
-        展厅需求依赖 AnySearch。当天没有存活 key 时停领新的 event 任务，
-        已在跑的任务继续；画像不受影响。key 跨日恢复后自动再领。
+        展厅需求依赖 DeepSeek Search/Fetch。未配置 DeepSeek 搜索 key 时停领新的 event
+        任务，已在跑的任务继续；画像不受影响。key 配好后自动恢复认领。
     """
 
     def __init__(self, settings: ScoreSettings) -> None:
@@ -88,7 +88,7 @@ class ScoreScheduler:
         if time.monotonic() < self._java_down_until:
             return
         await self._fill(PROFILE_KIND)
-        # 2. 展厅需求：AnySearch 当天无存活 key 时不认领，任务留在 PENDING
+        # 2. 展厅需求：未配置 DeepSeek 搜索 key 时不认领，任务留在 PENDING
         if self._event_claim_allowed():
             await self._fill(EVENT_KIND)
 
@@ -96,19 +96,20 @@ class ScoreScheduler:
         """
             今天是否还要认领展厅需求。
 
+            v3 检索链路走 DeepSeek Search/Fetch，只认 DeepSeek 搜索 key
+            （`DEEPSEEK_SEARCH_KEY`，回退 `DEEPSEEK_API_KEY`）；未配置时停领 event。
             只在停领与恢复的交界各打一条日志，避免每轮轮询刷屏。
 
             Returns:
-                有存活 AnySearch key 时为 True
+                配了 DeepSeek 搜索 key 时为 True
         """
-        # has_live_key：当天未被 401/402 或带 request_id 的 403 熔断的 key 才算存活
-        live = has_live_key()
+        live = resolve_deepseek_key() is not None
         if not live and not self._event_claim_paused:
             self._event_claim_paused = True
-            log.warning("AnySearch 当天无存活 key，暂停认领展厅需求任务")
+            log.warning("未配置 DeepSeek 搜索 key（DEEPSEEK_SEARCH_KEY），暂停认领展厅需求任务")
         elif live and self._event_claim_paused:
             self._event_claim_paused = False
-            log.info("AnySearch 已有存活 key，恢复认领展厅需求任务")
+            log.info("DeepSeek 搜索 key 已就绪，恢复认领展厅需求任务")
         return live
 
     def _reclaim(self) -> None:
