@@ -5,7 +5,7 @@
 - 输出结构与旧 `anysearch_tool.py` **逐字段一致**（含 error_code 契约）。
 - 独立包 `backend/domain/tools/anysearch/` 保持纯净（不 import 华院）。
 
-设计：`华院Agent设计/261016-Agent重构/Anysearch工具设计/00-总体设计.md` §8。
+设计：`华院Agent设计/00-当前技术设计-总览.md` §1.3（AnySearch 可选工具，未挂 flow）。
 """
 from __future__ import annotations
 

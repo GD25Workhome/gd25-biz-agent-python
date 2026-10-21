@@ -1,187 +1,82 @@
-# LangGraphFlow Multi-Agent Router V2.0
+# 华院规则二：展厅项目需求评分服务
 
-多智能体路由系统，基于 LangGraph 和 LangChain 构建。
+基于 FastAPI + LangGraph 的**规则二评分服务**。只保留：
 
-## 项目简介
+- `POST /api/v1/huayuan/radar-event-score`：展厅项目需求评分
+- `radar_score` **event worker**：认领 `radar_event_job` → 算分 → 自检 → 直写 `radar_event` / `radar_event_evidence` / 任务收口
+- 规则二 v3 flow：`react → rule_gate → auditor`
+- 检索工具：DeepSeek Search / Fetch + 区域字典
 
-本项目是一个基于 LangGraph 的多智能体路由系统，支持根据用户意图自动路由到对应的专业智能体进行处理。当前版本（MVP）实现了血压记录和复诊管理两个智能体。
+画像、chat、新闻 URL 抓取、Claude Agent SDK、`radar_kb` / `radar_crawl` / `company_news_crawl`、Milvus / AnySearch / 博查、非华院 Agent 均已删除。
 
-## 功能特性
+## 目录
 
-### Milestone 1 (MVP) 功能
-
-- ✅ **血压记录智能体**：支持记录、查询、更新血压数据
-- ✅ **复诊管理智能体**：支持创建、查询、更新预约
-- ✅ **智能路由系统**：根据用户意图自动路由到对应智能体
-- ✅ **数据库支持**：PostgreSQL 数据库，支持异步操作
-- ✅ **配置驱动**：通过 YAML 配置文件管理智能体和工具
-
-## 技术栈
-
-- **Python**: 3.10+
-- **FastAPI**: Web 框架
-- **LangGraph**: 多智能体框架
-- **LangChain**: LLM 调用和工具支持
-- **PostgreSQL**: 数据库
-- **SQLAlchemy**: ORM
-- **Pydantic**: 数据验证
-
-## 项目结构
-
-```
-gd25-biz-agent-python_cursor/
-├── app/                    # 应用层
-│   ├── main.py            # FastAPI 应用入口
-│   ├── api/               # API 路由
-│   ├── core/              # 核心配置
-│   ├── schemas/           # 数据模型
-│   └── middleware/        # 中间件
-├── domain/                # 领域层
-│   ├── router/           # 路由系统
-│   ├── agents/           # 智能体
-│   └── tools/            # 业务工具
-├── infrastructure/        # 基础设施层
-│   ├── database/         # 数据库
-│   ├── llm/              # LLM 客户端
-│   └── external/         # 外部服务集成
-├── config/               # 配置文件
-│   ├── agents.yaml       # 智能体配置
-│   └── prompts/         # 提示词文件
-├── alembic/              # 数据库迁移
-└── tests/                # 测试
+```text
+backend/
+  main.py                         # FastAPI 入口（只挂规则二）
+  app/api/routes/huayuan_radar_event.py
+  app/api/schemas/huayuan_radar_event.py
+  domain/flows/                   # agent / function 两类节点
+  domain/tools/                   # deepseek + region only
+  infrastructure/                 # LLM provider / prompts / langfuse
+radar_score/                      # event-only 调度、算分、自检、落库
+config/
+  flow_loader.yaml                # 只 preload v3
+  model_providers.yaml            # 只 huayuan
+  flows/huayuan_radar_event_agent_v3/
+Dockerfile
+requirements-huayuan.txt
+huaYuanTestDeploy/push-huayuan-agent.sh
 ```
 
-## 快速开始
-
-### 1. 环境准备
-
-确保已安装：
-- Python 3.10+
-- PostgreSQL 14+
-- Conda（推荐）
-
-### 2. 安装依赖
+## 本地运行
 
 ```bash
-# 创建 conda 环境（推荐）
-conda create -n langgraphflow python=3.10
-conda activate langgraphflow
+conda activate py311_GD25_base
+pip install -r requirements-huayuan.txt
 
-# 安装依赖
-pip install -r requirements.txt
-```
-
-### 3. 配置环境变量
-
-复制 `.env.example` 为 `.env` 并配置：
-
-```bash
 cp .env.example .env
+# 填 HUAYUAN_API_KEY / DEEPSEEK_SEARCH_KEY / EXHIBITION_MYSQL_*
+
+# HTTP API
+uvicorn backend.main:app --host 0.0.0.0 --port 8000
+
+# 另起 event worker（或在 .env 设 RADAR_SCORE_WORKER_IN_APP=true）
+python -m radar_score
 ```
 
-编辑 `.env` 文件，配置数据库和 LLM API 密钥：
+健康检查：`GET /health`。
 
-```env
-# 数据库配置
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_NAME=langgraphflow
-
-# LLM 配置
-OPENAI_API_KEY=your_api_key_here
-OPENAI_BASE_URL=https://api.deepseek.com/v1
-LLM_MODEL=deepseek-chat
-```
-
-### 4. 初始化数据库
+## 打包 / 发布
 
 ```bash
-# 运行数据库迁移
-alembic upgrade head
+# 只构建
+PUSH=0 ./huaYuanTestDeploy/push-huayuan-agent.sh
+
+# 构建并推送 TCR
+./huaYuanTestDeploy/push-huayuan-agent.sh
 ```
 
-### 5. 启动应用
+构建后在镜像内执行 `import backend.main, radar_score` + `pip check`，并打印镜像体积；目标未压缩 < 500MB。
 
-```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
+## 依赖
 
-### 6. 测试接口
+`requirements-huayuan.txt` 只装规则二直接依赖：FastAPI / uvicorn / LangGraph / LangChain / langchain-openai / pydantic / pydantic-settings / httpx / pyyaml / simpleeval / pymysql / python-dotenv。
 
-访问健康检查接口：
-```bash
-curl http://localhost:8000/health
-```
+不再安装：`claude-agent-sdk`、`pymilvus`、`pandas`、`numpy`、`trafilatura`、`curl_cffi`、`selectolax`、`lxml`、`beautifulsoup4`。
 
-## API 文档
+## 当前设计文档
 
-启动应用后，访问以下地址查看 API 文档：
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
+- `华院Agent设计/00-当前技术设计-总览.md`
+- `华院Agent设计/02-技术设计/01-HTTP契约与Agent流程.md`
+- `华院Agent设计/02-技术设计/02-评分、自检与落库规则.md`
+- `华院Agent设计/02-技术设计/03-Worker调度与数据模型.md`
+- `华院Agent设计/02-技术设计/04-配置、部署与验证.md`
+- `华院Agent设计/03-决策记录/`（4 篇当前决策）
+- `cairn/华院-展厅需求终评与提示词.md`
+- `cairn/华院-雷达事件落库与展示.md`
+- `cairn/华院-部署与依赖切分.md`
 
-### 聊天接口
+## 发布环境变量
 
-**POST** `/api/v1/chat`
-
-请求示例：
-```json
-{
-  "message": "我想记录血压，收缩压120，舒张压80",
-  "session_id": "session_123",
-  "user_id": "user_456"
-}
-```
-
-响应示例：
-```json
-{
-  "response": "成功记录血压：收缩压 120 mmHg，舒张压 80 mmHg",
-  "session_id": "session_123",
-  "intent": "blood_pressure",
-  "agent": "blood_pressure_agent"
-}
-```
-
-## 开发计划
-
-### Milestone 1: MVP 版本 ✅（基础骨架已完成）
-
-- [x] 基础架构搭建
-- [x] 血压记录智能体
-- [x] 复诊管理智能体
-- [x] 基础路由功能
-
-### Milestone 2: 功能增强（待开始）
-
-- [ ] 诊断智能体系统
-- [ ] RAG 检索功能
-- [ ] 路由逻辑扩展
-
-### Milestone 3: 生产就绪（待开始）
-
-- [ ] 安全审核
-- [ ] 性能优化
-- [ ] 完善测试和文档
-
-详细开发计划请参考：[开发计划与里程碑.md](./doc/设计V2.0/开发计划与里程碑.md)
-
-## 开发规范
-
-- 代码格式：使用 `black` 格式化
-- 代码检查：使用 `ruff` 检查
-- 类型检查：使用 `mypy` 检查
-- 测试：使用 `pytest` 运行测试
-
-## 注意事项
-
-1. **工具中的数据库会话**：当前工具实现中，数据库会话需要从 LangGraph 的 `RunnableConfig` 中获取。这部分需要在后续开发中完善。
-
-2. **意图识别**：当前使用简化的关键词匹配，后续可以使用 LLM 进行更智能的意图识别。
-
-3. **时间解析**：预约时间解析目前只支持 ISO 格式，后续可以增强支持自然语言时间描述。
-
-## 许可证
-
-详见 [LICENSE](./LICENSE) 文件。
+见 `huaYuanTestDeploy/环境变量.md`。必配：`HUAYUAN_API_KEY`、`DEEPSEEK_SEARCH_KEY`、`EXHIBITION_MYSQL_*`。

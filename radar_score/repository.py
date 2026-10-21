@@ -1,5 +1,5 @@
 """
-画像 / 展厅需求任务的认领与超时退回。
+规则二展厅需求任务的认领与超时退回（event-only）。
 
 互斥条件与 Java 手动入队一致：只有 status=0 的行能被改成 RUNNING。
 """
@@ -12,7 +12,7 @@ from typing import Any
 import pymysql
 from pymysql.cursors import DictCursor
 
-from radar_score.config import EVENT_KIND, JOB_KINDS, PROFILE_KIND, ScoreSettings
+from radar_score.config import EVENT_KIND, ScoreSettings
 
 log = logging.getLogger("radar_score.repository")
 
@@ -21,30 +21,26 @@ STATUS_RUNNING = 1
 STATUS_FAILED = 3
 
 _NOT_DELETED = "deleted = b'0'"
-_TABLES = {
-    PROFILE_KIND: "radar_profile_job",
-    EVENT_KIND: "radar_event_job",
-}
+_EVENT_TABLE = "radar_event_job"
 _RECLAIM_MESSAGE = "RUNNING 超时，退回待执行"
 
 
 def table_of(kind: str) -> str:
     """
-        任务类型对应的表名。
+        任务类型对应的表名（只允许 event）。
 
         Args:
-            kind: profile 或 event
+            kind: 任务类型
 
         Returns:
             表名
 
         Raises:
-            ValueError: 未知类型
+            ValueError: 非 event 类型
     """
-    try:
-        return _TABLES[kind]
-    except KeyError as ex:
-        raise ValueError(f"未知评分任务类型: {kind}") from ex
+    if kind != EVENT_KIND:
+        raise ValueError(f"未知评分任务类型: {kind}")
+    return _EVENT_TABLE
 
 
 def connect(settings: ScoreSettings) -> pymysql.Connection:
@@ -77,7 +73,7 @@ def _tenant_clause(settings: ScoreSettings) -> tuple[str, list[Any]]:
 
 def reclaim_stale(conn: pymysql.Connection, settings: ScoreSettings) -> int:
     """
-        把超时仍为 RUNNING 的任务退回 PENDING。
+        把超时仍为 RUNNING 的 event 任务退回 PENDING。
 
         java-manual 与 python-score- 都回收，避免任一侧认领后进程退出导致任务永远停住。
 
@@ -91,35 +87,32 @@ def reclaim_stale(conn: pymysql.Connection, settings: ScoreSettings) -> int:
     deadline = datetime.now() - timedelta(seconds=settings.stale_timeout_sec)
     now = datetime.now()
     tenant_sql, tenant_params = _tenant_clause(settings)
-    total = 0
     with conn.cursor() as cur:
-        for kind in JOB_KINDS:
-            table = table_of(kind)
-            cur.execute(
-                f"""
-                UPDATE {table}
-                SET status = %s,
-                    locked_by = NULL,
-                    locked_at = NULL,
-                    error_message = %s,
-                    updater = %s,
-                    update_time = %s
-                WHERE status = %s
-                  AND locked_at IS NOT NULL
-                  AND locked_at < %s
-                  AND {_NOT_DELETED}{tenant_sql}
-                """,
-                [
-                    STATUS_PENDING,
-                    _RECLAIM_MESSAGE,
-                    settings.locked_by,
-                    now,
-                    STATUS_RUNNING,
-                    deadline,
-                    *tenant_params,
-                ],
-            )
-            total += int(cur.rowcount or 0)
+        cur.execute(
+            f"""
+            UPDATE {_EVENT_TABLE}
+            SET status = %s,
+                locked_by = NULL,
+                locked_at = NULL,
+                error_message = %s,
+                updater = %s,
+                update_time = %s
+            WHERE status = %s
+              AND locked_at IS NOT NULL
+              AND locked_at < %s
+              AND {_NOT_DELETED}{tenant_sql}
+            """,
+            [
+                STATUS_PENDING,
+                _RECLAIM_MESSAGE,
+                settings.locked_by,
+                now,
+                STATUS_RUNNING,
+                deadline,
+                *tenant_params,
+            ],
+        )
+        total = int(cur.rowcount or 0)
     conn.commit()
     if total:
         log.warning("超时退回 PENDING %s 条", total)
@@ -133,21 +126,21 @@ def claim_jobs(
     limit: int,
 ) -> list[int]:
     """
-        认领至多 limit 条 PENDING 任务。
+        认领至多 limit 条 PENDING event 任务。
 
         Args:
             conn: 数据库连接
             settings: 调度配置
-            kind: profile 或 event
+            kind: 任务类型（只允许 event）
             limit: 本轮最多条数
 
         Returns:
             已置为 RUNNING 的任务 id
     """
+    table = table_of(kind)
     n = int(limit)
     if n <= 0:
         return []
-    table = table_of(kind)
     tenant_sql, tenant_params = _tenant_clause(settings)
     claimed: list[int] = []
     now = datetime.now()
@@ -226,7 +219,7 @@ def release_claim(
     retryable: bool = True,
 ) -> int:
     """
-        执行失败后处置本进程认领的任务。
+        执行失败后处置本进程认领的 event 任务。
 
         确定性错误（数据/结构不合规）或超过重试上限 → FAILED 并写 error_message；
         可重试错误且未超上限 → 退回 PENDING，等下一轮重试。
@@ -235,7 +228,7 @@ def release_claim(
         Args:
             conn: 数据库连接
             settings: 调度配置
-            kind: profile 或 event
+            kind: 任务类型（只允许 event）
             job_id: 任务编号
             reason: 写回 error_message 的说明
             retryable: 是否可重试（默认 True）

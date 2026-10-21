@@ -36,10 +36,6 @@ from backend.app.api.schemas.huayuan_radar_event import (
     RadarEventScoreItem,
     VALID_EVIDENCE_SCORES,
 )
-from backend.domain.flows.implementations.radar_evidence_gather_node import (
-    _select_briefs_by_channel_quota,
-    invoke_registered_tool,
-)
 from backend.domain.tools.huayuan_radar_event_context import (
     build_radar_event_context_from_request,
     classify_authority_tier,
@@ -430,29 +426,6 @@ def test_resolve_knowledge_explicit_enabled() -> None:
     assert cfg["enabled"] is True
 
 
-def test_channel_quota_prefers_web_and_kb() -> None:
-    """入模配额：两通道各保留，禁止 KB 独占 12 条。"""
-    web_briefs = [
-        {"tool_name": "bocha_web_search", "title": f"w{i}", "url": f"https://ex.com/{i}"}
-        for i in range(8)
-    ]
-    kb_briefs = [
-        {
-            "tool_name": "knowledge_base",
-            "doc_id": str(i),
-            "content_grade": "full",
-            "url": f"https://kb.com/{i}",
-        }
-        for i in range(8)
-    ]
-    selected = _select_briefs_by_channel_quota(web_briefs + kb_briefs)
-    web_n = sum(1 for b in selected if b.get("tool_name") != "knowledge_base")
-    kb_n = sum(1 for b in selected if b.get("tool_name") == "knowledge_base")
-    assert web_n >= 6
-    assert kb_n >= 6
-    assert len(selected) <= 12
-
-
 def test_parse_unrelated_clears_scores() -> None:
     """不准入时清空分数。"""
     text = json.dumps(
@@ -542,27 +515,6 @@ def test_route_parse_failure_returns_500() -> None:
     assert "radar_event_score" in resp.json()["detail"]
 
 
-def test_invoke_registered_tool_uses_ainvoke() -> None:
-    """StructuredTool 须经 ainvoke，不能直接当函数调用。"""
-    import asyncio
-    from langchain_core.tools import tool
-
-    @tool
-    async def _fake_search(query: str, max_results: int = 0) -> str:
-        """测试用假搜索工具。"""
-        return json.dumps({"ok": True, "query": query, "results": []}, ensure_ascii=False)
-
-    async def _run() -> None:
-        raw = await invoke_registered_tool(
-            _fake_search, {"query": "测试公司 展厅", "max_results": 0}
-        )
-        obj = json.loads(raw)
-        assert obj["ok"] is True
-        assert obj["query"] == "测试公司 展厅"
-
-    asyncio.run(_run())
-
-
 def test_flow_key_constant() -> None:
     """流程 key 与配置目录一致（v3 单 Agent）。"""
     assert HUAYUAN_RADAR_EVENT_FLOW_KEY == "huayuan_radar_event_agent_v3"
@@ -644,3 +596,68 @@ def test_parse_legacy_score_tolerated() -> None:
     assert result.evidence_score == 60
     assert result.specificity_score == 10
     assert result.total_score == 70
+
+
+def test_parse_multi_scores_shared_evidences_and_region() -> None:
+    """多事件数组 + 顶层共享 evidences；place_region_id 解析为 int。"""
+    from backend.app.api.routes.huayuan_radar_event import (
+        parse_radar_event_scores_from_obj,
+    )
+
+    ev = {"evidence_no": 0, "source_type": "web", "title": "t", "url": "https://x", "kept": True}
+    obj = {
+        "radar_event_scores": [
+            {
+                "exhibition_related": True,
+                "signal_summary": "a",
+                "event_name": "甲",
+                "event_relation": "new",
+                "place": "北京市朝阳区",
+                "place_region_id": "110105",
+                "evidence_score": 75,
+                "specificity_score": 10,
+            },
+            {
+                "exhibition_related": True,
+                "signal_summary": "b",
+                "event_name": "乙",
+                "place_region_id": 310000,
+                "evidence_score": 25,
+                "specificity_score": 10,
+            },
+        ],
+        "evidences": [ev],
+        "discarded": [],
+    }
+    scores = parse_radar_event_scores_from_obj(obj)
+    assert len(scores) == 2
+    assert scores[0].place_region_id == 110105
+    assert scores[1].place_region_id == 310000
+    assert [s.event_name for s in scores] == ["甲", "乙"]
+    assert all(len(s.evidences) == 1 for s in scores)  # 共享证据已注入每个事件
+
+
+def test_resolve_scores_injects_shared_evidences_from_bag() -> None:
+    """修复回归：edges_var 里 evidences 在顶层共享，数组分支必须注入缺省元素（否则"有分必有据"误报）。"""
+    from backend.app.api.routes.huayuan_radar_event import resolve_scores_from_flow_result
+
+    ev = {"evidence_no": 0, "source_type": "web", "title": "t", "url": "https://x", "kept": True}
+    result = {
+        "edges_var": {
+            "radar_event_scores": [
+                {
+                    "exhibition_related": True,
+                    "signal_summary": "a",
+                    "evidence_score": 25,
+                    "specificity_score": 10,
+                    "total_score": 35,
+                }
+            ],
+            "evidences": [ev],
+            "discarded": [],
+        }
+    }
+    scores = resolve_scores_from_flow_result(result)
+    assert len(scores) == 1
+    assert scores[0].total_score == 35
+    assert len(scores[0].evidences) == 1  # 顶层共享证据已注入

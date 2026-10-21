@@ -1,16 +1,14 @@
-"""画像、展厅需求分池轮询。每类并发默认 2，与 Java 内存队列的 worker 数对齐。"""
+"""规则二展厅需求 event 分池轮询（event-only）。"""
 from __future__ import annotations
 
 import asyncio
 import logging
 import threading
-import time
 from typing import Optional
 
 from backend.domain.tools.deepseek_search_tool import resolve_deepseek_key
-from radar_score.config import EVENT_KIND, PROFILE_KIND, ScoreSettings, claim_quota
+from radar_score.config import EVENT_KIND, ScoreSettings, claim_quota
 from radar_score.execute import execute_claimed_job
-from radar_score.java_client import JavaUnavailable
 from radar_score.repository import claim_jobs, connect, reclaim_stale
 
 log = logging.getLogger("radar_score.scheduler")
@@ -18,10 +16,10 @@ log = logging.getLogger("radar_score.scheduler")
 
 class ScoreScheduler:
     """
-        单事件循环里跑两类任务，用在途数量限制认领。
+        单事件循环里跑 event 任务，用在途数量限制认领。
 
-        展厅需求依赖 DeepSeek Search/Fetch。未配置 DeepSeek 搜索 key 时停领新的 event
-        任务，已在跑的任务继续；画像不受影响。key 配好后自动恢复认领。
+        展厅需求依赖 DeepSeek Search/Fetch。未配置 DeepSeek 搜索 key 时停领新任务，
+        已在跑的任务继续；key 配好后自动恢复认领。
     """
 
     def __init__(self, settings: ScoreSettings) -> None:
@@ -30,26 +28,9 @@ class ScoreScheduler:
                 settings: 调度配置
         """
         self.settings = settings
-        self._in_flight = {PROFILE_KIND: 0, EVENT_KIND: 0}
+        self._in_flight = 0
         self._tasks: set[asyncio.Task[None]] = set()
-        self._java_down_until = 0.0
         self._event_claim_paused = False
-
-    def concurrency_of(self, kind: str) -> int:
-        """
-            该类同时在跑的上限。
-
-            Args:
-                kind: profile 或 event
-
-            Returns:
-                并发数
-        """
-        if kind == PROFILE_KIND:
-            return self.settings.profile_concurrency
-        if kind == EVENT_KIND:
-            return self.settings.event_concurrency
-        raise ValueError(f"未知评分任务类型: {kind}")
 
     async def run_forever(self, stop_event: threading.Event) -> None:
         """
@@ -62,9 +43,8 @@ class ScoreScheduler:
                 stop_event: 停止信号
         """
         log.info(
-            "radar_score 启动 locked_by=%s profile=%s event=%s stale=%ss",
+            "radar_score 启动 locked_by=%s event=%s stale=%ss",
             self.settings.locked_by,
-            self.settings.profile_concurrency,
             self.settings.event_concurrency,
             self.settings.stale_timeout_sec,
         )
@@ -85,12 +65,9 @@ class ScoreScheduler:
     async def _tick(self) -> None:
         # 1. 先回收超时锁，再按空闲槽位认领
         await asyncio.to_thread(self._reclaim)
-        if time.monotonic() < self._java_down_until:
-            return
-        await self._fill(PROFILE_KIND)
         # 2. 展厅需求：未配置 DeepSeek 搜索 key 时不认领，任务留在 PENDING
         if self._event_claim_allowed():
-            await self._fill(EVENT_KIND)
+            await self._fill()
 
     def _event_claim_allowed(self) -> bool:
         """
@@ -119,51 +96,40 @@ class ScoreScheduler:
         finally:
             conn.close()
 
-    async def _fill(self, kind: str) -> None:
-        quota = claim_quota(self.concurrency_of(kind), self._in_flight[kind])
+    async def _fill(self) -> None:
+        quota = claim_quota(self.settings.event_concurrency, self._in_flight)
         if quota <= 0:
             return
-        job_ids = await asyncio.to_thread(self._claim, kind, quota)
+        job_ids = await asyncio.to_thread(self._claim, quota)
         for job_id in job_ids:
-            self._in_flight[kind] += 1
+            self._in_flight += 1
             task = asyncio.create_task(
-                self._run_one(kind, job_id),
-                name=f"radar-score-{kind}-{job_id}",
+                self._run_one(job_id),
+                name=f"radar-score-event-{job_id}",
             )
             self._tasks.add(task)
 
-    def _claim(self, kind: str, limit: int) -> list[int]:
+    def _claim(self, limit: int) -> list[int]:
         conn = connect(self.settings)
         try:
-            return claim_jobs(conn, self.settings, kind, limit)
+            return claim_jobs(conn, self.settings, EVENT_KIND, limit)
         finally:
             conn.close()
 
-    async def _run_one(self, kind: str, job_id: int) -> None:
+    async def _run_one(self, job_id: int) -> None:
         try:
-            await execute_claimed_job(self.settings, kind, job_id)
-        except JavaUnavailable as ex:
-            self._java_down_until = time.monotonic() + self.settings.java_down_backoff_sec
-            log.warning(
-                "Java 不可用，%.0fs 内不再认领 kind=%s jobId=%s err=%s",
-                self.settings.java_down_backoff_sec,
-                kind,
-                job_id,
-                ex,
-            )
+            await execute_claimed_job(self.settings, EVENT_KIND, job_id)
         except Exception:
-            log.exception("任务执行失败 kind=%s jobId=%s", kind, job_id)
+            log.exception("任务执行失败 kind=%s jobId=%s", EVENT_KIND, job_id)
         finally:
-            self._in_flight[kind] -= 1
+            self._in_flight -= 1
             current: Optional[asyncio.Task[None]] = asyncio.current_task()
             if current is not None:
                 self._tasks.discard(current)
 
     def _sleep_seconds(self) -> float:
-        if self._in_flight[PROFILE_KIND] or self._in_flight[EVENT_KIND]:
+        if self._in_flight:
             return min(2.0, self.settings.poll_interval_sec)
-        if time.monotonic() < self._java_down_until:
-            return self.settings.java_down_backoff_sec
         return self.settings.poll_interval_sec
 
     async def _wait(self, stop_event: threading.Event, seconds: float) -> None:

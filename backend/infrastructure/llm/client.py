@@ -64,38 +64,20 @@ def get_llm(
     if timeout is None:
         timeout = 1800 if thinking and thinking.get("type") == "enabled" else None
     
-    # 如果是豆包供应商且设置了 thinking 或 reasoning_effort，使用包装类
-    if provider == "doubao" and (thinking is not None or reasoning_effort is not None):
-        from backend.infrastructure.llm.doubao_chat import DoubaoChatOpenAI
-        llm = DoubaoChatOpenAI(
-            model=model,
-            temperature=temperature,
-            openai_api_key=api_key,
-            openai_api_base=base_url,
-            timeout=timeout,
-            thinking=thinking,
-            reasoning_effort=reasoning_effort,
-            **{k: v for k, v in kwargs.items() if k not in ["api_key", "base_url"]}
-        )
-        logger.debug(
-            f"创建豆包 LLM 包装类: provider={provider}, model={model}, "
-            f"thinking={thinking}, reasoning_effort={reasoning_effort}, timeout={timeout}"
-        )
-    else:
-        # 创建普通 ChatOpenAI 实例
-        llm = ChatOpenAI(
-            model=model,
-            temperature=temperature,
-            openai_api_key=api_key,
-            openai_api_base=base_url,
-            timeout=timeout,
-            # callbacks=callbacks if callbacks else None,
-            **{k: v for k, v in kwargs.items() if k not in ["api_key", "base_url"]}
-        )
-        logger.debug(
-            f"创建 LLM 客户端: provider={provider}, model={model}, "
-            f"temperature={temperature}, base_url={base_url}"
-        )
+    # 规则二只使用华院网关，统一走 ChatOpenAI
+    llm = ChatOpenAI(
+        model=model,
+        temperature=temperature,
+        openai_api_key=api_key,
+        openai_api_base=base_url,
+        timeout=timeout,
+        # callbacks=callbacks if callbacks else None,
+        **{k: v for k, v in kwargs.items() if k not in ["api_key", "base_url"]}
+    )
+    logger.debug(
+        f"创建 LLM 客户端: provider={provider}, model={model}, "
+        f"temperature={temperature}, base_url={base_url}"
+    )
     
     return llm
 

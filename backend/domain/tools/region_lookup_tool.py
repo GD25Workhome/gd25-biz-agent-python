@@ -9,9 +9,8 @@ Agent 命中的 `region.id` 可直接被落库链路复用（`place_region_id`�
 
 层级：1=国家、2=省/直辖市、3=市、4=区/县（`path_ids` 形如 `1/110000/110100/110105`）。
 
-⚠️ 本模块不复用 `backend.infrastructure.database.mysql_connection`（该模块的访问边界
-只允许 radar_news_content_task / radar_company_news_document / radar_news_agent_guard
-三张表）；这里自建只读连接，不改库、不写库。
+⚠️ 本模块自建只读连接，只访问 exhibition 库 `region` / `region_alias` 两张字典表；
+不改库、不写库，也不依赖其它数据库模块。
 """
 from __future__ import annotations
 

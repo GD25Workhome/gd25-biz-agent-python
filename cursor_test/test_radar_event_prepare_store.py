@@ -25,6 +25,8 @@ from radar_score.self_check import check
 from radar_score.prepare import (
     _bit_bool,
     _company_context,
+    _group_latest_by_root,
+    _is_closed_row,
     build_history_json,
     build_request_body,
 )
@@ -306,7 +308,7 @@ def test_clip_respects_column_width() -> None:
     assert _clip(123, 10) == 123
     assert _clip("abcd", 10) == "abcd"
     assert _clip("x" * 40, 10) == "x" * 10
-    assert len(_clip("中" * 100, _EVENT_MAX["time_text"])) == _EVENT_MAX["time_text"]
+    assert len(_clip("中" * 1000, _EVENT_MAX["time_text"])) == _EVENT_MAX["time_text"]
 
 
 def test_clip_optional_text_blank_to_none() -> None:
@@ -320,9 +322,9 @@ def test_event_columns_clip_overlong_strings() -> None:
     """超长字段必须被截断，避免 MySQL 1406 整单回滚。"""
     s = _score(
         time_text="t" * 300,
-        score_reason="r" * 3000,
-        suggested_level_reason="s" * 900,
-        verify_priority_reason="v" * 900,
+        score_reason="r" * 8000,
+        suggested_level_reason="s" * 3000,
+        verify_priority_reason="v" * 3000,
         signal_summary="   ",
     )
     cols = _event_columns(_job(), s, check(s), "trace-1")
@@ -399,3 +401,211 @@ def test_touch_latest_event_skips_blank() -> None:
 
     assert touch_latest_event(_Conn(), None, 1) == 0
     assert touch_latest_event(_Conn(), 1, None) == 0
+
+# ---------------- history 族去重（261020） ----------------
+
+def _hist_row(
+    eid: int,
+    *,
+    parent=None,
+    published=False,
+    validity="ACTIVE",
+    expired=False,
+    update_time="2026-10-19 10:00:00",
+    name=None,
+):
+    return {
+        "id": eid,
+        "parent_event_id": parent,
+        "event_name": name,
+        "published": published,
+        "validity_status": validity,
+        "expired_or_done": expired,
+        "update_time": update_time,
+    }
+
+
+def test_group_latest_by_root_dedup_and_aggregate() -> None:
+    """同族只留一条（最新作代表）；published 按族取"或"。"""
+    rows = [
+        _hist_row(5637, name="a", update_time="2026-10-19 15:52:05"),
+        _hist_row(5639, parent=5637, update_time="2026-10-19 16:37:38"),
+        _hist_row(5640, parent=5637, published=True, update_time="2026-10-19 18:03:38"),
+        _hist_row(1462, name="b", update_time="2026-09-01 00:00:00"),
+    ]
+    groups = _group_latest_by_root(rows)
+    assert len(groups) == 2
+    g = next(x for x in groups if x["root_event_id"] == 5637)
+    assert g["id"] == 5640  # 最新一条作代表
+    assert g["published"] is True  # 已发布那条不是最新，也要按族取到
+    assert g["member_count"] == 3
+    assert sorted(g["member_ids"]) == [5637, 5639, 5640]
+    # 代表行前的 root 组（1462）自成一组
+    assert [x["root_event_id"] for x in groups] == [5637, 1462]
+
+
+def test_group_closed_is_or() -> None:
+    """族内任一条失效 → closed=True。"""
+    rows = [
+        _hist_row(1, update_time="2026-10-19 10:00:00"),
+        _hist_row(2, parent=1, validity="INVALID", update_time="2026-10-19 11:00:00"),
+    ]
+    g = _group_latest_by_root(rows)[0]
+    assert g["id"] == 2
+    assert g["closed"] is True
+
+
+def test_is_closed_row_variants() -> None:
+    assert _is_closed_row({"validity_status": "INVALID"}) is True
+    assert _is_closed_row({"expired_or_done": True}) is True
+    assert _is_closed_row({"validity_status": "ACTIVE", "expired_or_done": False}) is False
+
+
+# ---------------- 分段切分兜底（B，261020） ----------------
+
+_CHAOYANG_BJ = {
+    "id": 110105, "parent_id": 110100, "level": 4, "name": "朝阳区", "name_en": None,
+    "full_name": "北京市 北京市 朝阳区", "path_ids": "1/110000/110100/110105",
+    "country_id": 1, "country_code": "CN", "is_domestic": b"\x01",
+}
+_CHANGCHUN_CITY = {
+    "id": 220100, "parent_id": 220000, "level": 3, "name": "长春市", "name_en": None,
+    "full_name": "吉林省 长春市", "path_ids": "1/220000/220100",
+    "country_id": 1, "country_code": "CN", "is_domestic": b"\x01",
+}
+_CHAOYANG_CC = {
+    "id": 220104, "parent_id": 220100, "level": 4, "name": "朝阳区", "name_en": None,
+    "full_name": "吉林省 长春市 朝阳区", "path_ids": "1/220000/220100/220104",
+    "country_id": 1, "country_code": "CN", "is_domestic": b"\x01",
+}
+
+
+def test_clean_place_strips_noise() -> None:
+    assert region_resolve._clean_place("重庆经开区东港片区（广滨三路）") == "重庆经开区东港片区"
+    assert region_resolve._clean_place(" 北京市朝阳区 ") == "北京市朝阳区"
+    assert region_resolve._clean_place(None) == ""
+
+
+def test_split_place_candidates_fine_to_coarse() -> None:
+    assert region_resolve._split_place_candidates("北京市朝阳区") == ["朝阳区", "北京市"]
+    assert region_resolve._split_place_candidates("重庆经开区东港片区（广滨三路）") == ["东港片区", "重庆经开区"]
+    assert region_resolve._split_place_candidates("美国旧金山") == ["美国旧金山"]
+    assert region_resolve._split_place_candidates("") == []
+
+
+def test_resolve_event_region_splitting_disambiguates(monkeypatch) -> None:
+    """整串失败 → 分段切分命中朝阳区，并按父级"北京市"消歧到 110105。"""
+    monkeypatch.setattr(region_resolve, "resolve_region_by_text", lambda conn, text: None)
+
+    def route(sql, params):
+        if "WHERE name =" in sql and params == ["朝阳区"]:
+            return [_CHAOYANG_BJ, _CHAOYANG_CC]
+        if "FROM region WHERE id =" in sql:
+            return [_BEIJING_CITY] if params[0] == 110100 else [_CHANGCHUN_CITY]
+        return []
+
+    cols = region_resolve.resolve_event_region(_FakeConn(route), "北京市朝阳区", {"region_id": 999})
+    assert cols["region_source"] == region_resolve.SOURCE_AI_PARSED
+    assert cols["region_id"] == 110105
+
+
+def test_resolve_event_region_splitting_picks_changchun(monkeypatch) -> None:
+    """同名字段带"长春市" → 消歧到 220104。"""
+    monkeypatch.setattr(region_resolve, "resolve_region_by_text", lambda conn, text: None)
+
+    def route(sql, params):
+        if "WHERE name =" in sql and params == ["朝阳区"]:
+            return [_CHAOYANG_BJ, _CHAOYANG_CC]
+        if "FROM region WHERE id =" in sql:
+            return [_BEIJING_CITY] if params[0] == 110100 else [_CHANGCHUN_CITY]
+        return []
+
+    cols = region_resolve.resolve_event_region(_FakeConn(route), "吉林省长春市朝阳区", {"region_id": 999})
+    assert cols["region_id"] == 220104
+    assert cols["region_source"] == region_resolve.SOURCE_AI_PARSED
+
+
+def test_has_district_token() -> None:
+    assert region_resolve._has_district_token("北京市朝阳区") is True
+    assert region_resolve._has_district_token("上海") is False
+    assert region_resolve._has_district_token(None) is False
+
+
+# ---------------- 证据落库映射（evidence_no / cite_reason，261020） ----------------
+
+class _ExecConn:
+    """最小连接桩：cursor() 返回自身，记录 executemany 的行。"""
+
+    def __init__(self):
+        self.insert_sql = ""
+        self.rows = []
+
+    def cursor(self):
+        return self
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def execute(self, sql, params=None):
+        return None
+
+    def executemany(self, sql, rows):
+        self.insert_sql = sql
+        self.rows = rows
+
+
+def test_replace_evidences_writes_evidence_no_and_cite_reason() -> None:
+    """kept 证据按顺序写 evidence_no(0..n-1)；cite_reason 一并落库；kept=false 跳过。"""
+    from radar_score.radar_event_store import replace_evidences
+
+    score = RadarEventScoreResult(
+        exhibition_related=True,
+        signal_summary="x",
+        evidences=[
+            RadarEventEvidenceItem(evidence_no=0, title="a", url="https://a", quote="qa", cite_reason="r0", kept=True),
+            RadarEventEvidenceItem(evidence_no=1, title="b", url="https://b", kept=False),
+            RadarEventEvidenceItem(evidence_no=2, title="c", url="https://c", cite_reason="r2", kept=True),
+        ],
+    )
+    conn = _ExecConn()
+    n = replace_evidences(conn, 99, score, tenant_id=0)
+    assert n == 2  # kept=false 的第 2 条不落
+    assert "evidence_no" in conn.insert_sql and "cite_reason" in conn.insert_sql
+    # 列序：event_id, evidence_no, title, summary, quote, cite_reason, ...
+    assert conn.rows[0][0] == 99 and conn.rows[0][1] == 0 and conn.rows[0][2] == "a" and conn.rows[0][5] == "r0"
+    assert conn.rows[1][1] == 1 and conn.rows[1][2] == "c" and conn.rows[1][5] == "r2"
+
+
+def test_widened_text_columns_match_ddl() -> None:
+    """加宽后的列宽必须与 DDL（48_/49_radar_widen_text_columns*.sql）一致，避免提前截断。"""
+    from radar_score.radar_event_store import _EVIDENCE_MAX
+
+    assert _EVENT_MAX["time_text"] == 128           # radar_event.time_text
+    assert _EVENT_MAX["score_reason"] == 4000       # radar_event.score_reason
+    assert _EVENT_MAX["signal_summary"] == 512      # radar_event.signal_summary
+    assert _EVENT_MAX["region_path_ids"] == 512     # radar_event.region_path_ids
+    assert _EVIDENCE_MAX["quote"] == 4000           # radar_event_evidence.quote
+    assert _EVIDENCE_MAX["summary"] == 4000         # radar_event_evidence.summary
+    assert _EVIDENCE_MAX["title"] == 1024           # radar_event_evidence.title
+    assert _EVIDENCE_MAX["cite_reason"] == 2000     # radar_event_evidence.cite_reason
+    assert _EVIDENCE_MAX["source_url"] == 2048      # radar_event_evidence.source_url
+
+
+def test_is_retryable_walks_cause_chain() -> None:
+    """路由把确定性 ValueError 包成 HTTPException 后，仍应判为不可重试（避免反复重跑）。"""
+    import pymysql
+    from fastapi import HTTPException
+
+    from radar_score.execute import is_retryable
+
+    try:
+        try:
+            raise ValueError("有分必有据：total_score>0 时…")
+        except ValueError as e:
+            raise HTTPException(status_code=500, detail=str(e)) from e
+    except HTTPException as ex:
+        assert is_retryable(ex) is False        # 沿 __cause__ 看到 ValueError → 不可重试
+    assert is_retryable(pymysql.err.OperationalError(2003, "can't connect")) is True  # 抖动 → 可重试

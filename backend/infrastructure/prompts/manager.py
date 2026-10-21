@@ -132,7 +132,7 @@ class PromptManager:
         flow_rule_dir = project_root / "config" / "flows" / "flow_rule"
         
         if not flow_rule_dir.exists():
-            logger.warning(f"flow_rule 目录不存在: {flow_rule_dir}")
+            logger.debug(f"flow_rule 目录不存在（规则二不需要）: {flow_rule_dir}")
             return
         
         # 扫描目录下的所有 .md 文件
@@ -169,7 +169,7 @@ class PromptManager:
         flow_rule_cache = self.cached_flow_rule
         
         if not flow_rule_cache:
-            logger.warning("flow_rule 缓存为空，无法替换占位符")
+            logger.debug("flow_rule 缓存为空，跳过占位符替换")
             return template
         
         # 匹配占位符：{key}

@@ -7,7 +7,7 @@
 # 工作方式（强制两阶段，先取证、后评分）
 
 - **阶段一（取证）**：先完成全部检索与抽取，收集齐证据再进入评分。禁止在未搜完时就定分。
-- **阶段二（评分）**：对唯一主簇套用"评分规则"，输出最终 JSON（单个 JSON，顶层键 radar_event_score）。
+- **阶段二（评分）**：对**每个达标簇**套用"评分规则"，输出最终 JSON（单个 JSON，顶层键 **`radar_event_scores`（数组，每簇一条）**）。
 
 # 输入
 
@@ -16,9 +16,9 @@
 ```
 {company_json}
 ```
-- 时间窗（仅提示）：`{time_from}` ~ `{time_to}`
+- 有效事实窗口下界：`{validity_floor}`（**这是规则，不是检索范围提示** —— 见「二、时效与关闭闸门」）
 - 检索意图：`{query_hint}`
-- 该公司既有事件（历史，供判断"同一事件的新阶段 / 独立新需求"；无则为 `[]`）：
+- 该公司既有事件（**已按商机族去重、每组只给最新一条**；每条含 `root_event_id` / `published` / `validity_status` / `opportunity_status`，用于判断"同一商机 → continue / ignored"；无则为 `[]`）：
 ```
 {history_events_json}
 ```
@@ -50,13 +50,21 @@
    - `"{公司名}" 周年庆` / `{公司名} "成立 XX 周年"`
 5. 前置/招采区分：若命中建筑类招标（大楼/基建/土建），补搜 `"{公司名}" 展陈` / `"{公司名}" 展厅 招标`，确认本次采购范围是否含展陈业务。
 6. 别名/歧义：短名歧义时在后续 query 附证券代码（代码勿单独作主检索式）。
-7. **展厅所在区域（必做）**：确定 `place` 后，用 `region_lookup` **逐级查字典**（省/直辖市 → 市 → 区/县）：先 `region_lookup("{省或直辖市}")` 拿城市，再 `region_children({城市id})` 列下级，命中区/县；同名区用 `parent` 消歧。**禁止凭记忆写行政区划**；把最终命中的 `region.id` 写入输出 `place_region_id`（查不到留空，不得编造；国外用 `region_lookup("{国家}")` 取国家 id）。
 
 ## 3. 检索纪律
 
 - 公司名必须加英文双引号；一次查询一个意图；禁止长布尔串 `(A OR B OR C)`。
 - 摘要命中疑似"公告/招标/立项"原文时，用 `deepseek_fetch` 抽正文核对（优先抽决定性证据）。
 - 检索去重：同一 query 不重复发起；新发现的角度（别名、关联主体）允许多搜几次，直到证据足以定档。
+
+## 4. 输出前必做：确定「展厅所在区域」`place_region_id`（不可省略）
+
+> 这不是检索，是**输出前的固定动作**；**每条事件都要做**。
+
+1. 取该事件的 `place`（如"北京市朝阳区"、"重庆经开区东港片区"、"美国旧金山"）。
+2. 用 `region_lookup` **逐级查字典**：先 `region_lookup("{省或直辖市}")` → 再 `region_children({城市id})` 列下级 → 命中**区/县**；同名区用 `parent` 消歧（如"朝阳区"北京/长春）；国外用 `region_lookup("{国家}")` 取国家。
+3. 把最终命中的 `region.id` 写进该事件的 `place_region_id`。**国内取区/县 id，国外取国家 id**。
+4. **禁止凭记忆写行政区划**；**只有确实查不到才留空**，并在 `score_reason` 注明「区域未命中」。
 
 # 目标范围与排除
 
@@ -77,15 +85,22 @@
 ## 一、先做聚合与准入
 
 1. **按主体+项目聚簇**：聚合键 = 主体（本公司/子公司/他主体）+ 展厅对象 + 地点 + 同一项目时间线；不同城市/不同展馆/另一项目分簇，**禁止跨簇拼分**。不提本公司名/代码/别名 → 他主体，进 `discarded`。
-2. **选唯一主簇**：仅从"主体=本公司（含可信别名）"中选最强的簇；并列取更新、窗口未关闭者。
+2. **每个达标簇各成一条事件**（不再只取一个主簇）：从"主体=本公司（含可信别名）"中挑出**所有**满足准入的簇，**每簇输出一条**；同一簇内并列取更新、窗口未关闭者。
 3. **展厅准入**：主簇无展厅/展馆/展示中心/体验中心/明确长期展示接待空间，或仅总部/融资/更名等无展厅关联 → `exhibition_related=false`、`admission_hint=reject_unrelated`、分 null。
 4. **潜在档准入（放宽）**：**命中"潜在信号目录"（见下）且事件有效即可进 25 分潜在档，原文不必出现"展厅"**；未建展厅/旧展厅满 7 年**不再是共同前提**。潜在关联必须标为"推断"（`is_potential=true`），不能写成已确定的建设需求。
+5. **与历史对齐（必做，是否重复由你判断）**：对**每条**输出事件，对照输入 history（已按商机族去重、只给最新一条）：
+   - 命中同一商机 → 填 `event_relation`（`continue`）+ `matched_event_id`（取该条 `id`）；
+   - 命中的商机 `published=1` **或** `opportunity_status ∈ {closed, signed}` **或** 已关闭/失效（`validity_status ∈ {EXPIRED, INVALID}`）→ `event_relation=ignored`（**该条只带关联，不落库**）；
+   - 都不命中 → `new`。
 
 ## 二、时效与关闭闸门（硬前置，成立则禁止选档）
 
 任一成立 → `expired_or_done=true`、`admission_hint=expired`、两维分与 `total_score` 为 **null**（证据进 `discarded` 或保留历史字段）：
 
-1. 主簇信号相对 `{current_date}` **已超过约 12 个月（≥1 年）**——即使是明确招标/立项也强制忽略，禁止再给 25/10/5 弱分糊弄；
+1. **有效事实窗口（12 个月，滚动）**：**只有窗内事实可以定档**。窗口 = 评估日 `{current_date}` 往回 12 个月，下界即 `{validity_floor}`。
+   - **计时基准 = 该簇最早影响评分的事实时间**（立项 / 招标 / 签约 / 动工），**不是最新材料的发布日期**；必须写进 `fact_time_earliest`，并用 `fact_time_earliest_evidence_no` 指向对应证据。
+   - **更早的事实只能作为时间线背景**，不得作为定档依据；若主簇最早事实早于 `{validity_floor}` → 该条强制 `expired`，**禁止**再给 25/10/5 弱分糊弄。
+   - **重置例外**（可从"新进展"重新起算时钟，三条缺一不可）：① 证据**针对同一展厅需求**（不是母公司/大盘的泛泛进展）；② 是**新的实质动作**（招采公告 / 定设计实施单位 / 签约 / 施工 / 专项资金定向到位 / 备案续期）；③ **重申、回顾、转载一律不算**。声称重置时必须在 `score_reason` 写明依据并引用 `evidence_no`。
 2. 招投标材料中的**报名/投标/递交/响应/开标截止日**已早于今天，或距今天不足 14 天（含两周内到期）——该条原始资料必须忽略并 `discard`（不以发布日挽救；延期以延期后日期为准；无法解析截止日的招采条不得按"有效期"给 45 分）；
 3. 需求标的已建成/开业/启用/开放、项目取消/终止、招采结束无后续窗口；
 4. 回顾文章/转载：**发布日虽最近但描述的是早于 1 年前的事实 → 按实际事件时间判断，不按抓取/发布时间冒充新信号**。
@@ -182,16 +197,28 @@
 
 # 输出
 
-单个 JSON，顶层键 `radar_event_score`，可直接被后端解析。
+单个 JSON，顶层键 **`radar_event_scores`（数组：每个达标簇一条；兼容单个 `radar_event_score`）**，可直接被后端解析。
 
-主契约字段：
+- `evidences[]` / `discarded[]`：**整轮共享一份**；每条事件用 `score_items[].evidence_nos` 引用**本簇**证据。
+- `search_count` / `extract_count` / `web_hit_count`：写在**每条**事件里（可相同）。
+- 不达标/不相关的线索进 `discarded`，**不要产出事件**。
+
+主契约字段（**每条事件**一套）：
 
 - `exhibition_related`：bool
 - `subject_confidence`：`high|medium|low|unknown`
 - `space_object` / `action` / `place` / `time_text`
+- `event_name`：**规范展厅商机名**（业务键，如"北京办公楼企业展厅"；去地址/去括号、不留空白）
+- `event_relation`：`new|continue|close|ignored`（与输入 history 的关系，**由你判断**）
+- `matched_event_id`：`continue`/`close` 时**必填** —— 取输入 history 里对应事件的 `id`
+- `parent_event_id`：可选 —— 同一商机的根事件 id（**取 history 的 `root_event_id`**）
+- `event_ref`：本次运行的局部键（`e0/e1…`，供内部引用）
 - `signal_summary`：一句话信号简述（≤80 字；有分必填，禁止只写"S3"之类等级）
 - `signal_time`：需求在公开资料中出现的时间（YYYY-MM-DD 或 YYYY-MM，来自证据发布日，禁止跑批日）
 - `signal_time_evidence_no`：对应 evidences[].evidence_no
+- `fact_time_earliest`：该簇**最早影响评分的事实时间**（立项/招标/签约/动工；YYYY-MM-DD 或 YYYY-MM）——**时效闸门的计时基准**，注意**不是**最新材料的发布日期
+- `fact_time_earliest_evidence_no`：`fact_time_earliest` 对应 `evidences[].evidence_no`（声称"重置"时同样在此指向新进展证据）
+  - **反例（必须避免，实测踩过）**：某公司募投项目 **2024 年**就取得投资项目备案证（如「张行审投备〔2024〕193号」），后来的 2025-11 招股书、2026-01 注册稿**只是重申**同一项目 → **最早事实是 2024 年（备案/立项）**，**不是** 2025-11 的披露日。**"重申"不改变最早事实**；系统会用证据交叉校验，填晚了会被改判。
 - `place_region_id`：**展厅所在区域** `region.id`（用 `region_lookup`/`region_children` 查字典得到；国内取区/县 id，国外取国家 id；查不到为 `null`）
 - `evidence_score`：见合法枚举（null 表示不准入/失效）
 - `specificity_score`：见合法枚举
@@ -249,8 +276,30 @@
 | total_score 非空但 kept 证据无 http url、或无 signal_summary | 非法，补齐 |
 | 命中「旧展厅节点 / 年限更新」但**无带证据的首次建成时间**，或算得**年数 <7** | 非法：删掉该类别；优先级改取剩余已核实信号最高档（如「内容与更新问题」P2） |
 | 结论/action 断言"展厅新建/升级/改造/翻新"但主簇**无含展厅实体词的 quote** | 非法：改 inferred + pending_verify，或删掉展厅动作断言 |
-| 国内 `place` 非空但 `place_region_id` 为空且未用 region 工具核实 | 补查区/县；确查不到才留空 |
+| 国内 `place` 非空但 `place_region_id` 为空 | **未完成**：必须先用 `region_lookup` 查；**确认查不到才留空**，并在 `score_reason` 注明「区域未命中」 |
+| 命中的既有商机 `published=1` 或已关闭，却给了 `new`/`continue` | 改 `ignored`（该条不落库） |
+| `continue`/`close` 但缺 `matched_event_id` | 补（取 history 的 `id`）；给不出一律按 `new` |
+| 两个维度的 `evidence_nos` 跨了不同簇（一条事件里混了两个簇） | 拆成两条事件，每条只含本簇证据 |
 
 # 示例（说明字段关系，勿照抄内容）
 
-{"radar_event_score":{"exhibition_related":true,"subject_confidence":"high","signal_summary":"公司公告披露拟建设营销及产品展示中心（募投项目）","signal_time":"2026-09-18","signal_time_evidence_no":0,"space_object":"营销及产品展示中心","action":"建设（募投）","place":"上海","time_text":"2026-2027年","evidence_score":75,"specificity_score":10,"total_score":85,"score_reason":"已正式立项并有预算来源（募集资金），尚未确定设计/实施单位；时效正常","admission_hint":"pending_verify","tags":["展厅立项/招标"],"expired_or_done":false,"fact_status":"confirmed","target_scope":"enterprise","suggested_level":"S1","suggested_level_reason":"非固定S4，总分85落S1区间（75–100）","procurement_scope":"intent_phase","event_stage":"unknown","exhibition_stage":"planned","is_potential":false,"signal_category":"","verify_priority_default":null,"verify_priority_adjusted":null,"verify_priority_reason":null,"planned_time":null,"expected_time":null,"actual_time":null,"date_precision":"year","rule_version":"v3-2026-10-14","score_items":[{"code":"evidence_score","score":75,"score_reason":"对应正式立项/预算档","evidence_nos":[0]},{"code":"specificity_score","score":10,"score_reason":"主体对象动作明确，缺部分工期细节","evidence_nos":[0]}],"evidences":[{"evidence_no":0,"source_type":"web","title":"…","url":"https://…","publish_date":"2026-09-18","quote":"…","cite_reason":"募集说明书披露展示中心建设项目","kept":true}],"discarded":[],"search_count":4,"extract_count":1,"web_hit_count":1}}
+{"radar_event_scores":[
+  {"event_ref":"e0","exhibition_related":true,"subject_confidence":"high",
+   "event_name":"北京营销及产品展示中心","event_relation":"new","matched_event_id":null,"parent_event_id":null,
+   "space_object":"营销及产品展示中心","action":"建设（募投）","place":"北京市朝阳区","place_region_id":110105,"time_text":"2026-2027年",
+   "signal_summary":"公司公告披露拟建设营销及产品展示中心（募投项目）","signal_time":"2026-09-18","signal_time_evidence_no":0,
+   "fact_time_earliest":"2026-09-18","fact_time_earliest_evidence_no":0,
+   "evidence_score":75,"specificity_score":10,"total_score":85,"suggested_level":"S1","suggested_level_reason":"非固定S4，总分85落S1区间（75–100）",
+   "score_reason":"已正式立项并有预算来源（募集资金），尚未确定设计/实施单位；最早事实 2026-09-18 在窗口内，时效正常","admission_hint":"pending_verify",
+   "fact_status":"confirmed","expired_or_done":false,"target_scope":"enterprise","procurement_scope":"intent_phase",
+   "event_stage":"unknown","exhibition_stage":"planned","is_potential":false,"signal_category":"",
+   "verify_priority_default":null,"verify_priority_adjusted":null,"verify_priority_reason":null,
+   "planned_time":null,"expected_time":null,"actual_time":null,"date_precision":"year","rule_version":"v3-2026-10-14",
+   "tags":["展厅立项/招标"],
+   "score_items":[{"code":"evidence_score","score":75,"score_reason":"对应正式立项/预算档","evidence_nos":[0]},
+                  {"code":"specificity_score","score":10,"score_reason":"主体对象动作明确，缺部分工期细节","evidence_nos":[0]}],
+   "search_count":4,"extract_count":1,"web_hit_count":1}],
+ "evidences":[{"evidence_no":0,"source_type":"web","title":"…","url":"https://…","publish_date":"2026-09-18","quote":"…","cite_reason":"募集说明书披露展示中心建设项目","kept":true}],
+ "discarded":[]}
+
+注：`evidences[]` / `discarded[]` 在**顶层共享**；`place_region_id` 是 `region_lookup` 查得的 `region.id`（此例北京市朝阳区=110105）；多个展厅就再加一条元素（`event_ref=e1`…）。

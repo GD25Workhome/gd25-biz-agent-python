@@ -3,6 +3,10 @@
 .github
 .vscode
 .claude
+.cursor
+.opencode
+.codegraph
+.cairn
 .idea
 .pytest_cache
 **/__pycache__
@@ -17,30 +21,37 @@
 .env*
 !.env.example
 
-# 文档 / 测试 / 设计稿
+# 文档 / 测试 / 设计稿（不进镜像）
 doc/
 ai_docs/
 cursor_docs/
 cursor_test/
 华院Agent设计/
+cairn/
+openspec/
 README.md
 LICENSE
 
-# 前端与静态素材（华院纯后端不需要）
+# 交付脚本 / 运维脚本（不进镜像）
+deploy/
+huaYuanTestDeploy/
+scripts/
+
+# 已删除的旧树（防止误 COPY）
+radar_kb/
+radar_crawl/
+company_news_crawl/
+company_claude_cral/
 frontend/
 static/
+tests/
+.claude_sdk_runtime/
 
-# 医疗 / RAG / 运维脚本（不进华院镜像）
-alembic/
-alembic.ini
-scripts/
-docker/deps.env
-
-# 全量依赖（镜像只用 requirements-huayuan.txt）
+# 旧依赖 / 旧交付
 requirements.txt
 requirements.lock
+requirements-radar-crawl.txt
+Dockerfile.radar-crawl
 
-# 规则抽取包里的实验/测试材料（运行时只要 adapters）
-company_news_crawl/实验/
-company_news_crawl/tests/
-company_news_crawl/examples/
+# 本机杂项
+.DS_Store

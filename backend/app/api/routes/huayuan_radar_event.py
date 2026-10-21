@@ -2,7 +2,10 @@
 华院规则二：展厅项目需求评分路由
 
 对接 exhibition：POST /api/v1/huayuan/radar-event-score
-无 Session；固定流程 huayuan_radar_event_agent；解析失败返回 500。
+无 Session；固定流程 huayuan_radar_event_agent_v3（react -> rule_gate -> auditor）；
+解析失败返回 500。
+
+设计：华院Agent设计/02-技术设计/01-HTTP契约与Agent流程.md
 """
 from __future__ import annotations
 
@@ -183,6 +186,8 @@ def build_radar_event_initial_state(
         "trace_id": trace_id,
         "prompt_vars": {
             "current_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            # 时效闸门的滚动下界（D9=W1）：评估日往回 12 个月，每次现算
+            "validity_floor": _validity_floor_str(),
             "company_json": _dumps_prompt_var(ctx.company.model_dump()),
             "time_from": ctx.time_from or "",
             "time_to": ctx.time_to or "",
@@ -686,6 +691,13 @@ def parse_radar_event_score_from_obj(obj: Dict[str, Any]) -> RadarEventScoreResu
     signal_time_evidence_no = _parse_optional_int(
         obj.get("signal_time_evidence_no") or obj.get("signalTimeEvidenceNo")
     )
+    # 时效闸门的计时基准（D8）：该簇最早影响评分的事实时间 + 其证据号
+    fact_time_earliest = _normalize_optional_str(
+        obj.get("fact_time_earliest") or obj.get("factTimeEarliest")
+    )
+    fact_time_earliest_evidence_no = _parse_optional_int(
+        obj.get("fact_time_earliest_evidence_no") or obj.get("factTimeEarliestEvidenceNo")
+    )
     # 有分必有 UI 简述；无信号时间不得标 pass
     has_score = total_score is not None and total_score > 0
     if has_score:
@@ -708,6 +720,8 @@ def parse_radar_event_score_from_obj(obj: Dict[str, Any]) -> RadarEventScoreResu
         signal_summary=signal_summary,
         signal_time=signal_time,
         signal_time_evidence_no=signal_time_evidence_no,
+        fact_time_earliest=fact_time_earliest,
+        fact_time_earliest_evidence_no=fact_time_earliest_evidence_no,
         evidence_score=evidence_score,
         specificity_score=specificity_score,
         total_score=total_score,
@@ -772,6 +786,22 @@ def parse_radar_event_score_from_obj(obj: Dict[str, Any]) -> RadarEventScoreResu
         rule_version=_normalize_optional_str(
             obj.get("rule_version") or obj.get("ruleVersion")
         ),
+        event_ref=_normalize_optional_str(obj.get("event_ref") or obj.get("eventRef")),
+        place_region_id=_parse_optional_int(
+            obj.get("place_region_id", obj.get("placeRegionId"))
+        ),
+        event_name=_normalize_optional_str(
+            obj.get("event_name") or obj.get("eventName")
+        ),
+        event_relation=_normalize_optional_str(
+            obj.get("event_relation") or obj.get("eventRelation")
+        ),
+        matched_event_id=_parse_optional_int(
+            obj.get("matched_event_id", obj.get("matchedEventId"))
+        ),
+        parent_event_id=_parse_optional_int(
+            obj.get("parent_event_id", obj.get("parentEventId"))
+        ),
     )
 
 
@@ -795,40 +825,167 @@ def parse_radar_event_score_from_ai_text(text: str) -> RadarEventScoreResult:
     return parse_radar_event_score_from_obj(obj)
 
 
-def resolve_score_from_flow_result(result: Dict[str, Any]) -> RadarEventScoreResult:
+def parse_radar_event_scores_from_obj(obj: Dict[str, Any]) -> List[RadarEventScoreResult]:
     """
-        优先从 edges_var / persistence_edges_var 的 radar_event_score 解析；
-        否则回退最后一条 AI 文本。
+        解析**多个**事件（261019）。兼容三种形状：
+
+        - `{"radar_event_scores": [ {...}, ... ]}`
+        - `{"radar_event_score": {...}}`（旧单事件）
+        - 单个事件对象（顶层直接是 exhibition_related 等）
+
+        Args:
+            obj: 已解析的 JSON dict
+
+        Returns:
+            RadarEventScoreResult 列表（至少 1 个）
+    """
+    if isinstance(obj, dict):
+        arr = obj.get("radar_event_scores") or obj.get("radarEventScores")
+        if isinstance(arr, list) and arr:
+            # 顶层共享的 evidences / discarded 注入到缺省的元素（提示词约定：整轮共享一份）
+            shared_ev = obj.get("evidences") or obj.get("evidence")
+            shared_disc = obj.get("discarded")
+            items: List[RadarEventScoreResult] = []
+            for x in arr:
+                if not isinstance(x, dict):
+                    continue
+                merged = x
+                if shared_ev and not x.get("evidences") and not x.get("evidence"):
+                    merged = {**merged, "evidences": shared_ev}
+                if shared_disc is not None and not x.get("discarded"):
+                    merged = {**merged, "discarded": shared_disc}
+                items.append(parse_radar_event_score_from_obj(merged))
+            if items:
+                return items
+        if isinstance(obj.get("radar_event_score"), dict):
+            return [parse_radar_event_score_from_obj(obj["radar_event_score"])]
+    return [parse_radar_event_score_from_obj(obj)]
+
+
+_VALIDITY_FLOOR_FALLBACK_MONTHS = 12
+
+
+def _collect_revision(result: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """
+        从流程结果里收集复核留痕（裁定 D12）。
+
+        取 `rule_gate` 的 `radar_rule_gate_report`（before/after/判定）与 `auditor` 的 `audit`
+        （逐事件 verdict + 依据），交给 execute 落库到 `radar_event_job.revision_json`。
 
         Args:
             result: graph.ainvoke 返回的状态
 
         Returns:
-            RadarEventScoreResult
-
-        Raises:
-            ValueError: 各路径均无法解析
+            留痕 dict；两处都没有时返回 None
     """
-    # 1. edges_var 优先（终评节点刚写入）
+    audit: Optional[Any] = None
+    gate: Optional[Any] = None
     for bag_name in ("edges_var", "persistence_edges_var"):
         bag = result.get(bag_name) or {}
         if not isinstance(bag, dict):
             continue
-        score_obj = bag.get("radar_event_score")
-        if isinstance(score_obj, dict) and score_obj:
-            logger.info(f"从 {bag_name}.radar_event_score 解析评分结果")
-            return parse_radar_event_score_from_obj(score_obj)
+        if gate is None and isinstance(bag.get("radar_rule_gate_report"), dict):
+            gate = bag["radar_rule_gate_report"]
+        if audit is None and isinstance(bag.get("audit"), dict):
+            audit = bag["audit"]
+    if gate is None and audit is None:
+        return None
+    revision: Dict[str, Any] = {}
+    if gate is not None:
+        revision["rule_gate"] = gate
+    if audit is not None:
+        revision["audit"] = audit
+    return revision
+
+
+def _validity_floor_str() -> str:
+    """
+        本次评估的"有效事实下界"（YYYY-MM-DD）。
+
+        D9 = W1：滚动窗口 —— 评估日往回 12 个月，每次评估现算；
+        同时作为提示词变量 `{validity_floor}` 注入（把"时间窗"从提示升级为规则条款）。
+
+        Returns:
+            下界日期字符串；计算异常时回落当前日期
+    """
+    try:
+        from radar_score.rules import validity
+
+        return validity.validity_floor(validity.today_from()).strftime("%Y-%m-%d")
+    except Exception:  # noqa: BLE001 - 兜底：不因提示变量计算失败而阻断请求
+        return datetime.now().strftime("%Y-%m-%d")
+
+
+def resolve_scores_from_flow_result(result: Dict[str, Any]) -> List[RadarEventScoreResult]:
+    """
+        多事件版解析：edges_var / persistence_edges_var（radar_event_scores|radar_event_score）→ AI 文本。
+
+        Args:
+            result: graph.ainvoke 返回的状态
+
+        Returns:
+            RadarEventScoreResult 列表
+
+        Raises:
+            ValueError: 各路径均无法解析
+    """
+    for bag_name in ("edges_var", "persistence_edges_var"):
+        bag = result.get(bag_name) or {}
+        if not isinstance(bag, dict):
+            continue
+        for key in ("radar_event_scores", "radar_event_score"):
+            val = bag.get(key)
+            if isinstance(val, list) and val:
+                # 顶层共享的 evidences/discarded 必须一并带上（注入缺省元素），否则"有分必有据"会误报
+                wrapper = {
+                    "radar_event_scores": val,
+                    "evidences": bag.get("evidences") or bag.get("evidence"),
+                    "discarded": bag.get("discarded"),
+                }
+                scores = parse_radar_event_scores_from_obj(wrapper)
+                if scores:
+                    logger.info(f"从 {bag_name}.{key} 解析 {len(scores)} 个事件")
+                    return scores
+            elif isinstance(val, dict) and val:
+                merged = dict(val)
+                if bag.get("evidences") and not merged.get("evidences"):
+                    merged["evidences"] = bag["evidences"]
+                if bag.get("discarded") is not None and not merged.get("discarded"):
+                    merged["discarded"] = bag["discarded"]
+                logger.info(f"从 {bag_name}.{key} 解析评分结果")
+                return parse_radar_event_scores_from_obj(merged)
         # 兼容：模型未包一层时，exhibition_related 可能直接在 edges_var
         if "exhibition_related" in bag:
             logger.info(f"从 {bag_name} 顶层字段解析评分结果")
-            return parse_radar_event_score_from_obj(bag)
+            return [parse_radar_event_score_from_obj(bag)]
 
-    # 2. 回退 AI 文本
     ai_text = extract_last_ai_text(result)
     if not ai_text:
-        raise ValueError("流程未返回 radar_event_score（edges_var 与 AI 文本均空）")
+        raise ValueError("流程未返回 radar_event_score(s)（edges_var 与 AI 文本均空）")
     logger.info("从最后一条 AI 文本解析评分结果（edges_var 未命中）")
-    return parse_radar_event_score_from_ai_text(ai_text)
+    obj = _extract_json_object(ai_text)
+    if not obj:
+        raise ValueError("无法从模型输出中解析 JSON 对象")
+    return parse_radar_event_scores_from_obj(obj)
+
+
+def resolve_score_from_flow_result(result: Dict[str, Any]) -> RadarEventScoreResult:
+    """
+        [兼容] 单事件版：取多事件解析结果的第一个。
+
+        Args:
+            result: graph.ainvoke 返回的状态
+
+        Returns:
+            第一个 RadarEventScoreResult（无则抛 ValueError）
+
+        Raises:
+            ValueError: 无法解析
+    """
+    scores = resolve_scores_from_flow_result(result)
+    if not scores:
+        raise ValueError("未解析到任何事件")
+    return scores[0]
 
 
 @router.post("/huayuan/radar-event-score", response_model=HuayuanRadarEventResponse)
@@ -836,13 +993,13 @@ async def huayuan_radar_event_score(
     request: HuayuanRadarEventRequest,
 ) -> HuayuanRadarEventResponse:
     """
-        华院规则二评分接口：三节点流水线（规划 → 并行采集 → 终评），返回两维分与证据链。
+        华院规则二评分接口：v3 三节点（react → rule_gate → auditor），返回多事件两维分与证据链。
 
         Args:
             request: 评分请求（query + context.company）
 
         Returns:
-            含 trace_id 与 radar_event_score 的响应
+            含 trace_id、primary radar_event_score 与 radar_event_scores 的响应
 
         Raises:
             HTTPException: 流程失败或解析失败时 500
@@ -907,21 +1064,26 @@ async def huayuan_radar_event_score(
         with HuayuanRadarEventContext(runtime_ctx):
             result = await graph.ainvoke(initial_state, config)
 
-        # 3. 优先 edges_var.radar_event_score，回退 AI 文本
-        score_result = resolve_score_from_flow_result(result)
+        # 3. 多事件解析（edges_var 优先，回退 AI 文本）
+        scores = resolve_scores_from_flow_result(result)
 
-        # 用运行时真实计数回填（若模型漏写）
-        if score_result.search_count <= 0 and runtime_ctx.search_count > 0:
-            score_result.search_count = runtime_ctx.search_count
-        if score_result.extract_count <= 0 and runtime_ctx.extract_count > 0:
-            score_result.extract_count = runtime_ctx.extract_count
+        # 用运行时真实计数回填（若模型漏写）；每个事件都回填
+        for s in scores:
+            if s.search_count <= 0 and runtime_ctx.search_count > 0:
+                s.search_count = runtime_ctx.search_count
+            if s.extract_count <= 0 and runtime_ctx.extract_count > 0:
+                s.extract_count = runtime_ctx.extract_count
 
-        response_json = score_result.model_dump_json()
+        primary = scores[0]
+        response_json = json.dumps(
+            {"radar_event_scores": [s.model_dump(mode="json") for s in scores]},
+            ensure_ascii=False,
+        )
         logger.info(
-            f"[华院RadarEvent请求完成] trace_id={trace_id}, "
-            f"exhibition_related={score_result.exhibition_related}, "
-            f"total_score={score_result.total_score}, "
-            f"search_count={score_result.search_count}, "
+            f"[华院RadarEvent请求完成] trace_id={trace_id}, events={len(scores)}, "
+            f"primary_exhibition_related={primary.exhibition_related}, "
+            f"primary_total_score={primary.total_score}, "
+            f"search_count={primary.search_count}, "
             f"bocha={runtime_ctx.bocha_count}, anysearch={runtime_ctx.anysearch_count}, "
             f"knowledge_enabled={runtime_ctx.knowledge.enabled}, "
             f"knowledge_hit_rate={runtime_ctx.knowledge.hit_rate:.2f}, "
@@ -930,8 +1092,10 @@ async def huayuan_radar_event_score(
         )
         return HuayuanRadarEventResponse(
             trace_id=trace_id,
-            radar_event_score=score_result,
+            radar_event_score=primary,
+            radar_event_scores=scores,
             response=response_json,
+            revision=_collect_revision(result),
         )
 
     except HTTPException:

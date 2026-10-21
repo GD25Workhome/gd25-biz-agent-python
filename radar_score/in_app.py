@@ -27,7 +27,7 @@ def start_radar_score_in_app() -> _Runtime:
             (stop_event, threads)
 
         Raises:
-            RuntimeError: 未配置 MySQL 或 Java 基址
+            RuntimeError: 未配置 MySQL
     """
     settings = load_score_settings()
     stop = threading.Event()
@@ -42,9 +42,8 @@ def start_radar_score_in_app() -> _Runtime:
     thread = threading.Thread(target=_target, name="radar-score", daemon=True)
     thread.start()
     log.info(
-        "已启动 radar_score 线程 name=%s profile=%s event=%s",
+        "已启动 radar_score 线程 name=%s event=%s",
         thread.name,
-        settings.profile_concurrency,
         settings.event_concurrency,
     )
     return stop, [thread]

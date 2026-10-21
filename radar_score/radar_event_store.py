@@ -3,7 +3,7 @@
 
 目标架构：Python 端到端落库——写 radar_event / radar_event_evidence，更新 radar_event_job。
 约束：所有写函数**不 commit**（由调用方事务提交/回滚），便于单测回滚与失败整体回滚。
-设计：华院Agent设计/261016-Agent重构/Agent整体设计/05-详细设计.md §8。
+设计：华院Agent设计/02-技术设计/02-评分、自检与落库规则.md §5。
 """
 from __future__ import annotations
 
@@ -49,43 +49,46 @@ def _normalize_priority(value: Optional[str]) -> Optional[str]:
 
 
 # varchar 列宽（与 exhibition DDL 一致；超长会 1406 整单回滚，与 Java RadarScoreFieldTruncate 同口径）
+# 261020：按实测「大胆加宽」——见 exhibition SQL脚本/48_、/49_（幂等，已应用）
 _EVENT_MAX = {
-    "space_object": 256,
-    "action": 128,
-    "place": 128,
-    "time_text": 64,
-    "signal_summary": 200,
+    "space_object": 512,
+    "event_name": 255,
+    "action": 255,
+    "place": 255,
+    "time_text": 128,
+    "signal_summary": 512,
     "signal_time": 32,
-    "signal_category": 128,
-    "verify_priority_reason": 500,
-    "admission_reason": 500,
-    "score_reason": 1000,
-    "suggested_level_reason": 500,
-    "rule_version": 32,
-    "subject_confidence": 16,
-    "fact_status": 16,
-    "admission_hint": 32,
-    "target_scope": 16,
-    "procurement_scope": 32,
-    "event_stage": 32,
-    "exhibition_stage": 32,
-    "date_precision": 16,
-    "validity_status": 16,
-    "verify_status": 32,
+    "signal_category": 255,
+    "verify_priority_reason": 1000,
+    "admission_reason": 1000,
+    "score_reason": 4000,
+    "suggested_level_reason": 1000,
+    "rule_version": 64,
+    "subject_confidence": 32,
+    "fact_status": 32,
+    "admission_hint": 64,
+    "target_scope": 32,
+    "procurement_scope": 64,
+    "event_stage": 64,
+    "exhibition_stage": 64,
+    "date_precision": 32,
+    "validity_status": 32,
+    "verify_status": 64,
     "region_name": 255,
-    "region_path_ids": 255,
-    "region_source": 32,
+    "region_path_ids": 512,
+    "region_source": 64,
 }
 
 _EVIDENCE_MAX = {
-    "title": 512,
-    "summary": 2000,
-    "quote": 500,
-    "source_url": 1000,
-    "source_host": 128,
-    "authority_tier": 32,
-    "source_type": 32,
-    "source_level": 8,
+    "title": 1024,
+    "summary": 4000,
+    "quote": 4000,
+    "cite_reason": 2000,
+    "source_url": 2048,
+    "source_host": 255,
+    "authority_tier": 64,
+    "source_type": 64,
+    "source_level": 16,
     "publish_date": 64,
 }
 
@@ -237,13 +240,15 @@ def _event_columns(
         "company_id": job["company_id"],
         "event_job_id": job["id"],
         "space_object": score.space_object,
+        "event_name": score.event_name,
+        "parent_event_id": score.parent_event_id,
         "action": score.action,
         "place": score.place,
         "time_text": score.time_text,
         "signal_summary": score.signal_summary,
         "signal_time": score.signal_time,
         "signal_time_evidence_no": score.signal_time_evidence_no,
-        "event_tags_json": _json(score.tags, maxlen=1000),
+        "event_tags_json": _json(score.tags, maxlen=2000),
         "exhibition_related": _bit(score.exhibition_related),
         "subject_confidence": score.subject_confidence,
         "admission_hint": score.admission_hint,
@@ -343,6 +348,9 @@ def update_event(
     """
         推进/覆盖既有事件（同事件新阶段）。
 
+        ⚠️ **261019 起停用**：事件决策改为「只插、不更、不关」，此函数不再被调用
+        （且会覆盖 `published` / `verify_status`）。保留仅为将来「子事件」落地时参考。
+
         Args:
             conn: 连接（不 commit）
             event_id: 既有事件 id
@@ -373,6 +381,10 @@ def replace_evidences(
     """
         以 kept 证据重建该事件的证据行（先删后插，保持幂等）。
 
+        - `evidence_no`：**事件内序号**（按 kept 顺序 `0..n-1`），与 `score_items.evidence_nos` /
+          `signal_time_evidence_no` 对齐（261020 补）。
+        - `cite_reason`：引用原因（261020 补，此前 v3 路径漏写）。
+
         Args:
             conn: 连接（不 commit）
             event_id: 事件 id
@@ -389,15 +401,18 @@ def replace_evidences(
         )
     rows: list[list[Any]] = []
     now = datetime.now()
+    evidence_no = 0
     for ev in score.evidences:
         if not ev.kept:
             continue
         rows.append(
             [
                 event_id,
+                evidence_no,
                 _clip(ev.title, _EVIDENCE_MAX["title"]),
                 _clip(ev.summary, _EVIDENCE_MAX["summary"]),
                 _clip(ev.quote, _EVIDENCE_MAX["quote"]),
+                _clip(ev.cite_reason, _EVIDENCE_MAX["cite_reason"]),
                 _clip(ev.url, _EVIDENCE_MAX["source_url"]),
                 _clip(ev.publish_date, _EVIDENCE_MAX["publish_date"]),
                 _clip(ev.source_host, _EVIDENCE_MAX["source_host"]),
@@ -412,16 +427,17 @@ def replace_evidences(
                 tenant_id,
             ]
         )
+        evidence_no += 1
     if not rows:
         return 0
     with conn.cursor() as cur:
         cur.executemany(
             """
             INSERT INTO radar_event_evidence
-                (event_id, title, summary, quote, source_url, publish_date, source_host,
-                 authority_tier, kept, source_type, source_level, creator, create_time,
-                 updater, update_time, tenant_id)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                (event_id, evidence_no, title, summary, quote, cite_reason, source_url,
+                 publish_date, source_host, authority_tier, kept, source_type, source_level,
+                 creator, create_time, updater, update_time, tenant_id)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             """,
             rows,
         )
@@ -437,14 +453,21 @@ def update_job_success(
     acp_raw_json: Optional[str],
     stats_json: Optional[str],
     cost_ms: int,
+    revision_json: Optional[str] = None,
 ) -> None:
-    """任务成功收口（status=2，回写 event_id/stats；event_id 可为 None=NOOP）。"""
+    """
+        任务成功收口（status=2，回写 event_id/stats；event_id 可为 None=NOOP）。
+
+        Args:
+            revision_json: 复核留痕（裁定 D12）——`rule_gate` 的 before/after/判定 +
+                `auditor` 的 audit 说明；写入 `radar_event_job.revision_json`（mediumtext）
+    """
     with conn.cursor() as cur:
         cur.execute(
             """
             UPDATE radar_event_job
             SET status = %s, event_id = %s, agent_trace_id = %s, acp_raw_json = %s,
-                stats_json = %s, cost_ms = %s, error_message = NULL,
+                stats_json = %s, revision_json = %s, cost_ms = %s, error_message = NULL,
                 locked_by = NULL, locked_at = NULL, updater = %s, update_time = %s
             WHERE id = %s AND deleted = b'0'
             """,
@@ -453,7 +476,8 @@ def update_job_success(
                 int(event_id) if event_id is not None else None,
                 trace_id,
                 acp_raw_json,
-                (stats_json or "")[:2000] or None,
+                (stats_json or "")[:60000] or None,
+                revision_json,
                 int(cost_ms),
                 _ACTOR,
                 datetime.now(),

@@ -1,4 +1,4 @@
-"""error_code 契约（沿用 ai_docs/260924-01 §6，调用方只认这些字符串）。"""
+"""error_code 契约（调用方只认这些字符串；原 260924-01 契约文档已随文档清理删除）。"""
 from __future__ import annotations
 
 # 无可用 key，或换完仍全被拒（401/402/带 request_id 的 403）

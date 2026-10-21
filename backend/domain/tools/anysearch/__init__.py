@@ -1,7 +1,7 @@
 """AnySearch 独立工具包：凭证池 + 动态配置 + 限速 + failover。
 
 定位：**只负责调用 AnySearch，与其它任何模块无关**（不 import 华院上下文）。
-设计：`华院Agent设计/261016-Agent重构/05-AnySearch-统一工具封装设计.md`
+设计：`华院Agent设计/00-当前技术设计-总览.md` §1.3（AnySearch 可选工具，未挂 flow）
 
 分层：
   - `errors`  error_code 常量（沿用 260924-01 契约）

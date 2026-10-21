@@ -1,43 +1,30 @@
 """
-FastAPI应用入口
+FastAPI 应用入口（规则二最小集）
 
 运行方式：
--（废弃）- conda activate py311_GD25_autoGen
-conda activate py311_GD25_base
+    conda activate py311_GD25_base
+    python backend/main.py
+    # 或
+    uvicorn backend.main:app --host 0.0.0.0 --port 8000
 
-    方式1（推荐）：直接运行
-        python backend/main.py
-    
-    方式2：使用 uvicorn 命令
-        uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
-
-访问地址：
-    http://localhost:8000/static/index.html
-
-说明：
-    FastAPI 应用需要通过 ASGI 服务器（如 uvicorn）运行。
-    直接运行 main.py 时，会自动启动 uvicorn 服务器。
-    使用 uvicorn 命令可以更好地控制配置，适合生产环境。
+只提供：
+    POST /api/v1/huayuan/radar-event-score
+    GET  /health
 """
 import sys
-import os
+import logging
 from pathlib import Path
 from contextlib import asynccontextmanager
 
 # 添加项目根目录到 Python 路径（必须在导入 backend 模块之前）
-# 使用绝对路径，确保无论从哪个目录运行都能正常工作
-_file_path = Path(__file__).resolve()  # 获取文件的绝对路径
-project_root = _file_path.parent.parent  # backend/main.py -> backend -> 项目根目录
-
-# 确保项目根目录在 sys.path 中（避免重复添加）
+_file_path = Path(__file__).resolve()
+project_root = _file_path.parent.parent
 project_root_str = str(project_root)
 if project_root_str not in sys.path:
     sys.path.insert(0, project_root_str)
 
-import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
 from backend.app.api.routes import router
 from backend.infrastructure.llm.providers.manager import ProviderManager
@@ -45,77 +32,22 @@ from backend.domain.flows.manager import FlowManager
 from backend.domain.tools import init_tools
 from backend.app.config import find_project_root, settings
 
-# 配置日志
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
 
-async def load_context_cache():
-    """
-    从数据库加载Token和Session缓存到ContextManager
-    
-    在系统启动时调用，将数据库中的缓存数据加载到内存中，
-    确保服务重启后Token和Session仍然可用。
-    """
-    from backend.infrastructure.database.connection import get_session_factory
-    from backend.infrastructure.database.repository.token_cache_repository import TokenCacheRepository
-    from backend.infrastructure.database.repository.session_cache_repository import SessionCacheRepository
-    from backend.domain.context.context_manager import get_context_manager
-    from backend.domain.context.user_info import UserInfo
-    
-    session_factory = get_session_factory()
-    async with session_factory() as session:
-        try:
-            context_manager = get_context_manager()
-            
-            # 加载Token缓存
-            token_repo = TokenCacheRepository(session)
-            token_records = await token_repo.get_all(limit=10000)  # 加载所有Token
-            
-            for token_record in token_records:
-                # 反序列化UserInfo对象
-                token_id = token_record.id  # id字段就是token_id（即user_id）
-                user_info = UserInfo(user_id=token_id)
-                if token_record.data_info:
-                    user_info.update(token_record.data_info)
-                context_manager._token_contexts[token_id] = user_info
-            
-            logger.info(f"   ✓ 加载了 {len(token_records)} 个Token缓存")
-            
-            # 加载Session缓存
-            session_repo = SessionCacheRepository(session)
-            session_records = await session_repo.get_all(limit=10000)  # 加载所有Session
-            
-            for session_record in session_records:
-                # 直接使用字典数据
-                session_id = session_record.id  # id字段就是session_id
-                context_manager._session_contexts[session_id] = session_record.data_info
-            
-            logger.info(f"   ✓ 加载了 {len(session_records)} 个Session缓存")
-            
-        except Exception as e:
-            logger.error(f"加载缓存失败: {e}", exc_info=True)
-            # 不抛出异常，允许系统继续启动（缓存加载失败不影响系统运行）
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """应用生命周期管理（替代已弃用的 on_event）"""
-    import asyncio
-    consumer_tasks = []
-    news_content_stop = None
-    news_content_task = None
-    radar_kb_stop = None
-    radar_kb_threads = None
+    """应用生命周期管理：只加载规则二运行所需组件。"""
     radar_score_stop = None
     radar_score_threads = None
     anysearch_pool = None
-    # 启动时执行
+
     logger.info("=" * 60)
-    logger.info("系统启动中...")
+    logger.info("规则二评分服务启动中...")
     logger.info("=" * 60)
 
     try:
@@ -124,20 +56,20 @@ async def lifespan(app: FastAPI):
         app_project_root = find_project_root()
         config_path = app_project_root / "config" / "model_providers.yaml"
         ProviderManager.load_providers(config_path)
-        logger.info(f"   ✓ 成功加载模型供应商配置")
+        logger.info("   ✓ 模型供应商配置加载完成")
 
         # 2. 初始化工具注册表
         logger.info("2. 初始化工具注册表...")
         init_tools()
-        logger.info(f"   ✓ 工具注册表初始化完成")
+        logger.info("   ✓ 工具注册表初始化完成")
 
         # 3. 扫描流程文件
         logger.info("3. 扫描流程文件...")
         flows = FlowManager.scan_flows()
         logger.info(f"   ✓ 扫描到 {len(flows)} 个流程定义")
 
-        # 4. 预加载常用流程
-        logger.info("4. 预加载常用流程...")
+        # 4. 预加载规则二流程
+        logger.info("4. 预加载规则二流程...")
         loader_config = FlowManager.get_flow_loader_config()
         preload_flows = loader_config.get("preload", [])
         if preload_flows:
@@ -146,108 +78,14 @@ async def lifespan(app: FastAPI):
         else:
             logger.info("   ✓ 没有需要预加载的流程")
 
-        # 5/6. 仅在启用数据库时加载缓存并启动 Rewritten 消费者
-        if settings.is_database_enabled:
-            # 5. 加载 Token 和 Session 缓存
-            logger.info("5. 加载Token和Session缓存...")
-            await load_context_cache()
-            logger.info("   ✓ 缓存加载完成")
-
-            # 6. 启动 Rewritten 任务队列消费者（021105，替代原 worker_loop）
-            logger.info("6. 启动 Rewritten 任务队列消费者...")
-            from backend.pipeline.rewritten_queue_service import start_consumers
-            consumer_tasks = start_consumers()
-            logger.info("   ✓ Rewritten 队列消费者已启动")
-        else:
-            logger.info(
-                "5. 跳过Token/Session缓存加载（ENABLE_DATABASE=false 或未配置 DATABASE_URL）"
-            )
-            logger.info(
-                "6. 跳过 Rewritten 队列消费者（无数据库模式下不启动）"
-            )
-
-        # 7. 新闻 URL 抓取：自检 claude CLI（SDK 是 CLI 子进程模型）
-        #    ⚠️ 自检失败只告警不阻断 —— 其他路由不受影响，
-        #    抓取接口会因缺 CLI 而在调用时报错（见 02-gd25侧详细设计.md §6.1）。
-        if settings.is_news_crawl_enabled:
-            logger.info("7. 自检新闻 URL 抓取运行时（claude CLI）...")
-            from backend.domain.news_crawl.agent_runner import check_cli_available
-            if await check_cli_available():
-                logger.info("   ✓ claude CLI 就绪，新闻 URL 抓取可用")
-            else:
-                logger.error(
-                    "   ✗ 未找到可用的 claude CLI，新闻 URL 抓取将不可用"
-                    "（镜像需装 Node.js 并 npm i -g @anthropic-ai/claude-code）"
-                )
-        else:
-            logger.info(
-                "7. 跳过新闻 URL 抓取自检"
-                "（NEWS_CRAWL_ENABLED=false 或未配置 Anthropic 凭证）"
-            )
-
-        # 8. L2：radar_kb 发现+正文调度器挂 lifespan（后台线程，不堵事件循环）
-        #    默认 RADAR_KB_WORKER_IN_APP=false；test 写入由发布页显式打开。
-        if settings.RADAR_KB_WORKER_IN_APP:
-            logger.info("8. 启动 radar_kb 统一单 loop 调度器（应用内 L2）...")
-            mysql_ok = settings.is_exhibition_mysql_enabled
-            if not mysql_ok:
-                # 仍可能靠 RADAR_DB_*；交给 load_kb_settings 判断
-                mysql_ok = True
-            if mysql_ok:
-                try:
-                    from radar_kb.in_app import start_radar_kb_in_app
-
-                    radar_kb_stop, radar_kb_threads = start_radar_kb_in_app()
-                    logger.info(
-                        "   ✓ radar_kb unified 已在后台线程启动"
-                        "（RADAR_KB_WORKER_IN_APP=true）"
-                    )
-                except Exception as exc:
-                    logger.error(
-                        "   ✗ radar_kb 启动失败（不阻断 API）：%s",
-                        exc,
-                        exc_info=True,
-                    )
-            else:
-                logger.error(
-                    "   ✗ RADAR_KB_WORKER_IN_APP=true 但未配置 MySQL，跳过"
-                )
-        else:
-            logger.info(
-                "8. 跳过 radar_kb 应用内调度"
-                "（RADAR_KB_WORKER_IN_APP=false；可用 python -m radar_kb）"
-            )
-
-        # 8b. 旧 news_content_worker 应用内挂载（与 L2 互斥）
-        if settings.NEWS_CONTENT_WORKER_IN_APP:
-            if settings.RADAR_KB_WORKER_IN_APP and radar_kb_threads:
-                logger.info(
-                    "8b. 跳过 NEWS_CONTENT_WORKER_IN_APP："
-                    "L2 radar_kb 已覆盖正文调度，避免双扫 content_task"
-                )
-            elif settings.is_exhibition_mysql_enabled:
-                logger.info("8b. 启动遗留新闻知识库 worker（应用内）...")
-                from backend.domain.news_content.worker_loop import (
-                    start_news_content_worker_in_app,
-                )
-                news_content_stop, news_content_task = start_news_content_worker_in_app()
-                logger.info("   ✓ 遗留 news_content worker 已启动")
-            else:
-                logger.error(
-                    "   ✗ NEWS_CONTENT_WORKER_IN_APP=true 但未配置 exhibition MySQL，跳过"
-                )
-
-        # 9. 五维画像 / 展厅需求自动调度（与 radar_kb 一样挂 lifespan，默认关）
+        # 5. 可选：应用内启动 radar_score event worker
         if settings.RADAR_SCORE_WORKER_IN_APP:
-            logger.info("9. 启动 radar_score 评分调度（应用内）...")
+            logger.info("5. 启动 radar_score event 调度（应用内）...")
             try:
                 from radar_score.in_app import start_radar_score_in_app
 
                 radar_score_stop, radar_score_threads = start_radar_score_in_app()
-                logger.info(
-                    "   ✓ radar_score 已在后台线程启动"
-                    "（RADAR_SCORE_WORKER_IN_APP=true）"
-                )
+                logger.info("   ✓ radar_score 已在后台线程启动")
             except Exception as exc:
                 logger.error(
                     "   ✗ radar_score 启动失败（不阻断 API）：%s",
@@ -256,11 +94,11 @@ async def lifespan(app: FastAPI):
                 )
         else:
             logger.info(
-                "9. 跳过 radar_score 应用内调度"
+                "5. 跳过 radar_score 应用内调度"
                 "（RADAR_SCORE_WORKER_IN_APP=false；可用 python -m radar_score）"
             )
 
-        # 10. AnySearch 凭证池：加载 DB 快照 + 后台定时刷新（DB 热配置）
+        # 6. AnySearch 凭证池：加载 DB 快照 + 后台定时刷新（可选工具，未挂 flow，不阻断 API）
         try:
             from backend.domain.tools.anysearch.pool import get_anysearch_pool
 
@@ -268,14 +106,15 @@ async def lifespan(app: FastAPI):
             _as_snap = anysearch_pool.reload(force=True)
             anysearch_pool.start_background()
             logger.info(
-                "10. AnySearch 池就绪 source=%s keys=%d（DB 热配置，后台刷新中）",
-                _as_snap.source, len(_as_snap.keys),
+                "6. AnySearch 池就绪 source=%s keys=%d（DB 热配置，后台刷新中）",
+                _as_snap.source,
+                len(_as_snap.keys),
             )
-        except Exception as e:
-            logger.warning("10. AnySearch 池初始化失败（不阻断 API）：%s", e)
+        except Exception as as_exc:
+            logger.warning("6. AnySearch 池初始化失败（不阻断 API）：%s", as_exc)
 
         logger.info("=" * 60)
-        logger.info("系统启动完成！")
+        logger.info("规则二评分服务启动完成！")
         logger.info("=" * 60)
 
     except Exception as e:
@@ -284,47 +123,26 @@ async def lifespan(app: FastAPI):
 
     yield  # 应用运行期间
 
-    # 关闭时：先停评分调度与 radar_kb / 新闻 worker，再 cancel Rewritten 消费者
-    if anysearch_pool is not None:
-        try:
-            anysearch_pool.stop_background()
-            await anysearch_pool.release_all()
-            logger.info("AnySearch 池已停止并释放租约")
-        except Exception as e:
-            logger.warning("AnySearch 池停止异常: %s", e)
-
+    # 关闭时：停止评分调度
     if radar_score_stop is not None and radar_score_threads is not None:
         from radar_score.in_app import stop_radar_score_in_app
 
         stop_radar_score_in_app(radar_score_stop, radar_score_threads)
 
-    if radar_kb_stop is not None and radar_kb_threads is not None:
-        from radar_kb.in_app import stop_radar_kb_in_app
-
-        stop_radar_kb_in_app(radar_kb_stop, radar_kb_threads)
-
-    if news_content_stop is not None and news_content_task is not None:
-        from backend.domain.news_content.worker_loop import (
-            stop_news_content_worker_in_app,
-        )
-        await stop_news_content_worker_in_app(news_content_stop, news_content_task)
-
-    if consumer_tasks:
-        for t in consumer_tasks:
-            t.cancel()
+    # 关闭 AnySearch 池：停后台刷新并释放租约
+    if anysearch_pool is not None:
         try:
-            await asyncio.gather(*consumer_tasks, return_exceptions=True)
-        except Exception:
-            pass
-        logger.info("Rewritten 队列消费者已停止")
+            anysearch_pool.stop_background()
+            await anysearch_pool.release_all()
+            logger.info("AnySearch 池已停止并释放租约")
+        except Exception as as_exc:
+            logger.warning("AnySearch 池停止异常: %s", as_exc)
 
     logger.info("系统正在关闭...")
 
 
-# 创建FastAPI应用，使用新的 lifespan 事件处理器
-app = FastAPI(title="华院 Agent 服务", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="华院规则二评分服务", version="2.0.0", lifespan=lifespan)
 
-# 配置CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -333,63 +151,33 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 注册路由
 app.include_router(router)
-
-# 配置静态文件服务（前端文件）
-frontend_dir = project_root / "frontend"
-if frontend_dir.exists():
-    app.mount("/static", StaticFiles(directory=str(frontend_dir)), name="static")
 
 
 @app.get("/")
 async def root():
     """根路径。"""
     return {
-        "message": "华院 Agent 服务",
+        "message": "华院规则二评分服务",
         "status": "running",
-        "routes": [
-            "/api/v1/huayuan/chat",
-            "/api/v1/huayuan/portrait",
-            "/api/v1/huayuan/radar-event-score",
-        ],
+        "routes": ["/api/v1/huayuan/radar-event-score"],
     }
 
 
 @app.get("/health")
 async def health():
-    """健康检查"""
+    """健康检查。"""
     return {"status": "healthy"}
 
 
 if __name__ == "__main__":
-    """
-    直接运行此文件时启动开发服务器
-    
-    使用方式：
-        方式1（推荐）：从项目根目录运行
-            python backend/main.py
-        
-        方式2：使用模块方式运行
-            python -m backend.main
-        
-        方式3：继续使用 uvicorn 命令（生产环境推荐）
-            uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
-    
-    注意：
-        - 直接运行时会自动启用 reload 模式（开发模式）
-        - 生产环境建议使用 uvicorn 命令，可以更好地控制配置
-    """
     import uvicorn
-    
-    # 确保项目根目录在 Python 路径中（uvicorn 重新导入时需要）
-    # 使用字符串形式让 uvicorn 处理导入，它会自动处理路径
+
     uvicorn.run(
-        "backend.main:app",  # 使用字符串形式，uvicorn 会重新导入模块
+        "backend.main:app",
         host="0.0.0.0",
         port=8000,
-        reload=True,  # 开发模式：代码变更时自动重启
+        reload=True,
         log_level="info",
-        reload_dirs=[str(project_root)] if project_root.exists() else None,  # 指定监听目录
+        reload_dirs=[str(project_root)] if project_root.exists() else None,
     )
-

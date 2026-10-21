@@ -7,12 +7,16 @@
 """
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import logging
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional
+
+import pymysql
+from pymysql.cursors import DictCursor
 
 from backend.app.config import settings
 
@@ -23,39 +27,61 @@ _CONFIG_TABLE = "radar_anysearch_config"
 _NOT_DELETED = "deleted = b'0'"
 
 
-def _db():
+def _connect() -> pymysql.connections.Connection:
     """
-        惰性导入 exhibition MySQL 封装。
+        建立 exhibition MySQL 连接（DictCursor，autocommit=False）。
 
-        ⚠️ `backend.infrastructure.database` 包的 `__init__` 会拉起较重依赖
-        （如 ulid）；本包在导入期不应触发它，故 DB 访问都在函数内惰性 import。
+        说明：slim 版删除了 `backend.infrastructure.database.mysql_connection`，
+        这里用 `settings.require_exhibition_mysql()` + pymysql 自持短连接，
+        保持与原 `query_all` / `execute` / `run_db` 同名同语义。
 
         Returns:
-            (execute, query_all, run_db) 三元组
+            pymysql 连接
+
+        Raises:
+            RuntimeError: 未配置 exhibition MySQL
     """
-    from backend.infrastructure.database.mysql_connection import (
-        execute,
-        query_all,
-        run_db,
+    params = settings.require_exhibition_mysql()
+    return pymysql.connect(
+        host=params["host"],
+        port=params["port"],
+        user=params["user"],
+        password=params["password"],
+        database=params["database"],
+        charset=params.get("charset", "utf8mb4"),
+        connect_timeout=params.get("connect_timeout", 10),
+        cursorclass=DictCursor,
+        autocommit=False,
     )
 
-    return execute, query_all, run_db
 
-
-# 模块级薄封装：让下方代码沿用 query_all/execute/run_db 名字，但实际惰性导入。
+# 模块级薄封装：让下方代码沿用 query_all/execute/run_db 名字。
 def query_all(sql: str, params=None):  # noqa: ANN001, ANN201
-    """惰性转调 exhibition MySQL 的 query_all。"""
-    return _db()[1](sql, params)
+    """查询多行（短连接，DictCursor）。"""
+    conn = _connect()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql, params or [])
+            return cur.fetchall()
+    finally:
+        conn.close()
 
 
 def execute(sql: str, params=None):  # noqa: ANN001, ANN201
-    """惰性转调 exhibition MySQL 的 execute。"""
-    return _db()[0](sql, params)
+    """执行写入并提交（短连接）；返回受影响行数。"""
+    conn = _connect()
+    try:
+        with conn.cursor() as cur:
+            affected = cur.execute(sql, params or [])
+        conn.commit()
+        return affected
+    finally:
+        conn.close()
 
 
-def run_db(fn, /, *args, **kwargs):  # noqa: ANN001, ANN201
-    """惰性转调 exhibition MySQL 的 run_db（线程池执行）。"""
-    return _db()[2](fn, *args, **kwargs)
+async def run_db(fn, /, *args, **kwargs):  # noqa: ANN001, ANN201
+    """把阻塞 DB 调用丢到线程执行，避免卡住事件循环。"""
+    return await asyncio.to_thread(fn, *args, **kwargs)
 
 
 # ---------------------------------------------------------------- 数据模型

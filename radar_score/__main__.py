@@ -1,5 +1,5 @@
 """
-radar_score 独立入口。
+radar_score 独立入口（规则二 event-only）。
 
 默认不随 FastAPI 启动（RADAR_SCORE_WORKER_IN_APP=false）。
 本机或独立进程：python -m radar_score

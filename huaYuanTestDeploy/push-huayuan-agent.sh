@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# 华院 Agent API — 一键构建并推送到公司 TCR
-# （与 push-radar-crawl.sh 相互独立）
+# 华院规则二评分 API — 一键构建并推送到公司 TCR
+# 只打规则二 slim 镜像（/api/v1/huayuan/radar-event-score + radar_score event worker）
 #
 # 用法：
 #   ./huaYuanTestDeploy/push-huayuan-agent.sh              # tag = YYYYMMDD-HHMMSS
@@ -26,6 +26,8 @@ BUILD_MAC="${BUILD_MAC:-0}"
 CLEAN_OLD_IMAGES="${CLEAN_OLD_IMAGES:-1}"
 KEEP_OLD_TAGS="${KEEP_OLD_TAGS:-0}"
 PRUNE_BUILD_CACHE="${PRUNE_BUILD_CACHE:-0}"
+SMOKE="${SMOKE:-1}"
+SIZE_WARN_MB="${SIZE_WARN_MB:-500}"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -73,6 +75,21 @@ fi
 _docker_build_remote "$DOCKERFILE" "$ROOT_DIR" "$FULL_REF" "$LATEST_REF"
 _docker_maybe_build_mac "$DOCKERFILE" "$ROOT_DIR" "$IMAGE_NAME"
 
+if [[ "$SMOKE" == "1" ]]; then
+  echo "==> smoke test: import backend.main + radar_score"
+  docker run --rm --platform "$PLATFORM" --entrypoint python "$FULL_REF" \
+    -c "import backend.main, radar_score; print('import ok')"
+  echo "==> smoke test: pip check"
+  docker run --rm --platform "$PLATFORM" --entrypoint pip "$FULL_REF" check
+fi
+
+SIZE_BYTES="$(docker image inspect "$FULL_REF" --format '{{.Size}}')"
+SIZE_MB=$((SIZE_BYTES / 1024 / 1024))
+echo "==> image size: ${SIZE_MB} MB (uncompressed, target < ${SIZE_WARN_MB} MB)"
+if (( SIZE_MB > SIZE_WARN_MB )); then
+  echo "WARN: image size ${SIZE_MB}MB 超过 ${SIZE_WARN_MB}MB 目标线" >&2
+fi
+
 if [[ "$PUSH" == "1" ]]; then
   echo "==> docker push"
   docker push "$FULL_REF"
@@ -88,5 +105,6 @@ echo "  $FULL_REF"
 echo
 echo "容器端口: 8000"
 echo "启动: 镜像默认 CMD（uvicorn backend.main:app --host 0.0.0.0 --port 8000）"
-echo "必配密钥: HUAYUAN_API_KEY（华院 LLM）；新闻抓取另需 ANTHROPIC_AUTH_TOKEN"
+echo "必配密钥: HUAYUAN_API_KEY（华院 LLM）/ DEEPSEEK_SEARCH_KEY（规则二检索）"
+echo "MySQL: EXHIBITION_MYSQL_HOST/USER/PASSWORD/DB（event worker 必需）"
 echo "完整环境变量见: huaYuanTestDeploy/环境变量.md"

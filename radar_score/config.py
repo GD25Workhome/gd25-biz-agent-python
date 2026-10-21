@@ -1,5 +1,5 @@
 """
-radar_score 运行配置。
+radar_score 运行配置（规则二 event-only）。
 
 数据库优先 RADAR_DB_*，否则回退 exhibition MySQL。
 默认不随 FastAPI 启动，由 RADAR_SCORE_WORKER_IN_APP 打开。
@@ -19,20 +19,7 @@ load_dotenv(_REPO_ROOT / ".env", override=False)
 
 # locked_by / updater 列宽
 LOCKED_BY_MAX_LEN = 64
-PROFILE_KIND = "profile"
 EVENT_KIND = "event"
-JOB_KINDS = (PROFILE_KIND, EVENT_KIND)
-
-
-def _parse_bool(raw: Optional[str], default: bool) -> bool:
-    if raw is None or str(raw).strip() == "":
-        return default
-    text = str(raw).strip().lower()
-    if text in ("1", "true", "yes", "on", "y"):
-        return True
-    if text in ("0", "false", "no", "off", "n"):
-        return False
-    return default
 
 
 def _parse_optional_int(raw: Optional[str]) -> Optional[int]:
@@ -66,7 +53,7 @@ def claim_quota(max_concurrency: int, in_flight: int) -> int:
         本轮还能再领几条。
 
         Args:
-            max_concurrency: 该类并发上限
+            max_concurrency: 并发上限
             in_flight: 已经在跑的条数
 
         Returns:
@@ -77,7 +64,7 @@ def claim_quota(max_concurrency: int, in_flight: int) -> int:
 
 @dataclass(frozen=True)
 class ScoreSettings:
-    """评分自动调度配置。"""
+    """评分自动调度配置（event-only）。"""
 
     db_host: str
     db_port: int
@@ -86,25 +73,11 @@ class ScoreSettings:
     db_name: str
     tenant_id: Optional[int]
     locked_by: str
-    java_base_url: str
-    java_token: str  # 预留：生产回调鉴权；当前 Java 不校验，可不配置
-    profile_concurrency: int
     event_concurrency: int
     poll_interval_sec: float
     stale_timeout_sec: int
-    java_timeout_sec: float
-    java_down_backoff_sec: float
     shutdown_wait_sec: float
     max_retry: int = 3
-
-
-def is_radar_score_in_app_enabled() -> bool:
-    """
-        是否在 FastAPI 内挂载评分调度。
-
-        环境变量 RADAR_SCORE_WORKER_IN_APP，默认 false。
-    """
-    return _parse_bool(os.getenv("RADAR_SCORE_WORKER_IN_APP"), False)
 
 
 def _load_mysql() -> tuple[str, int, str, str, str]:
@@ -145,24 +118,17 @@ def _load_mysql() -> tuple[str, int, str, str, str]:
 
 def load_score_settings() -> ScoreSettings:
     """
-        加载评分调度配置。
+        加载评分调度配置（event-only）。
 
         Returns:
             已校验的配置
 
         Raises:
-            RuntimeError: 缺少数据库或 Java 基址
+            RuntimeError: 缺少数据库配置
     """
     host, port, user, password, db_name = _load_mysql()
-    java_base = os.getenv("RADAR_SCORE_JAVA_BASE_URL", "").strip().rstrip("/")
-    if not java_base:
-        raise RuntimeError(
-            "未配置 RADAR_SCORE_JAVA_BASE_URL（Java 服务根地址，"
-            "用于 /admin-api/radar/*/score-prepare 与 score-complete）"
-        )
     hostname = os.getenv("RADAR_SCORE_WORKER_HOST", "").strip() or socket.gethostname()
     pid = os.getpid()
-    profile_concurrency = max(1, int(os.getenv("RADAR_SCORE_PROFILE_CONCURRENCY", "2") or "2"))
     event_concurrency = max(1, int(os.getenv("RADAR_SCORE_EVENT_CONCURRENCY", "2") or "2"))
     return ScoreSettings(
         db_host=host,
@@ -172,14 +138,9 @@ def load_score_settings() -> ScoreSettings:
         db_name=db_name,
         tenant_id=_parse_optional_int(os.getenv("RADAR_TENANT_ID")),
         locked_by=build_locked_by(hostname, pid),
-        java_base_url=java_base,
-        java_token=os.getenv("RADAR_SCORE_JAVA_TOKEN", "").strip(),
-        profile_concurrency=profile_concurrency,
         event_concurrency=event_concurrency,
         poll_interval_sec=float(os.getenv("RADAR_SCORE_POLL_INTERVAL_SEC", "15") or "15"),
         stale_timeout_sec=int(os.getenv("RADAR_SCORE_STALE_TIMEOUT_SEC", "2400") or "2400"),
-        java_timeout_sec=float(os.getenv("RADAR_SCORE_JAVA_TIMEOUT_SEC", "60") or "60"),
-        java_down_backoff_sec=float(os.getenv("RADAR_SCORE_JAVA_DOWN_BACKOFF_SEC", "60") or "60"),
         shutdown_wait_sec=float(os.getenv("RADAR_SCORE_SHUTDOWN_WAIT_SEC", "30") or "30"),
         max_retry=max(1, int(os.getenv("RADAR_SCORE_MAX_RETRY", "3") or "3")),
     )

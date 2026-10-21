@@ -1,21 +1,18 @@
-# 华院最小后端 — K8s 示例清单
-# 使用前替换镜像仓库地址，并用真实 Secret 注入 API Key。
+# 华院规则二评分服务 — K8s 示例清单
+# 使用前替换镜像仓库地址、MySQL 与密钥。
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: huayuan-agent-config
 data:
-  ENABLE_DATABASE: "false"
   LANGFUSE_ENABLED: "false"
-  PROMPT_SOURCE_MODE: "local"
-  NEWS_CRAWL_ENABLED: "true"
-  ANTHROPIC_BASE_URL: "https://ai-api.unidtai.com/openapi/llm/anthropic"
-  ANTHROPIC_MODEL: "deepseek/deepseek-v4.1-flash"
-  # 代码默认已是 false；显式写出，避免以后改默认时 test 误开抓取
-  RADAR_KB_WORKER_IN_APP: "false"
-  # 五维画像 / 展厅需求自动调度。Java score-prepare 未上线前保持 false
-  RADAR_SCORE_WORKER_IN_APP: "false"
+  # event worker 与 API 同进程；也可设 false 并单独运行 python -m radar_score
+  RADAR_SCORE_WORKER_IN_APP: "true"
+  RADAR_SCORE_EVENT_CONCURRENCY: "2"
+  EXHIBITION_MYSQL_HOST: "replace-me"
+  EXHIBITION_MYSQL_PORT: "3306"
+  EXHIBITION_MYSQL_DB: "unidt_exhibition"
 ---
 apiVersion: v1
 kind: Secret
@@ -23,13 +20,13 @@ metadata:
   name: huayuan-agent-secrets
 type: Opaque
 stringData:
-  # 华院 LLM 主密钥（provider=huayuan）；可与 ANTHROPIC_AUTH_TOKEN 同一把网关 key
+  # 华院 LLM 网关（provider=huayuan）
   HUAYUAN_API_KEY: "replace-me"
-  ANTHROPIC_AUTH_TOKEN: "replace-me"
-  ANY_SEARCH_API_KEY: "replace-me"
-  # 可选。非空时按逗号顺序做凭证池，并忽略上面的单 key。不要提交真实 key。
-  # ANY_SEARCH_API_KEYS: "replace-me-1,replace-me-2"
-  BO_CHA_APIKEY: "replace-me"
+  # 规则二 v3 检索链（DeepSeek Search / Fetch）
+  DEEPSEEK_SEARCH_KEY: "replace-me"
+  # exhibition MySQL（任务 / 事件 / 区域）
+  EXHIBITION_MYSQL_USER: "replace-me"
+  EXHIBITION_MYSQL_PASSWORD: "replace-me"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -49,7 +46,7 @@ spec:
     spec:
       containers:
         - name: huayuan-agent
-          image: bj-unidt.tencentcloudcr.com/unidt-repo/unidt-exhibition-opportunity-py-agent:v1-260911
+          image: bj-unidt.tencentcloudcr.com/unidt-repo/unidt-exhibition-opportunity-py-agent:latest
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

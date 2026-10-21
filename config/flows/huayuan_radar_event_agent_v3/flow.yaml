@@ -1,11 +1,12 @@
-# 华院规则二 v3：单 Agent ReAct + DeepSeek Search/Fetch 唯一链路（目标架构）
-# 改造：原三节点（query_planner → evidence_gather → score_summarizer）收敛为单 Agent。
-# 检索链路改用 DeepSeek 官方 Search / Fetch（独立工具，不依赖华院配额上下文）；
-# 旧 AnySearch 链路（anysearch_flow）保留，需要时把 tools 换回 anysearch_web_search / anysearch_extract。
+# 华院规则二 v3：单 Agent ReAct + DeepSeek Search/Fetch 唯一检索链路
+#   + 质检闸门（function，确定性规则：时效 / 日期纪律）
+#   + 时效复核（agent，语义复核，只降不升）
+# 形态＝裁定 D10 的 (C)：图内「改好」、图外 self_check「拦住」，规则同源调用 radar_score/rules/*
+# 条件边只用「条件边」（同一节点不可与 always 混用）；未命中时 route_func 回退 END。
 # 目标架构见 华院Agent设计/261016-Agent重构/Agent整体设计/04-总体设计.md
 name: huayuan_radar_event_agent_v3
 version: "3.0"
-description: "华院规则二 v3：单 Agent ReAct + DeepSeek Search/Fetch；输出两维分 + 建议等级 + v3 扩展字段"
+description: "华院规则二 v3：ReAct 检索评分 + 质检闸门(function) + 时效复核(agent)；输出两维分 + 建议等级 + v3 扩展字段"
 
 nodes:
   - name: radar_event_react_node
@@ -28,9 +29,41 @@ nodes:
         - region_children
       persist_to_persistence_edges_var:
         - radar_event_score
+        - radar_event_scores
+
+  # 第 2 节点：质检闸门（纯代码）—— R9 剔跑批日戳/行情页、R7 超窗置 expired、给出 radar_audit_required
+  - name: radar_rule_gate
+    type: function
+    config:
+      function_key: "radar_rule_gate_func"
+
+  # 第 3 节点：时效复核（LLM，只降不升）—— 不挂检索工具：只依据给定证据做语义复核
+  - name: radar_event_audit_node
+    type: agent
+    config:
+      prompt: prompts/radar_event_audit_v3.md
+      model:
+        provider: huayuan
+        temperature: 0.1
+        timeout: 300
+        thinking:
+          type: disabled
+      persist_to_persistence_edges_var:
+        - radar_event_scores
+        - evidences
+        - discarded
 
 edges:
   - from: radar_event_react_node
+    to: radar_rule_gate
+    condition: always
+
+  # 经硬闸后**仍有分**的事件存在 → 走语义复核；否则直接 END（未命中条件时回退 END）
+  - from: radar_rule_gate
+    to: radar_event_audit_node
+    condition: radar_audit_required == true
+
+  - from: radar_event_audit_node
     to: END
     condition: always
 

@@ -1,13 +1,7 @@
-# 流程加载配置（华院最小部署）
-# 仅预加载华院三条业务流，避免启动时编译医疗/RAG 流程
-
+# 流程加载配置（规则二最小集）
+# 只预加载规则二 v3，避免启动时编译画像 / chat / 抓取流程
 flows:
   preload:
-    - huayuan_simple_agent
-    - huayuan_react_agent
-    - huayuan_portrait_agent
     - huayuan_radar_event_agent_v3
 
-  lazy_load:
-    - huayuan_radar_event_agent
-    - huayuan_radar_event_agent_v1_single_react
+  lazy_load: []

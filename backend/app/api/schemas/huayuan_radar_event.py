@@ -149,6 +149,17 @@ class RadarEventScoreResult(BaseModel):
         default=None,
         description="signal_time 对应 evidences[].evidence_no",
     )
+    fact_time_earliest: Optional[str] = Field(
+        default=None,
+        description=(
+            "该簇**最早影响评分的事实时间**（立项/招标/签约），YYYY-MM-DD 或 YYYY-MM；"
+            "时效闸门的计时基准（D8）——注意不是最新材料的发布日期"
+        ),
+    )
+    fact_time_earliest_evidence_no: Optional[int] = Field(
+        default=None,
+        description="fact_time_earliest 对应 evidences[].evidence_no",
+    )
     evidence_score: Optional[int] = Field(
         default=None, description="证据强度分，合法档 85/75/55/45/25/5/0（v3）"
     )
@@ -216,6 +227,36 @@ class RadarEventScoreResult(BaseModel):
     rule_version: Optional[str] = Field(
         default=None, description='规则版本，如 "v3-2026-10-14"'
     )
+
+    # ---------------- v3 多事件 / 关联字段（261019） ----------------
+    event_ref: Optional[str] = Field(
+        default=None, description="本次运行内的局部键（e0/e1…），供 score_items/evidences 引用"
+    )
+    event_name: Optional[str] = Field(
+        default=None, description="规范展厅商机名（业务键核心，如「北京办公楼企业展厅」）"
+    )
+    event_relation: Optional[str] = Field(
+        default=None,
+        description="与既有事件的关系（由 Agent 判）：new|continue|close|ignored",
+    )
+    matched_event_id: Optional[int] = Field(
+        default=None,
+        description="continue/close 时指向输入 history 里的既有事件 id（代码会校验属本企业）",
+    )
+    parent_event_id: Optional[int] = Field(
+        default=None, description="父事件 id（同一商机的根）；无则 null"
+    )
+
+    @field_validator("matched_event_id", "parent_event_id", mode="before")
+    @classmethod
+    def coerce_relation_ids(cls, value: Any) -> Optional[int]:
+        """关联 id 容错：数字串/整数照收，其余（空串、非数字）归 None，避免整单校验失败。"""
+        if value is None or value == "":
+            return None
+        try:
+            return int(str(value).strip())
+        except (TypeError, ValueError):
+            return None
 
     @field_validator("place_region_id", mode="before")
     @classmethod
@@ -317,7 +358,18 @@ class HuayuanRadarEventResponse(BaseModel):
     """华院规则二评分响应。"""
 
     trace_id: str = Field(..., description="本次 Trace ID")
-    radar_event_score: RadarEventScoreResult = Field(..., description="评分与证据")
+    radar_event_score: RadarEventScoreResult = Field(..., description="评分与证据（第一个事件；兼容）")
+    radar_event_scores: List[RadarEventScoreResult] = Field(
+        default_factory=list,
+        description="多事件结果（261019）；`radar_event_score` 为其第一个，向后兼容",
+    )
     response: Optional[str] = Field(
         default=None, description="可选：结果 JSON 字符串，便于人工查看"
+    )
+    revision: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description=(
+            "复核留痕（裁定 D12）：`rule_gate` 的 before/after/判定 与 `auditor` 的 audit 说明；"
+            "由 execute 落库到 `radar_event_job.revision_json`"
+        ),
     )

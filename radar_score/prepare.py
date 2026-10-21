@@ -2,7 +2,7 @@
 规则二 v3 请求组装（M2）。
 
 目标架构：Java 只产任务，Python 自行读取任务与历史事件，组装模型请求体。
-设计：华院Agent设计/261016-Agent重构/Agent整体设计/05-详细设计.md §3。
+设计：华院Agent设计/02-技术设计/03-Worker调度与数据模型.md §5。
 """
 from __future__ import annotations
 
@@ -69,6 +69,124 @@ def fetch_job_and_company(
     return job, company
 
 
+# 单次从库预取的原始行上限（分组后会显著变少，故放大）
+_HISTORY_SCAN_LIMIT = 200
+
+
+def _row_to_history(r: dict[str, Any]) -> dict[str, Any]:
+    """radar_event 行 → history 摘要 dict。"""
+    return {
+        "id": r.get("id"),
+        "event_name": r.get("event_name"),
+        "parent_event_id": r.get("parent_event_id"),
+        "space_object": r.get("space_object"),
+        "place": r.get("place"),
+        "procurement_scope": r.get("procurement_scope"),
+        "event_stage": r.get("event_stage"),
+        "exhibition_stage": r.get("exhibition_stage"),
+        "system_level": r.get("system_level"),
+        "verify_status": r.get("verify_status"),
+        "validity_status": r.get("validity_status"),
+        "expired_or_done": _bit_bool(r.get("expired_or_done")),
+        "published": _bit_bool(r.get("published")),
+        "total_score": r.get("total_score"),
+        "signal_summary": r.get("signal_summary"),
+        "rule_version": r.get("rule_version"),
+        "update_time": str(r.get("update_time")) if r.get("update_time") else None,
+    }
+
+
+def _is_closed_row(row: dict[str, Any]) -> bool:
+    """该事件是否已失效/关闭（事件自身层）。"""
+    if row.get("expired_or_done"):
+        return True
+    return str(row.get("validity_status") or "").strip().upper() in {"EXPIRED", "INVALID"}
+
+
+def _group_latest_by_root(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """
+        按「商机族」聚组、每组取最新一条作代表；**族内状态取"或"**。
+
+        族键 = `parent_event_id or id`（约定子事件直接指向根，单层）。
+        `published` / `closed` 必须按族取或——**已发布那条往往不是最新**。
+
+        Args:
+            rows: 已解析的 history 行
+
+        Returns:
+            每组一条代表行（含 `root_event_id` / `published` / `closed` / `member_count` / `member_ids`），按更新时间倒序
+    """
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        root_key = str(row.get("parent_event_id") or row.get("id"))
+        groups.setdefault(root_key, []).append(row)
+
+    out: list[dict[str, Any]] = []
+    for root_key, members in groups.items():
+        members_sorted = sorted(
+            members,
+            key=lambda x: (str(x.get("update_time") or ""), int(x.get("id") or 0)),
+            reverse=True,
+        )
+        rep = dict(members_sorted[0])
+        rep["root_event_id"] = int(root_key)
+        rep["published"] = any(m.get("published") for m in members)
+        rep["closed"] = any(_is_closed_row(m) for m in members)
+        rep["member_count"] = len(members)
+        rep["member_ids"] = [int(m.get("id")) for m in members]
+        out.append(rep)
+    out.sort(
+        key=lambda x: (str(x.get("update_time") or ""), int(x.get("id") or 0)),
+        reverse=True,
+    )
+    return out
+
+
+def _attach_opportunity_status(
+    conn: pymysql.Connection,
+    groups: list[dict[str, Any]],
+    *,
+    tenant_id: Optional[int] = None,
+) -> None:
+    """
+        批量补商机状态（`radar_opportunity.status`），就地写回每组的 `opportunity_status`。
+
+        商机只挂在"被发布的那条事件"上，故按**族内全部事件 id** 查，命中即取（避免 N+1）。
+
+        Args:
+            conn: 数据库连接
+            groups: `_group_latest_by_root` 产物（就地修改）
+            tenant_id: 租户过滤
+    """
+    all_ids = [eid for g in groups for eid in (g.get("member_ids") or [])]
+    if not all_ids:
+        return
+    tenant_sql = " AND tenant_id = %s" if tenant_id is not None else ""
+    tenant_params = [tenant_id] if tenant_id is not None else []
+    placeholders = ", ".join(["%s"] * len(all_ids))
+    sql = (
+        "SELECT source_event_id, status, close_reason, closed_at "
+        "FROM radar_opportunity "
+        f"WHERE deleted = b'0'{tenant_sql} AND source_event_id IN ({placeholders})"
+    )
+    with conn.cursor() as cur:
+        cur.execute(sql, [*tenant_params, *all_ids])
+        rows = list(cur.fetchall() or [])
+    by_event: dict[int, dict[str, Any]] = {
+        int(r["source_event_id"]): r for r in rows if r.get("source_event_id") is not None
+    }
+    for g in groups:
+        hit: Optional[dict[str, Any]] = None
+        for eid in g.get("member_ids") or []:
+            if eid in by_event:
+                hit = by_event[eid]
+                break
+        g["opportunity_status"] = (
+            (str(hit.get("status") or "").strip() or None) if hit else None
+        )
+        g["opportunity_close_reason"] = (hit.get("close_reason") or None) if hit else None
+
+
 def load_history_events(
     conn: pymysql.Connection,
     company_id: int,
@@ -77,51 +195,41 @@ def load_history_events(
     limit: int = MAX_HISTORY_EVENTS,
 ) -> list[dict[str, Any]]:
     """
-        读取该企业既有事件摘要（供 Agent 判断同一事件新阶段 / 独立新需求）。
+        读取该企业既有事件摘要（供 Agent 判断"同一商机"）。
+
+        261020：**按商机族去重、每组只给最新一条**，并补商机状态 —— 给模型的数据更少、指认更简单。
+        - 族键 = `parent_event_id or id`；
+        - `published` / `closed` 取族内"或"（已发布那条往往不是最新）；
+        - 附 `opportunity_status`（`radar_opportunity.status`，只读）。
 
         Args:
             conn: 数据库连接
             company_id: 企业编号
             tenant_id: 租户过滤
-            limit: 上限
+            limit: 返回的商机组数上限
 
         Returns:
-            摘要列表（按更新时间倒序）
+            每组一条的摘要列表（按更新时间倒序）
     """
     tenant_sql = " AND tenant_id = %s" if tenant_id is not None else ""
     tenant_params = [tenant_id] if tenant_id is not None else []
     sql = f"""
-        SELECT id, space_object, place, procurement_scope, event_stage, exhibition_stage,
-               system_level, verify_status, validity_status, expired_or_done, total_score,
-               signal_summary, update_time
+        SELECT id, event_name, parent_event_id, space_object, place, procurement_scope, event_stage, exhibition_stage,
+               system_level, verify_status, validity_status, expired_or_done, published,
+               total_score, signal_summary, rule_version, update_time
         FROM radar_event
         WHERE company_id = %s AND deleted = b'0'{tenant_sql}
         ORDER BY update_time DESC
         LIMIT %s
     """
+    scan_limit = max(int(limit) * 5, _HISTORY_SCAN_LIMIT)
     with conn.cursor() as cur:
-        cur.execute(sql, [company_id, *tenant_params, int(limit)])
+        cur.execute(sql, [company_id, *tenant_params, int(scan_limit)])
         rows = list(cur.fetchall() or [])
-    out: list[dict[str, Any]] = []
-    for r in rows:
-        out.append(
-            {
-                "id": r.get("id"),
-                "space_object": r.get("space_object"),
-                "place": r.get("place"),
-                "procurement_scope": r.get("procurement_scope"),
-                "event_stage": r.get("event_stage"),
-                "exhibition_stage": r.get("exhibition_stage"),
-                "system_level": r.get("system_level"),
-                "verify_status": r.get("verify_status"),
-                "validity_status": r.get("validity_status"),
-                "expired_or_done": _bit_bool(r.get("expired_or_done")),
-                "total_score": r.get("total_score"),
-                "signal_summary": r.get("signal_summary"),
-                "update_time": str(r.get("update_time")) if r.get("update_time") else None,
-            }
-        )
-    return out
+
+    groups = _group_latest_by_root([_row_to_history(r) for r in rows])
+    _attach_opportunity_status(conn, groups, tenant_id=tenant_id)
+    return groups[: int(limit)]
 
 
 def build_history_json(history: list[dict[str, Any]]) -> str:
